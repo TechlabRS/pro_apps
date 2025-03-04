@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Milk Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .container { max-width: 600px; margin-top: 20px; }
+        .card { padding: 20px; }
+        input { text-align: center; }
+        .month-header { background: #007bff; color: white; padding: 5px; font-weight: bold; margin-top: 10px; }
+        .month-total { text-align: right; font-weight: bold; margin-bottom: 10px; }
+        
+        /* Calendar Layout */
+        .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 10px; }
+        .day { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid #ccc; border-radius: 5px; }
+        .day.milk { background: #28a745; color: white; }
+        .day.missing { background: #ffcc00; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 class="text-center">Daily Milk Tracker</h2>
+
+    <div class="card">
+        <div class="mb-3">
+            <label class="form-label">Select Month</label>
+            <select id="monthSelector" class="form-select" onchange="updateTable()"></select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Price per Liter (₹)</label>
+            <input type="number" id="pricePerLiter" class="form-control" value="65" min="1">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Date</label>
+            <input type="date" id="dateInput" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Milk Quantity (Liters)</label>
+            <input type="number" id="milkQuantity" class="form-control" step="0.25" min="0">
+        </div>
+
+        <button class="btn btn-primary w-100" onclick="addEntry()">Add Entry</button>
+        <button class="btn btn-danger w-100 mt-2" onclick="clearAll()">Clear All Data</button>
+    </div>
+
+    <h4 class="mt-4">Calendar View</h4>
+    <div id="calendar" class="calendar"></div>
+
+    <h4 class="mt-4">Monthly Records</h4>
+    <div id="milkTable"></div>
+
+    <h5 class="text-end mt-3">Overall Total: ₹<span id="totalAmount">0</span></h5>
+</div>
+
+<script>
+    let milkRecords = JSON.parse(localStorage.getItem("milkRecords")) || [];
+
+    function populateMonthSelector() {
+        let monthSelector = document.getElementById("monthSelector");
+        monthSelector.innerHTML = "";
+        let today = new Date();
+
+        for (let i = 0; i < 12; i++) {
+            let date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            let monthValue = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            let monthText = date.toLocaleString("default", { month: "long", year: "numeric" });
+            let option = new Option(monthText, monthValue);
+            monthSelector.add(option);
+        }
+
+        monthSelector.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function addEntry() {
+        let date = document.getElementById("dateInput").value;
+        let quantity = parseFloat(document.getElementById("milkQuantity").value);
+        let pricePerLiter = parseFloat(document.getElementById("pricePerLiter").value);
+
+        if (!date || isNaN(quantity) || quantity < 0) {
+            alert("Please enter valid details.");
+            return;
+        }
+
+        let amount = (quantity * pricePerLiter).toFixed(2);
+        let existingEntry = milkRecords.find(record => record.date === date);
+
+        if (existingEntry) {
+            existingEntry.quantity = quantity;
+            existingEntry.amount = amount;
+        } else {
+            milkRecords.push({ date, quantity, amount });
+        }
+
+        localStorage.setItem("milkRecords", JSON.stringify(milkRecords));
+        updateTable();
+    }
+
+    function updateTable() {
+        let tableDiv = document.getElementById("milkTable");
+        tableDiv.innerHTML = "";
+        let totalAmount = 0, totalLiters = 0;
+
+        let selectedMonth = document.getElementById("monthSelector").value;
+        let selectedYear = selectedMonth.split("-")[0];
+        let selectedMonthIndex = parseInt(selectedMonth.split("-")[1]) - 1;
+
+        let groupedQuantities = {};
+        let daysInMonth = new Date(selectedYear, selectedMonthIndex + 1, 0).getDate();
+
+        let monthHeader = `<div class="month-header">${new Date(selectedYear, selectedMonthIndex).toLocaleString("default", { month: "long", year: "numeric" })}</div>`;
+        let table = `<table class="table table-bordered mt-2">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date</th>
+                    <th>Quantity (L)</th>
+                    <th>Amount (₹)</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            let dateStr = `${selectedYear}-${String(selectedMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            let record = milkRecords.find(record => record.date === dateStr);
+
+            if (record) {
+                table += `<tr>
+                    <td>${record.date}</td>
+                    <td>${record.quantity} L</td>
+                    <td>₹${record.amount}</td>
+                    <td><button class="btn btn-danger btn-sm" onclick="removeEntry('${record.date}')">X</button></td>
+                </tr>`;
+
+                totalAmount += parseFloat(record.amount);
+                totalLiters += record.quantity;
+
+                groupedQuantities[record.quantity] = groupedQuantities[record.quantity] || { count: 0, amount: 0 };
+                groupedQuantities[record.quantity].count++;
+                groupedQuantities[record.quantity].amount += parseFloat(record.amount);
+            }
+        }
+
+        table += `</tbody></table>`;
+        let summary = `<div class="month-total">Grouped Summary:</div>`;
+        
+        for (let quantity in groupedQuantities) {
+            summary += `<div>${quantity} L appeared ${groupedQuantities[quantity].count} times, total amount ₹${groupedQuantities[quantity].amount.toFixed(2)}</div>`;
+        }
+
+        let monthTotal = `<div class="month-total mt-2">Final Total: ${totalLiters} L, ₹${totalAmount.toFixed(2)}</div>`;
+
+        tableDiv.innerHTML = monthHeader + table + summary + monthTotal;
+        document.getElementById("totalAmount").innerText = totalAmount.toFixed(2);
+
+        updateCalendar(selectedYear, selectedMonthIndex, daysInMonth);
+    }
+
+    function updateCalendar(year, month, daysInMonth) {
+        let calendarDiv = document.getElementById("calendar");
+        calendarDiv.innerHTML = "";
+
+        let recordedDays = milkRecords.map(record => record.date);
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            let dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            let dayClass = recordedDays.includes(dateStr) ? "milk" : "missing";
+            calendarDiv.innerHTML += `<div class="day ${dayClass}">${day}</div>`;
+        }
+    }
+
+    populateMonthSelector();
+    updateTable();
+</script>
+
+</body>
+</html>
