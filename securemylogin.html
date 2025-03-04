@@ -1,0 +1,763 @@
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>$RPM</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+
+    <style>
+
+        body {
+
+            background: #3a6172;
+
+            color: #ffffff;
+
+            padding: 20px;
+
+        }
+
+        .container {
+
+            max-width: 500px;
+
+            margin: auto;
+
+            padding: 20px;
+
+            background: #283b5a;
+
+            border-radius: 12px;
+
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+
+        }
+
+        input {
+
+            color: #fff !important;
+
+        }
+
+        .btn-show-list {
+
+            background-color: #87CEFA !important;
+
+            color: #000 !important;
+
+            font-weight: bold;
+
+        }
+
+        .hidden-password {
+
+            display: none;
+
+            color: lime;
+
+        }
+
+
+
+        .collection {
+
+            background: #283b5a !important; /* Match container color */
+
+            border: none;
+
+        }
+
+
+
+        .collection-item {
+
+            background: #3a6172 !important; /* Slightly lighter */
+
+            color: #ffffff !important; /* Ensure text is visible */
+
+            border-bottom: 1px solid #ffffff30; /* Subtle divider */
+
+        }
+
+
+
+        .collection-item button {
+
+            margin-left: 10px;
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h4 class="center-align">🔐 R' $ecure PaswdMgr</h4>
+
+        <button class="btn grey full-width" onclick="refreshPage()">🔄 Refresh</button>
+
+
+
+        <div id="setMasterKeySection">
+
+            <h5 class="center-align">Set Master Key</h5>
+
+            <div class="input-field">
+
+                <input type="password" id="setMasterKey" placeholder="Enter a Master Key">
+
+            </div>
+
+            <div class="input-field">
+
+                <input type="text" id="hint" placeholder="Enter a Hint (Optional)">
+
+            </div>
+
+            <button class="btn green full-width" onclick="saveMasterKey()">Save Master Key</button>
+
+        </div>
+
+
+
+        <h5 class="center-align">Recovery Options</h5>
+
+        <button class="btn blue full-width" onclick="showHint()">🔑 Show Hint</button>
+
+        <button class="btn orange full-width" onclick="sendRecoveryKey()">📩 Send via WhatsApp</button>
+
+        <button class="btn purple full-width" onclick="downloadRecoveryKey()">💾 Save Locally</button>
+
+
+
+        <h5 class="center-align">Save a Password</h5>
+
+        <div class="input-field">
+
+            <input type="text" id="site" placeholder="Website/App">
+
+        </div>
+
+        <div class="input-field">
+
+            <input type="password" id="password" placeholder="Enter Password">
+
+        </div>
+
+        <button class="btn waves-effect waves-light full-width" onclick="encryptPassword()">Save Securely</button>
+
+
+
+        <h5 class="center-align">Saved Passwords</h5>
+
+        <button class="btn btn-show-list full-width" onclick="showSavedSites()">Show My List</button>
+
+        <ul id="siteList" class="collection"></ul>
+
+
+
+        <h5 class="center-align">Retrieve Password</h5>
+
+        <div class="input-field">
+
+            <input type="password" id="masterKey" placeholder="Enter Master Key">
+
+        </div>
+
+        <button class="btn blue full-width" onclick="decryptPassword()">Retrieve</button>
+
+        <p class="center-align"><strong>Decrypted Password:</strong> <span id="decryptedData"></span></p>
+
+
+
+        <h5 class="center-align">Backup & Restore</h5>
+
+        <button class="btn green full-width" onclick="exportPasswords()">Export Passwords</button>
+
+        <input type="file" id="importFile" onchange="importPasswords(event)">
+
+        <button class="btn red full-width" onclick="clearPasswords()">Clear All Passwords</button>
+
+
+
+        <button class="btn orange full-width" onclick="recoverMasterKey()">Recover Master Key</button>
+
+
+
+    </div>
+
+
+
+    <script>
+
+        function refreshPage() {
+
+            location.reload();
+
+        }
+
+
+
+        function generateRecoveryKey() {
+
+            return CryptoJS.lib.WordArray.random(16).toString(CryptoJS.enc.Hex);
+
+        }
+
+
+
+        function saveMasterKey() {
+
+    let masterKey = document.getElementById("setMasterKey").value.trim();
+
+    if (!masterKey) {
+
+        alert("Master key cannot be empty.");
+
+        return;
+
+    }
+
+
+
+    let hashedKey = CryptoJS.SHA256(masterKey).toString();
+
+    localStorage.setItem("masterKey", hashedKey);
+
+    sessionStorage.setItem("currentMasterKey", masterKey); // Store for session
+
+
+
+    // Generate a one-time recovery key
+
+    let recoveryKey = CryptoJS.lib.WordArray.random(16).toString(CryptoJS.enc.Hex);
+
+    let encryptedMasterKey = CryptoJS.AES.encrypt(masterKey, recoveryKey).toString();
+
+    localStorage.setItem("recoveryKey", encryptedMasterKey);
+
+
+
+    // Show the recovery key only once
+
+    showRecoveryKey(recoveryKey);
+
+    
+
+    alert("Master key saved successfully! Please copy your recovery key.");
+
+    document.getElementById("setMasterKeySection").style.display = "none";
+
+}
+
+
+
+function showRecoveryKey(recoveryKey) {
+
+    let recoveryDiv = document.createElement("div");
+
+    recoveryDiv.innerHTML = `
+
+        <p><strong>Your Recovery Key (Copy & Save Securely):</strong></p>
+
+        <input type="text" id="recoveryKeyInput" value="${recoveryKey}" readonly>
+
+        <button onclick="copyRecoveryKey()">📋 Copy</button>
+
+        <button onclick="this.parentElement.remove()">❌ Close</button>
+
+    `;
+
+    recoveryDiv.style.background = "#444";
+
+    recoveryDiv.style.padding = "10px";
+
+    recoveryDiv.style.borderRadius = "8px";
+
+    recoveryDiv.style.marginTop = "10px";
+
+
+
+    document.body.appendChild(recoveryDiv);
+
+}
+
+
+
+function copyRecoveryKey() {
+
+    let input = document.getElementById("recoveryKeyInput");
+
+    input.select();
+
+    document.execCommand("copy");
+
+    alert("Recovery key copied! Save it in a secure place.");
+
+    input.parentElement.remove(); // Hide after copying
+
+}
+
+
+
+
+
+
+
+function recoverMasterKey() {
+
+    let enteredRecoveryKey = prompt("Enter your Recovery Key:");
+
+    if (!enteredRecoveryKey) return;
+
+
+
+    let encryptedMasterKey = localStorage.getItem("recoveryKey");
+
+    if (!encryptedMasterKey) {
+
+        alert("No recovery key found!");
+
+        return;
+
+    }
+
+
+
+    let decryptedMasterKey;
+
+    try {
+
+        decryptedMasterKey = CryptoJS.AES.decrypt(encryptedMasterKey, enteredRecoveryKey).toString(CryptoJS.enc.Utf8);
+
+    } catch (error) {
+
+        alert("Invalid Recovery Key!");
+
+        return;
+
+    }
+
+
+
+    if (!decryptedMasterKey) {
+
+        alert("Incorrect Recovery Key!");
+
+        return;
+
+    }
+
+
+
+    let newMasterKey = prompt("Enter a new Master Key:");
+
+    if (!newMasterKey) {
+
+        alert("Master Key update canceled.");
+
+        return;
+
+    }
+
+
+
+    let hashedNewMasterKey = CryptoJS.SHA256(newMasterKey).toString();
+
+    localStorage.setItem("masterKey", hashedNewMasterKey);
+
+    sessionStorage.setItem("currentMasterKey", newMasterKey);
+
+
+
+    alert("Master Key has been successfully recovered and updated!");
+
+}
+
+
+
+
+
+        function showHint() {
+
+            let hint = localStorage.getItem("hint");
+
+            alert(hint ? "Your hint: " + hint : "No hint is set.");
+
+        }
+
+
+
+        function sendRecoveryKey() {
+
+            let recoveryKey = localStorage.getItem("recoveryKey");
+
+            if (!recoveryKey) {
+
+                alert("No recovery key found!");
+
+                return;
+
+            }
+
+
+
+            let whatsappURL = `https://api.whatsapp.com/send?text=Your%20Recovery%20Key:%20${recoveryKey}`;
+
+            window.open(whatsappURL, "_blank");
+
+        }
+
+
+
+        function downloadRecoveryKey() {
+
+            let recoveryKey = localStorage.getItem("recoveryKey");
+
+            if (!recoveryKey) {
+
+                alert("No recovery key found!");
+
+                return;
+
+            }
+
+
+
+            let blob = new Blob([recoveryKey], { type: "text/plain" });
+
+            let link = document.createElement("a");
+
+            link.href = URL.createObjectURL(blob);
+
+            link.download = "recovery_key.txt";
+
+            link.click();
+
+        }
+
+
+
+        function encryptPassword() {
+
+            let masterKey = sessionStorage.getItem("currentMasterKey");
+
+            if (!masterKey) {
+
+                alert("Master key is required!");
+
+                return;
+
+            }
+
+
+
+            let site = document.getElementById("site").value.trim();
+
+            let password = document.getElementById("password").value.trim();
+
+            if (!site || !password) {
+
+                alert("Please enter both site and password.");
+
+                return;
+
+            }
+
+
+
+            let encrypted = CryptoJS.AES.encrypt(password, masterKey).toString();
+
+            let savedPasswords = JSON.parse(localStorage.getItem("securePasswords")) || {};
+
+            savedPasswords[site] = encrypted;
+
+
+
+            localStorage.setItem("securePasswords", JSON.stringify(savedPasswords));
+
+            alert("Password saved securely!");
+
+        }
+
+
+
+        function decryptPassword() {
+
+            let masterKey = document.getElementById("masterKey").value.trim();
+
+            if (!masterKey) {
+
+                alert("Master key is required!");
+
+                return;
+
+            }
+
+
+
+            let site = prompt("Enter the Website/App to retrieve the password:");
+
+            let savedPasswords = JSON.parse(localStorage.getItem("securePasswords")) || {};
+
+            let encrypted = savedPasswords[site];
+
+
+
+            if (!encrypted) {
+
+                alert("No password found for this site!");
+
+                return;
+
+            }
+
+
+
+            let decrypted = CryptoJS.AES.decrypt(encrypted, masterKey).toString(CryptoJS.enc.Utf8);
+
+            if (!decrypted) {
+
+                alert("Incorrect Master Key!");
+
+                return;
+
+            }
+
+
+
+            document.getElementById("decryptedData").innerText = decrypted;
+
+            alert(`Password for ${site}: ${decrypted}`);
+
+        }
+
+
+
+        function exportPasswords() {
+
+            let savedPasswords = localStorage.getItem("securePasswords");
+
+            if (!savedPasswords) {
+
+                alert("No passwords to export.");
+
+                return;
+
+            }
+
+
+
+            let blob = new Blob([savedPasswords], { type: "application/json" });
+
+            let link = document.createElement("a");
+
+            link.href = URL.createObjectURL(blob);
+
+            link.download = "password_backup.json";
+
+            link.click();
+
+        }
+
+
+
+        function showSavedSites() {
+
+    let masterKey = sessionStorage.getItem("currentMasterKey");
+
+
+
+    if (!masterKey) {
+
+        masterKey = prompt("Enter Master Key to View Saved Sites:");
+
+        if (!masterKey) return; // Stop if user cancels
+
+        sessionStorage.setItem("currentMasterKey", masterKey); // Temporarily store
+
+    }
+
+
+
+    let savedMasterKey = localStorage.getItem("masterKey");
+
+    if (CryptoJS.SHA256(masterKey).toString() !== savedMasterKey) {
+
+        alert("Invalid master key!");
+
+        sessionStorage.removeItem("currentMasterKey"); // Remove incorrect key
+
+        return;
+
+    }
+
+
+
+    let savedPasswords = JSON.parse(localStorage.getItem("securePasswords")) || {};
+
+    let siteList = document.getElementById("siteList");
+
+    siteList.innerHTML = "";
+
+
+
+    if (Object.keys(savedPasswords).length === 0) {
+
+        siteList.innerHTML = "<li class='collection-item'>No saved passwords.</li>";
+
+        return;
+
+    }
+
+
+
+    Object.keys(savedPasswords).forEach(site => {
+
+        let li = document.createElement("li");
+
+        li.classList.add("collection-item");
+
+        li.innerHTML = `
+
+            ${site} 
+
+            <button class="btn-small blue" onclick="revealPassword('${site}')">🔑 Show</button> 
+
+            <span id="password-${site}" class="hidden-password"></span>
+
+        `;
+
+        siteList.appendChild(li);
+
+    });
+
+}
+
+
+
+function revealPassword(site) {
+
+    let masterKey = prompt("Enter Master Key to Reveal Password:");
+
+    if (!masterKey) return;
+
+
+
+    let savedMasterKey = localStorage.getItem("masterKey");
+
+    if (CryptoJS.SHA256(masterKey).toString() !== savedMasterKey) {
+
+        alert("Invalid master key!");
+
+        return;
+
+    }
+
+
+
+    let savedPasswords = JSON.parse(localStorage.getItem("securePasswords")) || {};
+
+    let encrypted = savedPasswords[site];
+
+
+
+    if (!encrypted) {
+
+        alert("No password found!");
+
+        return;
+
+    }
+
+
+
+    let decrypted = CryptoJS.AES.decrypt(encrypted, masterKey).toString(CryptoJS.enc.Utf8);
+
+    if (!decrypted) {
+
+        alert("Incorrect Master Key!");
+
+        return;
+
+    }
+
+
+
+    let passwordElement = document.getElementById(`password-${site}`);
+
+    passwordElement.innerText = decrypted;
+
+    passwordElement.style.display = "inline";
+
+
+
+    // Add Copy Button
+
+    let copyBtn = document.createElement("button");
+
+    copyBtn.innerText = "📋 Copy";
+
+    copyBtn.classList.add("btn-small", "green");
+
+    copyBtn.onclick = () => copyToClipboard(decrypted);
+
+    passwordElement.appendChild(copyBtn);
+
+}
+
+
+
+function copyToClipboard(text) {
+
+            navigator.clipboard.writeText(text).then(() => {
+
+                alert("Password copied!");
+
+            });
+
+        }
+
+
+
+        function importPasswords(event) {
+
+            let reader = new FileReader();
+
+            reader.onload = function(e) {
+
+                localStorage.setItem("securePasswords", e.target.result);
+
+                alert("Passwords imported successfully!");
+
+            };
+
+            reader.readAsText(event.target.files[0]);
+
+        }
+
+
+
+        function clearPasswords() {
+
+            localStorage.removeItem("securePasswords");
+
+            alert("All saved passwords have been cleared!");
+
+        }
+
+    </script>
+
+</body>
+
+</html>
