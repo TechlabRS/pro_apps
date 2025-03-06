@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Expenses Calculator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"> </script>
+
+    <style>
+        /* Default container size (for mobile screens) */
+.container {
+    width: 85%;
+    max-width: 480px;  /* Default: Mobile-friendly width */
+    margin: auto;
+    padding: 10px;
+}
+
+/* Adjust for larger screens (Tablets & Desktops) */
+@media screen and (min-width: 768px) {  
+    .container {
+        max-width: 90%; /* ✅ Use 90% screen width for medium screens */
+    }
+}
+
+@media screen and (min-width: 1200px) { 
+    .container {
+        max-width: 80%; /* ✅ Use 80% screen width for large screens */
+    }
+}
+
+/* For ultra-wide screens (optional) */
+@media screen and (min-width: 1600px) {
+    .container {
+        max-width: 70%; /* ✅ Adjust for ultra-wide screens */
+    }
+}
+
+@media (max-width: 600px) {
+    button {
+        width: 100%; /* Full width on small screens */
+        font-size: 14px;
+        padding: 8px;
+    }
+}
+ /* for balance display*/
+/* General Styles */
+body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+
+/* General Styles */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Compact Card Styles */
+.card {
+    /* background-color: white;
+    padding: 2px 5px; /* Minimal padding */
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    font-size: 10px; /* Small font */
+    height: auto; /* Ultra-compact height */
+    /* display: flex; */
+    align-items: center;
+    justify-content: center;
+    /* width: 100%; Auto width */
+    min-width: 60px; */
+
+    display: grid;
+        grid-template-columns: repeat(2, minmax(80px, 1fr)); /* Two equal columns */
+        gap: 5px; /* Minimal spacing */
+        max-width: 250px; /* Compact width */
+}
+
+/* Balance Cards */
+.balance { background-color: #e3fcef; border-left: 3px solid #27ae60; } /* Green */
+.net-balance { background-color: #e3f2fd; border-left: 3px solid #2980b9; } /* Blue */
+
+/* Income & Expenses */
+.income { background-color: #e8f5e9; border-left: 3px solid #2ecc71; } /* Green */
+.expenses { background-color: #ffebee; border-left: 3px solid #e74c3c; } /* Red */
+
+/* Transfers & Investments */
+.transfers { background-color: #fef9e7; border-left: 3px solid #f1c40f; } /* Yellow */
+.investments { background-color: #e8f5fa; border-left: 3px solid #3498db; } /* Blue */
+
+/* Responsive - Stack in small screens */
+@media (max-width: 280px) {
+    .container {
+        grid-template-columns: auto; /* Stack on very small screens */
+    }
+}
+
+
+
+/* Transaction list styling */
+.transaction {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+/* Modal styling (For Full-Screen Effect on Large Screens) */
+.modal {
+    display: none;
+    position: fixed;
+    top: 10%;
+    left: 5%;
+    width: 90%;  /* ✅ Use 90% screen width for large screens */
+    max-width: 1200px;  /* ✅ Set a max width for clarity */
+    background-color: white;
+    padding: 20px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    overflow-y: auto;
+    max-height: 80vh;
+}
+
+@media screen and (max-width: 768px) {
+    .modal {
+        width: 100%;
+        left: 0;
+        top: 0;
+        height: 100vh;  /* ✅ Full screen on mobile */
+        max-height: none;
+        border-radius: 0;
+    }
+}
+        
+        
+        input, select, button { width: -webkit-fill-available; padding: 10px; margin: 5px 0; border-radius: 5px; border: 1px solid #ccc; }
+        .summary { text-align: center; margin-top: 20px; }
+        .transactions { margin-top: 20px; }
+        
+        button {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    width: auto; /* Adapts size */
+    min-width: 100px; /* Prevents too small buttons */
+    text-align: center;
+    transition: all 0.3s ease-in-out;
+}
+
+button:hover {
+    background: linear-gradient(135deg, #0056b3, #003d80);
+    transform: scale(1.05);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+.button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 15px;
+}
+
+		.transaction span:first-child {
+			flex-grow: 1; /* Keeps date and description left-aligned */
+		}
+
+		.transaction .amount {
+			font-weight: bold;
+			text-align: right;
+			min-width: 60px; /* Ensures alignment */
+		}
+
+		
+        .swipe-left { transform: translateX(-100%); opacity: 0; transition: transform 0.3s, opacity 0.3s; }
+        .swipe-right { transform: translateX(100%); opacity: 0; transition: transform 0.3s, opacity 0.3s; }
+        
+		canvas { 
+    max-width: 100%; 
+    height: 300px !important; /* Fixes the height issue */
+    display: block; /* Ensures it appears properly */
+    margin: auto;
+}
+
+.summary-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .summary-card {
+        flex: 1;
+        min-width: fit-content;
+        text-align: center;
+        padding: 15px;
+        border-radius: 10px;
+        color: white;
+        font-size: 18px;
+        font-weight: bold;
+        box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .balance-card { background: linear-gradient(135deg, #28a745, #218838); }
+    .expense-card { background: linear-gradient(135deg, #dc3545, #c82333); }
+    .self-transfer-card { background: linear-gradient(135deg, #007bff, #0056b3); }
+    .investment-card { background: linear-gradient(135deg, #6f42c1, #5939a1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Daily Expenses Calculator</h2>
+
+        <label>Date:</label>
+        <input type="date" id="date">
+
+        <label>Description:</label>
+        <input type="text" id="description">
+
+        <label>Transaction Type:</label>
+        <select id="transactionType" onchange="updateSubcategories()">
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+            <option value="savings">Savings</option>
+            <option value="acexpense">A/c Expense</option>
+        </select>
+
+        <label>Subcategory:</label>
+        <select id="subcategory"></select>
+
+        <label>Amount:</label>
+        <input type="number" id="amount">
+
+        <button onclick="addTransaction()">Save Transaction</button>
+					
+		<button id="clearDataBtn" onclick="clearAllData()" >Clear All Data</button>
+        <button onclick="exportData()">Export Transactions</button>
+        <input type="file" id="importFile" onchange="importData()" accept=".json">
+
+        <label>Select Month:</label>
+        <select id="monthFilter" onchange="updateUI()"></select>
+
+<div class="summary-container">
+    <div class="card balance">
+        <p>💰 <strong>Actual Balance</strong></p>
+        <h2><strong>₹<span id="actualBalance">0</span></strong></h2>
+    </div>
+    <div class="card net-balance">
+        <p>📈 <strong>Net Balance (Incl. Investments)</strong></p>
+        <h2><strong>₹<span id="netBalance">0</span></strong></h2>
+    </div>
+
+    <div class="card income">
+        <p>🤑 <strong>Income</strong></p>
+        <h2><strong>₹<span id="incomeTotal">0</span></strong></h2>
+    </div>
+    <div class="card expenses">
+        <p>💸 <strong>Monthly Expenses</strong></p>
+        <h2><strong>₹<span id="monthlyTotal">0</span></strong></h2>
+    </div>
+
+    <div class="card transfers">
+        <p>🔄 <strong>Self Transfers</strong></p>
+        <h2><strong>₹<span id="selfTransferTotal">0</span></strong></h2>
+    </div>
+    <div class="card investments">
+        <p>📊 <strong>Investments</strong></p>
+        <h2><a href="#" onclick="showInvestmentModal()">₹<span id="investmentTotal">0</span></a></h2>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="investmentModal" class="modal" style="display: none; position: fixed; top: 50px; left: 50%; transform: translateX(-50%); background: white; padding: 20px; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);">
+    <h3>Investment Transactions</h3>
+    <div id="investmentList"></div>
+    <button onclick="closeInvestmentModal()">Close</button>
+</div>
+
+        <div style="text-align:center;">
+    <canvas id="expenseChart"></canvas>
+</div>
+
+<div id="transactionList" class="transactions"></div>
+
+    </div>
+
+    <script>
+        let transactions = JSON.parse(localStorage.getItem("rdailycalc")) || [];
+         let editTransactionId = null; // Store the ID of the transaction being edited
+        
+
+        function updateSubcategories() {
+            const type = document.getElementById("transactionType").value;
+            const subcategory = document.getElementById("subcategory");
+            subcategory.innerHTML = "";
+
+            const options = {
+                income: ["In-hand Cash", "A/c", "Savings", "Salary", "Earnings"],
+                expense: ["Health & Daily Care", "Medicine", "Daily Use", "Fruits", "Foods & Drinks", "Transfer", "All Bills", "EMI", "CC Bills", "Groceries & Items", "Shopping", "Clothes", "Others", "Self Transfer"],
+                acexpense: ["HDFC", "AXIS", "SBI", "ICICI"],
+                savings: ["FD", "Stocks", "PPF", "Postal Savings"]
+            };
+
+            options[type].forEach(sub => {
+                let opt = document.createElement("option");
+                opt.value = sub;
+                opt.textContent = sub;
+                subcategory.appendChild(opt);
+            });
+        }
+
+        function addTransaction() {
+    let description = document.getElementById("description").value;
+    let amount = parseFloat(document.getElementById("amount").value);
+    let type = document.getElementById("transactionType").value;
+    let date = document.getElementById("date").value;
+    let subcategory = document.getElementById("subcategory").value;
+    
+    if (!description || isNaN(amount) || !date) {
+        alert("Please fill all fields!");
+        return;
+    }
+
+    if (editTransactionId !== null) {
+        // Find the index of the transaction being edited
+        let index = transactions.findIndex(t => t.id === editTransactionId);
+        if (index !== -1) {
+            // Update the existing transaction directly in the array
+            transactions[index] = {
+                id: editTransactionId,
+                description,
+                amount,
+                type,
+                date,
+                subcategory
+            };
+        }
+        editTransactionId = null; // Reset edit mode
+    } else {
+        // Adding a new transaction
+        let newTransaction = {
+            id: Date.now(),
+            description,
+            amount,
+            type,
+            date,
+            subcategory
+        };
+        transactions.push(newTransaction);
+    }
+
+    // Save updated transactions to localStorage
+    localStorage.setItem("rdailycalc", JSON.stringify(transactions));
+
+    // Refresh UI
+    updateUI();
+}
+
+        function deleteTransaction(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            localStorage.setItem("rdailycalc", JSON.stringify(transactions));
+            updateUI();
+        }
+        
+       
+
+        function editTransaction(id) {
+    const trans = transactions.find(t => t.id === id);
+    if (trans) {
+        document.getElementById("date").value = trans.date;
+        document.getElementById("description").value = trans.description;
+        document.getElementById("transactionType").value = trans.type;
+        updateSubcategories(); // Update subcategory dropdown
+        document.getElementById("subcategory").value = trans.subcategory;
+        document.getElementById("amount").value = trans.amount;
+
+        editTransactionId = id; // Store the ID of the transaction being edited
+    }
+}
+
+        document.addEventListener("DOMContentLoaded", () => {
+    transactions = JSON.parse(localStorage.getItem("rdailycalc")) || [];
+    document.getElementById("date").value = new Date().toISOString().split("T")[0];
+    updateSubcategories();
+    populateMonthDropdown();
+    updateUI();
+});
+
+
+        function populateMonthDropdown() {
+            const monthFilter = document.getElementById("monthFilter");
+            monthFilter.innerHTML = `<option value="all">All Months</option>`;
+
+            const months = [...new Set(transactions.map(t => t.date.slice(0, 7)))];
+            months.sort().reverse();
+
+            months.forEach(month => {
+                let option = document.createElement("option");
+                option.value = month;
+                option.textContent = new Date(month + "-01").toLocaleString('default', { month: 'long', year: 'numeric' });
+                monthFilter.appendChild(option);
+            });
+        }
+
+        function updateUI() {
+    let actualBalance = 0, netBalance = 0;
+    let monthlyTotal = 0, selfTransferTotal = 0, investmentTotal = 0, incomeTotal = 0;
+
+    const transactionList = document.getElementById("transactionList");
+    transactionList.innerHTML = ""; // ✅ Clear before updating
+
+    if (transactions.length === 0) {
+        transactionList.innerHTML = "<p>No transactions yet!</p>"; // ✅ Show message
+    }
+
+    const selectedMonth = document.getElementById("monthFilter").value;
+    let filteredTransactions = selectedMonth === "all" 
+        ? transactions 
+        : transactions.filter(t => t.date.startsWith(selectedMonth));
+
+    // ✅ Sort by date (Newest First)
+    filteredTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    filteredTransactions.forEach(trans => {
+        const transactionItem = document.createElement("div");
+        transactionItem.className = "transaction";
+        transactionItem.style.display = "flex";
+        transactionItem.style.justifyContent = "space-between";
+
+        let amountSign = "";
+        let amountColor = "black"; // Default color
+
+        if (trans.type === "expense" || trans.type === "acexpense" ) {
+            if (trans.subcategory === "Self Transfer") {
+                selfTransferTotal += trans.amount;
+                // ✅ Self Transfer does not affect balances
+            } else {
+                actualBalance -= trans.amount;
+                netBalance -= trans.amount; // ✅ Expense reduces both balances
+                monthlyTotal += trans.amount;
+                amountSign = "-";
+                amountColor = "lightcoral"; // ✅ Expense color
+            }
+        } 
+        else if (trans.type === "income") {
+            actualBalance += trans.amount;
+            netBalance += trans.amount; // ✅ Income increases both balances
+            incomeTotal += trans.amount;
+            amountSign = "+";
+            amountColor = "lightgreen"; // ✅ Income color
+        } 
+        else if (trans.type === "savings") {
+            investmentTotal += trans.amount;
+            actualBalance -= trans.amount; // ✅ Investment reduces actual balance
+            amountSign = "-";
+            amountColor = "darkblue"; // ✅ Investment color
+        }
+
+        transactionItem.innerHTML = `
+            <span>${trans.date} - ${trans.description} (${trans.subcategory})</span>
+            <strong style="color: ${amountColor};">${amountSign}₹${trans.amount}</strong>
+        `;
+
+        addSwipeListeners(transactionItem, trans.id); // ✅ Ensure swipe works
+        transactionList.appendChild(transactionItem);
+    });
+
+    // ✅ Net Balance = Actual Balance + Investments
+    netBalance = actualBalance + investmentTotal;
+
+    // ✅ Update UI values
+    document.getElementById("actualBalance").textContent = actualBalance;
+    document.getElementById("netBalance").textContent = netBalance;
+    document.getElementById("monthlyTotal").textContent = monthlyTotal;
+    document.getElementById("selfTransferTotal").textContent = selfTransferTotal;
+    document.getElementById("investmentTotal").textContent = investmentTotal;
+    document.getElementById("incomeTotal").textContent = incomeTotal; // ✅ Show Income Separately
+
+    updateChart(); // ✅ Ensure chart updates
+}
+
+
+function showInvestmentModal() {
+    const investmentList = document.getElementById("investmentList");
+    investmentList.innerHTML = ""; // ✅ Clear previous data
+
+    let investments = transactions.filter(t => t.type === "savings");
+
+    if (investments.length === 0) {
+        investmentList.innerHTML = "<p>No investments found!</p>";
+    } else {
+        investments.forEach(trans => {
+            let item = document.createElement("div");
+            item.innerHTML = `
+                <span>${trans.date} - ${trans.description} (${trans.subcategory})</span>
+                <strong style="color: darkblue;">₹${trans.amount}</strong>
+            `;
+            investmentList.appendChild(item);
+        });
+    }
+
+    document.getElementById("investmentModal").style.display = "block";
+}
+
+function closeInvestmentModal() {
+    document.getElementById("investmentModal").style.display = "none";
+}
+
+
+		
+		function updateChart() {
+    const ctx = document.getElementById("expenseChart").getContext("2d");
+
+    if (window.expenseChartInstance) {
+        window.expenseChartInstance.destroy();
+    }
+
+    const expenseCategories = {};
+    transactions.forEach(trans => {
+        if (trans.type === "expense" || trans.type === "acexpense" && trans.subcategory !== "Self Transfer") {
+            expenseCategories[trans.subcategory] = (expenseCategories[trans.subcategory] || 0) + trans.amount;
+        }
+    });
+
+    if (Object.keys(expenseCategories).length === 0) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        return;
+    }
+
+    window.expenseChartInstance = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+            labels: Object.keys(expenseCategories),
+            datasets: [{
+                data: Object.values(expenseCategories),
+                backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4CAF50", "#8E44AD", "#E74C3C"]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+}
+
+
+function addSwipeListeners(element, transactionId) {
+    let startX = 0;
+
+    element.addEventListener("touchstart", function (e) {
+        startX = e.touches[0].clientX;
+    });
+
+    element.addEventListener("touchmove", function (e) {
+        let moveX = e.touches[0].clientX;
+        let diffX = moveX - startX;
+
+        if (diffX < -50) { // Swipe Left → Delete
+            let transaction = transactions.find(t => t.id === transactionId);
+            
+            if (transaction) {
+                let confirmDelete = confirm(
+                    `🗑 Confirm Deletion\n\n📅 Date: ${transaction.date}\n📝 Description: ${transaction.description}\n💰 Amount: ₹${transaction.amount}\n\nAre you sure you want to delete this transaction?`
+                );
+
+                if (confirmDelete) {
+                    element.classList.add("swipe-left");
+                    setTimeout(() => deleteTransaction(transactionId), 300);
+                }
+            }
+        } else if (diffX > 50) { // Swipe Right → Edit
+            let transaction = transactions.find(t => t.id === transactionId);
+            
+            if (transaction) {
+                let confirmEdit = confirm(
+                    `✏ Edit Transaction\n\n📅 Date: ${transaction.date}\n📝 Description: ${transaction.description}\n💰 Amount: ₹${transaction.amount}\n\nDo you want to edit this transaction?`
+                );
+
+                if (confirmEdit) {
+                    element.classList.add("swipe-right");
+                    setTimeout(() => editTransaction(transactionId), 300);
+                }
+            }
+        }
+    });
+
+    element.addEventListener("touchend", function () {
+        element.classList.remove("swipe-left", "swipe-right");
+    });
+}
+
+function clearAllData() {
+    if (confirm("Are you sure you want to clear all transactions?")) {
+        transactions = []; // Reset transactions
+        localStorage.removeItem("rdailycalc"); // Clear local storage
+
+        // Reset the UI directly
+        document.getElementById("transactionList").innerHTML = "";
+        document.getElementById("monthlyTotal").textContent = "0";
+        document.getElementById("selfTransferTotal").textContent = "0";
+        document.getElementById("investmentTotal").textContent = "0";
+		document.getElementById("actualBalance").textContent = "0";
+		document.getElementById("netBalance").textContent = "0";
+
+
+        updateChart(); // Reset the chart
+		updateUI();
+    }
+}
+
+
+
+        function exportData() {
+            const filename = `expenses_${new Date().toLocaleDateString("en-GB").replace(/\//g, "")}.json`;
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions));
+            const dlAnchor = document.createElement("a");
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", filename);
+            dlAnchor.click();
+        }
+
+        function importData() {
+            const file = document.getElementById("importFile").files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    transactions = JSON.parse(event.target.result);
+                    localStorage.setItem("rdailycalc", JSON.stringify(transactions));
+                    updateUI();
+                } catch (e) {
+                    alert("Invalid file format!");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        let startX = 0;
+let endX = 0;
+const swipeThreshold = 50; // Adjust sensitivity (higher = harder to trigger)
+
+document.querySelectorAll('.summary-card').forEach(card => {
+    card.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+    });
+
+    card.addEventListener('touchmove', (e) => {
+        endX = e.touches[0].clientX;
+    });
+
+    card.addEventListener('touchend', (e) => {
+        let diff = endX - startX;
+        if (Math.abs(diff) < swipeThreshold) {
+            e.preventDefault(); // Prevent accidental swipe triggers
+        }
+    });
+});
+
+
+    </script>
+</body>
+</html>
