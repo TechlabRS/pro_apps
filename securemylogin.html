@@ -355,30 +355,53 @@ function getMasterKey() {
 
 // Modified function to retrieve and decrypt password
 function decryptPassword() {
-    let masterKey = getMasterKey();
 
-    if (!masterKey) {
-        masterKey = prompt("Enter Master Key to retrieve passwords:");
-        if (masterKey) {
-            sessionStorage.setItem("sessionMasterKey", masterKey);
-        } else {
-            alert("Master key is required!");
-            return;
-        }
-    }
+            let masterKey = document.getElementById("masterKey").value.trim();
 
-    // Decryption logic (Assuming you have some decryption function)
-    const encryptedData = localStorage.getItem("encryptedPasswords");
-    if (encryptedData) {
-        try {
-            const decryptedData = atob(encryptedData); // Example decryption
-            document.getElementById("decryptedData").textContent = decryptedData;
-        } catch (error) {
-            alert("Incorrect Master Key!");
-        }
-    } else {
-        alert("No saved passwords.");
-    }
+            if (!masterKey) {
+
+                alert("Master key is required!");
+
+                return;
+
+            }
+
+
+
+            let site = prompt("Enter the Website/App to retrieve the password:");
+
+            let savedPasswords = JSON.parse(localStorage.getItem("securePasswords")) || {};
+
+            let encrypted = savedPasswords[site];
+
+
+
+            if (!encrypted) {
+
+                alert("No password found for this site!");
+
+                return;
+
+            }
+
+
+
+            let decrypted = CryptoJS.AES.decrypt(encrypted, masterKey).toString(CryptoJS.enc.Utf8);
+
+            if (!decrypted) {
+
+                alert("Incorrect Master Key!");
+
+                return;
+
+            }
+
+
+
+            document.getElementById("decryptedData").innerText = decrypted;
+
+            alert(`Password for ${site}: ${decrypted}`);
+
 }
 
 
