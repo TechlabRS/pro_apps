@@ -484,8 +484,9 @@ function deletePassword(site) {
 
 
 function revealPassword(site) {
-    let masterKey = prompt("Enter Master Key to Reveal Password:");
-    if (!masterKey) return;
+    //let masterKey = prompt("Enter Master Key to Reveal Password:");
+	let masterKey = sessionStorage.getItem("currentMasterKey");
+	if (!masterKey) return;
 
     let savedMasterKey = localStorage.getItem("masterKey");
     if (CryptoJS.SHA256(masterKey).toString() !== savedMasterKey) {
