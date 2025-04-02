@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Secure Password Manager</title>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom Styles -->
+    <style>
+        /* Improved Colors */
+        body {
+            background-color: #600c63; /* Darker shade for sleek UI */
+            color: #fff;
+        }
+        .card {
+            background-color: #11a7c2e7; /* Darker form background */
+            border: none;
+        }
+        .form-control {
+            background-color: #ffffff; /* Smooth dark input */
+            color: rgb(230, 190, 190);
+            border: 1px solid #4a4f57; /* Subtle border */
+        }
+        .form-control:focus {
+            border-color: #0d6efd; /* Blue highlight */
+            box-shadow: 0 0 5px rgba(13, 110, 253, 0.5);
+        }
+        .btn{
+            max-width: fit-content;
+            align-self: center;
+        }
+
+    .hidden-password {
+        font-weight: bold;
+        color: gray;
+    }
+    button {
+        margin: 5px;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    
+
+    /* Responsive Table */
+.table-container {
+    width: 100%;
+    overflow-x: auto; /* Enables scrolling on small screens */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 5px; /* Reduce padding */
+    text-align: center;
+    font-size: 14px; /* Reduce font size for mobile */
+}
+
+/* Buttons - Make Smaller */
+button {
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Green Show Button */
+.green {
+    background-color: green;
+    color: white;
+    border: none;
+}
+
+/* Red Delete Button */
+.red {
+    background-color: red;
+    color: white;
+    border: none;
+}
+
+/* Copy Button */
+.copy-btn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+}
+
+/* Mobile View - Stack elements */
+@media (max-width: 600px) {
+    th, td {
+        font-size: 12px; /* Even smaller for mobile */
+        padding: 3px;
+    }
+
+    .actions {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    button {
+        width: 100%;
+    }
+}
+
+
+    </style>
+</head>
+<body>
+
+    <div class="container mt-4">
+        <h4 class="text-center">🔐 R' $ecure PaswdMgr</h4>
+        <button class="btn btn-secondary w-100 mb-3" onclick="refreshPage()">🔄 Refresh</button>
+    
+        <!-- Set Master Key Section -->
+        <div class="card p-3 mb-4">
+            <h5 class="text-center">Set Master Key</h5>
+            <div class="mb-3">
+                <input type="password" class="form-control" id="setMasterKey" placeholder="Enter a Master Key">
+            </div>
+            <div class="mb-3">
+                <input type="text" class="form-control" id="hint" placeholder="Enter a Hint (Optional)">
+            </div>
+            <button class="btn btn-success w-100" onclick="saveMasterKey()">Save Master Key</button>
+        </div>
+    
+
+    <!-- Save Password Section -->
+    <div class="card p-3 mb-4">
+        <h5 class="text-center">Save a Password</h5>
+        <div class="mb-3">
+            <input type="text" class="form-control" id="site" placeholder="Website/App">
+        </div>
+        <div class="mb-3">
+            <input type="password" class="form-control" id="password" placeholder="Enter Password">
+        </div>
+        <button class="btn btn-info" onclick="encryptPassword()">Save Securely</button>
+    </div>
+
+    <!-- Saved Passwords -->
+    <div class="card p-3 mb-4">
+        <h5 class="text-center">Saved Usernames</h5>
+        <button class="btn btn-secondary w-100 mb-3" onclick="showUsernames()">SHOW MY LIST</button>
+        <div id="userList"></div>
+
+        <h3>Reveal Password</h3>
+        <input class="form-control" type="text" id="selectedUser" placeholder="Enter Username">
+        <button class="btn btn-warning w-100 mb-2" onclick="revealPassword()">REVEAL PASSWORD</button>
+        <p>Password: <span id="revealedPassword"></span></p>
+        <button class="btn-small green" onclick="copyPassword()">COPY</button>
+        <button class="btn-small red" onclick="deletePassword()">DELETE</button>    
+    </div>
+
+    <!-- Retrieve Password Section -->
+    <div class="card p-3 mb-4">
+        <h5 class="text-center">Retrieve Password</h5>
+        <div class="mb-3">
+            <input type="password" class="form-control" id="masterKey" placeholder="Enter Master Key">
+        </div>
+        <button class="btn btn-primary w-100 mb-2" onclick="decryptPassword()">Retrieve</button>
+        <p class="text-center"><strong>Decrypted Password:</strong> <span id="decryptedData"></span></p>
+    </div>
+
+    <!-- Recovery Options -->
+    <div class="card p-3 mb-4">
+        <h5 class="text-center">Recovery Options</h5>
+        <button class="btn btn-primary w-100 mb-2" onclick="showHint()">🔑 Show Hint</button>
+        <button class="btn btn-warning w-100 mb-2" onclick="sendRecoveryKey()">📩 Send via WhatsApp</button>
+        <button class="btn btn-info w-100" onclick="downloadRecoveryKey()">💾 Save Locally</button>
+    </div>
+
+
+
+    <!-- Backup & Restore Section -->
+    <div class="card p-3">
+        <h5 class="text-center">Backup & Restore</h5>
+        <button class="btn btn-success w-100 mb-2" onclick="exportPasswords()">Export Passwords</button>
+        <input type="file" id="importFile" class="form-control mb-2" onchange="importPasswords(event)">
+        <button class="btn btn-danger w-100 mb-2" onclick="clearPasswords()">Clear All Passwords</button>
+        <button class="btn btn-warning w-100" onclick="recoverMasterKey()">Recover Master Key</button>
+    </div>
+
+</div>
+
+</body>
+
+<script>
+
+</script>
+</html>
