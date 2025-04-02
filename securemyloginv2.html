@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Password Manager</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1e3a5f;
+            color: white;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            background-color: #2a4d75;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        input, button {
+            width: 90%;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+        }
+        button { cursor: pointer; }
+        .btn-save { background: green; color: white; }
+        .btn-reveal { background: blue; color: white; }
+        .btn-delete { background: red; color: white; }
+        .btn-copy { background: #4CAF50; color: white; }
+        .strength-meter { height: 5px; width: 100%; margin-top: 5px; }
+        .weak { background: red; }
+        .medium { background: orange; }
+        .strong { background: green; }
+        .chip {
+            display: inline-block;
+            padding: 8px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>🔒 Secure Password Manager</h2>
+
+        <h3>Set Master Key</h3>
+        <input type="password" id="masterKey" placeholder="Enter Master Key">
+        <button onclick="setMasterKey()">SET MASTER KEY</button>
+
+        <!-- Forgot Master Key -->
+        <button class="btn btn-warning w-100 mt-2" onclick="recoverMasterKey()">Forgot Master Key?</button>
+            
+        <div id="recoveryKeySection"></div>
+
+        <h3>Enter Master Key</h3>
+        <input type="password" id="masterKey" placeholder="Enter Master Key">
+        <button onclick="verifyMasterKey()">VERIFY</button>
+
+        <h3>Save a Password</h3>
+        <input type="text" id="website" placeholder="Website/App">
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password" oninput="checkPasswordStrength()">
+        <div class="strength-meter" id="strengthMeter"></div>
+        <button class="btn-save" onclick="savePassword()">SAVE SECURELY</button>
+
+        <h3>Saved Usernames</h3>
+        <button onclick="showUsernames()">SHOW MY LIST</button>
+        <div id="userList"></div>
+
+        <h3>Reveal Password</h3>
+        <input type="text" id="selectedUser" placeholder="Enter Username">
+        <button class="btn-reveal" onclick="revealPassword()">REVEAL PASSWORD</button>
+        <p>Password: <span id="revealedPassword"></span></p>
+        <button class="btn-copy" onclick="copyPassword()">COPY</button>
+        <button class="btn-delete" onclick="deletePassword()">DELETE</button>
+
+        <h3>Import / Export</h3>
+        <button onclick="exportPasswords()">EXPORT</button>
+        <input type="file" id="importFile" onchange="importPasswords(event)">
+    </div>
+
+    <script>
+        let passwords = JSON.parse(localStorage.getItem("passwords")) || {};
+        let storedHash = localStorage.getItem("masterKeyHash");
+        let masterKeyValidated = false;
+        let masterKeyTimeout;
+        let recoveryKey = generateRecoveryKey();
+        let hashedRecoveryKey = CryptoJS.SHA256(recoveryKey).toString();
+
+        localStorage.setItem("recoveryKey", hashedRecoveryKey);
+
+        function setMasterKey() {
+            let masterKey = document.getElementById("masterKey").value;
+            if (!masterKey) {
+                alert("Master Key cannot be empty!");
+                return;
+            }
+
+            let hashedKey = CryptoJS.SHA256(masterKey).toString();
+            localStorage.setItem("masterKeyHash", hashedKey);
+            alert("Master Key Set Successfully!");
+
+            // Show Recovery Key with Copy Button
+        document.getElementById("recoveryKeySection").innerHTML = `
+        <div class="alert alert-info text-center">
+            <strong>Your Recovery Key:</strong> <span id="generatedRecoveryKey">${recoveryKey}</span>
+            <button class="btn btn-sm btn-primary" onclick="copyRecoveryKey()">Copy</button>
+        </div>
+        <p class="text-danger text-center"><b>Save this key safely! It cannot be recovered later.</b></p>
+        `;
+
+            alert("Master Key saved successfully! Make sure to copy and store your Recovery Key.");
+        }
+
+        function copyRecoveryKey() {
+        let recoveryKeyText = document.getElementById("generatedRecoveryKey").innerText;
+        
+        navigator.clipboard.writeText(recoveryKeyText).then(() => {
+            alert("Recovery Key copied to clipboard!");
+        }).catch(err => {
+            alert("Failed to copy Recovery Key: " + err);
+        });
+}
+
+        function setMasterKeyTimeout() {
+            masterKeyTimeout = setTimeout(() => {
+                masterKeyValidated = false;
+                alert("Master Key session expired! Please enter again.");
+            }, 1 * 60 * 1000);  // 5 minutes timeout
+        }
+
+        function verifyMasterKey() {
+            let masterKey = document.getElementById("masterKey").value;
+            if (!masterKey) {
+                alert("Master Key is required!");
+                return;
+            }
+            if (CryptoJS.SHA256(masterKey).toString() !== storedHash) {
+                alert("Incorrect Master Key!");
+                return;
+            }
+            masterKeyValidated = true;
+            alert("Master Key Verified!");
+            setMasterKeyTimeout();
+        }
+
+        function getMasterKey() {
+            if (!masterKeyValidated) {
+                alert("Session Expired! Enter Master Key Again.");
+                return null;
+            }
+            return document.getElementById("masterKey").value;
+        }
+
+        function encryptPassword(password, key) {
+            return CryptoJS.AES.encrypt(password, key).toString();
+        }
+
+        function decryptPassword(encrypted, key) {
+            try {
+                let bytes = CryptoJS.AES.decrypt(encrypted, key);
+                return bytes.toString(CryptoJS.enc.Utf8);
+            } catch (e) {
+                alert("Decryption failed! Incorrect Master Key?");
+                return null;
+            }
+        }
+
+        function savePassword() {
+            let masterKey = getMasterKey();
+            if (!masterKey) return;
+
+            let website = document.getElementById("website").value;
+            let username = document.getElementById("username").value;
+            let password = document.getElementById("password").value;
+            
+            if (!website || !username || !password) {
+                alert("All fields are required!");
+                return;
+            }
+
+            passwords[username] = encryptPassword(password, masterKey);
+            localStorage.setItem("passwords", JSON.stringify(passwords));
+            alert("Password saved securely!");
+        }
+
+        function checkPasswordStrength() {
+            let password = document.getElementById("password").value;
+            let strengthMeter = document.getElementById("strengthMeter");
+
+            if (password.length < 6) strengthMeter.className = "strength-meter weak";
+            else if (password.length < 12) strengthMeter.className = "strength-meter medium";
+            else strengthMeter.className = "strength-meter strong";
+        }
+
+        function showUsernames() {
+            if (!masterKeyValidated) {
+                alert("Session Expired! Enter Master Key Again.");
+                return;
+            }
+
+            let userListDiv = document.getElementById("userList");
+            userListDiv.innerHTML = "";
+            Object.keys(passwords).forEach(user => {
+                let chip = document.createElement("div");
+                chip.classList.add("chip");
+                chip.innerText = user;
+                chip.onclick = () => document.getElementById("selectedUser").value = user;
+                userListDiv.appendChild(chip);
+            });
+        }
+
+        function revealPassword() {
+            let masterKey = getMasterKey();
+            if (!masterKey) return;
+
+            let user = document.getElementById("selectedUser").value;
+            if (passwords[user]) {
+                document.getElementById("revealedPassword").innerText = decryptPassword(passwords[user], masterKey);
+            } else {
+                alert("No password found!");
+            }
+        }
+
+        function copyPassword() {
+            let password = document.getElementById("revealedPassword").innerText;
+            if (!password) return alert("No password to copy!");
+            navigator.clipboard.writeText(password);
+            alert("Copied to clipboard!");
+        }
+
+        function deletePassword() {
+            let user = document.getElementById("selectedUser").value;
+            if (passwords[user]) {
+                delete passwords[user];
+                localStorage.setItem("passwords", JSON.stringify(passwords));
+                alert("Password deleted!");
+            } else {
+                alert("User not found!");
+            }
+        }
+
+        function generateRecoveryKey() {
+    let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let key = "";
+    for (let i = 0; i < 16; i++) {
+        key += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return key;
+}
+
+function recoverMasterKey() {
+    let storedRecoveryKeyHash = localStorage.getItem("recoveryKey");
+
+    if (!storedRecoveryKeyHash) {
+        alert("Recovery Key not set! Cannot recover Master Key.");
+        return;
+    }
+
+    let userRecoveryKey = prompt("Enter your Recovery Key:");
+
+    if (!userRecoveryKey) {
+        alert("Recovery Key cannot be empty.");
+        return;
+    }
+
+    let hashedUserRecoveryKey = CryptoJS.SHA256(userRecoveryKey).toString();
+
+    if (hashedUserRecoveryKey === storedRecoveryKeyHash) {
+        let newMasterKey = prompt("Correct Recovery Key! Enter a new Master Key:");
+
+        if (!newMasterKey) {
+            alert("Master Key cannot be empty.");
+            return;
+        }
+
+        let newHashedKey = CryptoJS.SHA256(newMasterKey).toString();
+        localStorage.setItem("masterKey", newHashedKey);
+        sessionStorage.setItem("currentMasterKey", newMasterKey);
+
+        alert("Master Key successfully reset!");
+    } else {
+        alert("Incorrect Recovery Key! Cannot reset Master Key.");
+    }
+}
+
+        function exportPasswords() {
+            let dataStr = JSON.stringify(passwords, null, 2);
+            let blob = new Blob([dataStr], { type: "application/json" });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement("a");
+            a.href = url;
+            a.download = "passwords.json";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function importPasswords(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                passwords = JSON.parse(e.target.result);
+                localStorage.setItem("passwords", JSON.stringify(passwords));
+                alert("Passwords imported successfully!");
+            };
+            reader.readAsText(file);
+        }
+    </script>
+
+</body>
+</html>
