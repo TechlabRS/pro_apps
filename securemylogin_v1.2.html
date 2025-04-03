@@ -457,15 +457,15 @@
         return CryptoJS.AES.encrypt(password, key).toString();
     }
 
-    // function decryptPassword(encrypted, key) {
-    //     try {
-    //         let bytes = CryptoJS.AES.decrypt(encrypted, key);
-    //         return bytes.toString(CryptoJS.enc.Utf8);
-    //     } catch (e) {
-    //         alert("Decryption failed! Incorrect Master Key?");
-    //         return null;
-    //     }
-    // }
+    function decryptPassword(encrypted, key) {
+        try {
+            let bytes = CryptoJS.AES.decrypt(encrypted, key);
+            return bytes.toString(CryptoJS.enc.Utf8);
+         } catch (e) {
+             alert("Decryption failed! Incorrect Master Key?");
+             return null;
+        }
+     }
 
 //     function decryptPassword(username, masterKey) {
 //     // Retrieve stored passwords from localStorage
