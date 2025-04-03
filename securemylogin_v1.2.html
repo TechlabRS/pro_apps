@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Secure Password Manager</title>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
     <!-- Bootstrap 5 CSS -->
@@ -14,89 +13,117 @@
     <style>
         /* Improved Colors */
         body {
-            background-color: #600c63; /* Darker shade for sleek UI */
+            background-color: #600c63;
+            /* Darker shade for sleek UI */
             color: #fff;
         }
+
         .card {
-            background-color: #11a7c2e7; /* Darker form background */
+            background-color: #11a7c2e7;
+            /* Darker form background */
             border: none;
         }
+
         .form-control {
-            background-color: #ffffff; /* Smooth dark input */
+            background-color: #ffffff;
+            /* Smooth dark input */
             color: rgb(230, 190, 190);
-            border: 1px solid #4a4f57; /* Subtle border */
+            border: 1px solid #4a4f57;
+            /* Subtle border */
         }
+
         .form-control:focus {
-            border-color: #0d6efd; /* Blue highlight */
+            border-color: #0d6efd;
+            /* Blue highlight */
             box-shadow: 0 0 5px rgba(13, 110, 253, 0.5);
         }
-        .btn{
+
+        .btn {
             max-width: fit-content;
             align-self: center;
         }
 
-    .hidden-password {
-        font-weight: bold;
-        color: gray;
-    }
-    button {
-        margin: 5px;
-        padding: 5px 10px;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-    
+        .hidden-password {
+            font-weight: bold;
+            color: gray;
+        }
 
-    /* Responsive Table */
-.table-container {
-    width: 100%;
-    overflow-x: auto; /* Enables scrolling on small screens */
-}
+        button {
+            margin: 5px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
 
-th, td {
-    padding: 5px; /* Reduce padding */
-    text-align: center;
-    font-size: 14px; /* Reduce font size for mobile */
-}
+        /* Responsive Table */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            /* Enables scrolling on small screens */
+        }
 
-/* Buttons - Make Smaller */
-button {
-    padding: 4px 8px;
-    font-size: 12px;
-    border-radius: 4px;
-    cursor: pointer;
-}
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
 
-/* Green Show Button */
-.green {
-    background-color: green;
-    color: white;
-    border: none;
-}
+        th,
+        td {
+            padding: 5px;
+            /* Reduce padding */
+            text-align: center;
+            font-size: 14px;
+            /* Reduce font size for mobile */
+        }
 
-/* Red Delete Button */
-.red {
-    background-color: red;
-    color: white;
-    border: none;
-}
+        /* Buttons - Make Smaller */
+        button {
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
 
-/* Copy Button */
-.copy-btn {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-}
+        /* Green Show Button */
+        .green {
+            background-color: green;
+            color: white;
+            border: none;
+        }
 
-.strength-meter { height: 5px; width: 100%; margin-top: 5px; }
-        .weak { background: red; }
-        .medium { background: orange; }
-        .strong { background: green; }
+        /* Red Delete Button */
+        .red {
+            background-color: red;
+            color: white;
+            border: none;
+        }
+
+        /* Copy Button */
+        .copy-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+        }
+
+        .strength-meter {
+            height: 5px;
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        .weak {
+            background: red;
+        }
+
+        .medium {
+            background: orange;
+        }
+
+        .strong {
+            background: green;
+        }
+
         .chip {
             display: inline-block;
             padding: 8px;
@@ -107,43 +134,68 @@ button {
             cursor: pointer;
         }
 
-    .timer {
-    font-size: 18px;
-    font-weight: bold;
-    color: yellow;
-    background-color: #333;
-    padding: 10px;
-    border-radius: 5px;
-    text-align: center;
-}
+        .timer {
+            font-size: 18px;
+            font-weight: bold;
+            color: yellow;
+            background-color: #333;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
 
-/* Mobile View - Stack elements */
-@media (max-width: 600px) {
-    th, td {
-        font-size: 12px; /* Even smaller for mobile */
-        padding: 3px;
+        /* Mobile View - Stack elements */
+        @media (max-width: 600px) {
+
+            th,
+            td {
+                font-size: 12px;
+                /* Even smaller for mobile */
+                padding: 3px;
+            }
+
+            .actions {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+
+        button {
+                width: 100%;
+            }
+        }
+
+        #masterKeyStatus {
+            font-weight: bold;
+            font-size: 18px;
+            text-align: center;
+
+            background-color: rebeccapurple;
+        }
+
+        #userList2 {
+    list-style-type: none;
+    padding: 0;
+    border: 1px solid #ccc;
+    max-height: 200px;
+    overflow-y: auto;
+    background: white;
+    position: absolute;
+    width: 100%;
     }
 
-    .actions {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
+    .user-item {
+        padding: 8px;
+        cursor: pointer;
     }
 
-    button {
-        width: 100%;
+    .user-item:hover {
+        background-color: #f0f0f0;
     }
-}
 
-#masterKeyStatus {
-    font-weight: bold;
-    font-size: 18px;
-    text-align: center;
-    
-    background-color: rebeccapurple;
-}
-</style>
+    </style>
 </head>
+
 <body>
 
     <div class="container mt-4">
@@ -153,10 +205,10 @@ button {
         <p class="timer card p-3 mb-2" id="timerDisplay"> --:--</p>
 
         <div class="card p-3 mb-2" id="masterKeyStatus"></div>
-        
+
         <!-- Set Master Key Section -->
         <div class="card p-3 mb-4">
-            
+
 
             <h5 class="text-center">Set Master Key</h5>
             <div class="mb-3">
@@ -173,144 +225,151 @@ button {
             <div id="recoveryKeySection"></div>
 
         </div>
-    
 
-    <!-- Save Password Section -->
-    <div class="card p-3 mb-4">
-        <h5 class="text-center">Save a Password</h5>
-        <div class="mb-3">
-            <input type="text" class="form-control" id="website" placeholder="Website/App">
+
+        <!-- Save Password Section -->
+        <div class="card p-3 mb-4">
+            <h5 class="text-center">Save a Password</h5>
+            <div class="mb-3">
+                <input type="text" class="form-control" id="website" placeholder="Website/App">
+            </div>
+            <div class="mb-3">
+                <input type="text" class="form-control" id="username" placeholder="Username">
+            </div>
+            <div class="mb-3">
+                <input type="password" class="form-control" id="password" placeholder="Enter Password"
+                    oninput="checkPasswordStrength()">
+            </div>
+            <div class="strength-meter" id="strengthMeter"></div>
+            <button class="btn btn-info" onclick="savePassword()">Save Securely</button>
+            <button class="btn btn-info" onclick="verifyMasterKey()">VerifyKey</button>
         </div>
-        <div class="mb-3">
-            <input type="text" class="form-control" id="username" placeholder="Username">
+
+        <!-- Saved Passwords -->
+        <div class="card p-3 mb-4">
+            <h5 class="text-center">Saved Usernames</h5>
+            <button class="btn btn-secondary w-100 mb-3" onclick="showUsernames()">SHOW MY LIST</button>
+
+
+            <div id="userList"></div>
+
+            <h5>Reveal Password</h5>
+            <input class="form-control" type="text" id="selectedUser" placeholder="Enter Username">
+            <button class="btn btn-warning w-100 mb-2" onclick="revealPassword()">REVEAL PASSWORD</button>
+            <p>Password: <span id="revealedPassword"></span></p>
+            <button class="btn-small green" onclick="copyPassword()">COPY</button>
+            <button class="btn-small red" onclick="deletePassword()">DELETE</button>
         </div>
-        <div class="mb-3">
-            <input type="password" class="form-control" id="password" placeholder="Enter Password" oninput="checkPasswordStrength()">
+
+        <!-- <div class="card p-3 mb-3">
+            <input type="text" id="searchUser" class="form-control" placeholder="Search Username...">
+            <ul id="userList2"></ul>
+
+        </div> -->
+
+        <!-- Retrieve Password Section -->
+        <!-- <div class="card p-3 mb-4">
+            <h5 class="text-center">Retrieve Password</h5>
+            <div class="mb-3">
+                <input type="password" class="form-control" id="masterKey1" placeholder="Enter Master Key">
+            </div>
+            <button class="btn btn-primary w-100 mb-2" onclick="decryptPassword()">Retrieve</button>
+            <p class="text-center"><strong>Decrypted Password:</strong> <span id="decryptedData"></span></p>
+        </div> -->
+
+        <!-- Backup & Restore Section -->
+        <div class="card p-3 mb-4">
+            <h5 class="text-center">Backup & Restore</h5>
+            <button class="btn btn-success w-100 mb-2" onclick="exportPasswords()">Export Passwords</button>
+            <input type="file" id="importFile" class="form-control mb-2" onchange="importPasswords(event)">
+            <button class="btn btn-danger w-100 mb-2" onclick="clearPasswords()">Clear All Passwords</button>
         </div>
-        <div class="strength-meter" id="strengthMeter"></div>
-        <button class="btn btn-info" onclick="savePassword()">Save Securely</button>
-        <button class="btn btn-info" onclick="verifyMasterKey()">VerifyKey</button>
-    </div>
 
-    <!-- Saved Passwords -->
-    <div class="card p-3 mb-4">
-        <h5 class="text-center">Saved Usernames</h5>
-        <button class="btn btn-secondary w-100 mb-3" onclick="showUsernames()">SHOW MY LIST</button>
-        <div id="userList"></div>
-
-        <h5>Reveal Password</h5>
-        <input class="form-control" type="text" id="selectedUser" placeholder="Enter Username">
-        <button class="btn btn-warning w-100 mb-2" onclick="revealPassword()">REVEAL PASSWORD</button>
-        <p>Password: <span id="revealedPassword"></span></p>
-        <button class="btn-small green" onclick="copyPassword()">COPY</button>
-        <button class="btn-small red" onclick="deletePassword()">DELETE</button>    
-    </div>
-
-    <!-- Retrieve Password Section -->
-    <div class="card p-3 mb-4">
-        <h5 class="text-center">Retrieve Password</h5>
-        <div class="mb-3">
-            <input type="password" class="form-control" id="masterKey1" placeholder="Enter Master Key">
+        <!-- Recovery Options -->
+        <div class="card p-3 mb-4">
+            <h5 class="text-center">Recovery Options</h5>
+            <button class="btn btn-warning w-100" onclick="recoverMasterKey()">Recover Master Key</button>
+            <button class="btn btn-primary w-100 mb-2" onclick="showHint()">🔑 Show Hint</button>
+            <button class="btn btn-warning w-100 mb-2" onclick="sendRecoveryKey()">📩 Send via WhatsApp</button>
+            <button class="btn btn-info w-100" onclick="downloadRecoveryKey()">💾 Save Locally</button>
         </div>
-        <button class="btn btn-primary w-100 mb-2" onclick="decryptPassword()">Retrieve</button>
-        <p class="text-center"><strong>Decrypted Password:</strong> <span id="decryptedData"></span></p>
+
     </div>
-
-    <!-- Recovery Options -->
-    <div class="card p-3 mb-4">
-        <h5 class="text-center">Recovery Options</h5>
-        <button class="btn btn-primary w-100 mb-2" onclick="showHint()">🔑 Show Hint</button>
-        <button class="btn btn-warning w-100 mb-2" onclick="sendRecoveryKey()">📩 Send via WhatsApp</button>
-        <button class="btn btn-info w-100" onclick="downloadRecoveryKey()">💾 Save Locally</button>
-    </div>
-
-
-
-    <!-- Backup & Restore Section -->
-    <div class="card p-3">
-        <h5 class="text-center">Backup & Restore</h5>
-        <button class="btn btn-success w-100 mb-2" onclick="exportPasswords()">Export Passwords</button>
-        <input type="file" id="importFile" class="form-control mb-2" onchange="importPasswords(event)">
-        <button class="btn btn-danger w-100 mb-2" onclick="clearPasswords()">Clear All Passwords</button>
-        <button class="btn btn-warning w-100" onclick="recoverMasterKey()">Recover Master Key</button>
-    </div>
-
-</div>
 
 </body>
 
 <script>
 
-window.onload = function () {
-    let savedMasterKey = localStorage.getItem("masterKey");
-    let masterKeyStatus = document.getElementById("masterKeyStatus");
+    window.onload = function () {
+        let savedMasterKey = localStorage.getItem("masterKey");
+        let masterKeyStatus = document.getElementById("masterKeyStatus");
 
-    if (!savedMasterKey) {
-        alert("No Master Key found. Please Set your Master Key");
+        if (!savedMasterKey) {
+            alert("No Master Key found. Please Set your Master Key");
+        }
+
+        masterKeyStatus.innerHTML = savedMasterKey
+            ? `<span style="color: green;">✅ Master Key is set.</span>`
+            : `<span style="color: red;">⚠ No Master Key found.</span>`;
+    };
+
+
+
+
+    let passwords = JSON.parse(localStorage.getItem("passwords")) || {};
+    let storedHash = localStorage.getItem("masterKeyHash");
+    let masterKeyValidated = false;
+    let masterKeyTimeout;
+    //let recoveryKey = generateRecoveryKey();
+    //let hashedRecoveryKey = CryptoJS.SHA256(recoveryKey).toString();
+
+    let sessionTimeLeft = 5 * 60; // 5 minutes in seconds
+    let timerInterval;
+
+
+
+    //localStorage.setItem("recoveryKey", hashedRecoveryKey);
+
+    // function verifyMasterKy(){
+    //     masterKeyValidated = true;
+    // }
+
+    function refreshPage() {
+        location.reload();
     }
 
-    masterKeyStatus.innerHTML = savedMasterKey
-        ? `<span style="color: green;">✅ Master Key is set.</span>`
-        : `<span style="color: red;">⚠ No Master Key found.</span>`;
-};
+    function setMasterKey() {
+        let masterKey = document.getElementById("masterKey").value;
+        if (!masterKey) {
+            alert("Master Key cannot be empty!");
+            return;
+        }
 
 
+        let hashedKey = CryptoJS.SHA256(masterKey).toString();
+        localStorage.setItem("masterKeyHash", hashedKey);
+        localStorage.setItem("masterKey", hashedKey);
+
+        // Generate a one-time recovery key
+        let recoveryKey = CryptoJS.lib.WordArray.random(16).toString(CryptoJS.enc.Hex);
+        let encryptedMasterKey = CryptoJS.AES.encrypt(masterKey, recoveryKey).toString();
+        localStorage.setItem("recoveryKey", encryptedMasterKey);
+
+        // Show the recovery key only once
+        //showRecoveryKey(recoveryKey);
 
 
-        let passwords = JSON.parse(localStorage.getItem("passwords")) || {};
-        let storedHash = localStorage.getItem("masterKeyHash");
-        let masterKeyValidated = false;
-        let masterKeyTimeout;
-        //let recoveryKey = generateRecoveryKey();
-        //let hashedRecoveryKey = CryptoJS.SHA256(recoveryKey).toString();
+        alert("Master Key Set Successfully!");
 
-        let sessionTimeLeft = 5 * 60; // 5 minutes in seconds
-        let timerInterval;
+        let hint = document.getElementById("hint").value.trim(); // Get the value properly
 
+        if (hint) {
+            localStorage.setItem("hint", hint); // Save hint
+            alert("Hint saved successfully!");
+        }
 
-
-        //localStorage.setItem("recoveryKey", hashedRecoveryKey);
-
-        // function verifyMasterKy(){
-        //     masterKeyValidated = true;
-        // }
-
-function refreshPage() {
-            location.reload();
-}
-
-function setMasterKey() {
-            let masterKey = document.getElementById("masterKey").value;
-            if (!masterKey) {
-                alert("Master Key cannot be empty!");
-                return;
-            }
-
-            
-            let hashedKey = CryptoJS.SHA256(masterKey).toString();
-            localStorage.setItem("masterKeyHash", hashedKey);
-            localStorage.setItem("masterKey", hashedKey);
-    
-            // Generate a one-time recovery key
-            let recoveryKey = CryptoJS.lib.WordArray.random(16).toString(CryptoJS.enc.Hex);
-            let encryptedMasterKey = CryptoJS.AES.encrypt(masterKey, recoveryKey).toString();
-            localStorage.setItem("recoveryKey", encryptedMasterKey);
-
-            // Show the recovery key only once
-            //showRecoveryKey(recoveryKey);
-
-            
-            alert("Master Key Set Successfully!");
-
-            let hint = document.getElementById("hint").value.trim(); // Get the value properly
-
-            if (hint) {
-                localStorage.setItem("hint", hint); // Save hint
-                alert("Hint saved successfully!");
-            }
-
-            // Show Recovery Key with Copy Button
-            document.getElementById("recoveryKeySection").innerHTML = `
+        // Show Recovery Key with Copy Button
+        document.getElementById("recoveryKeySection").innerHTML = `
             <div class="alert alert-info text-center">
                 <strong>Your Recovery Key:</strong> <span id="generatedRecoveryKey">${recoveryKey}</span>
                 <button class="btn btn-sm btn-primary" onclick="copyRecoveryKey()">Copy</button>
@@ -318,294 +377,369 @@ function setMasterKey() {
             <p class="text-danger text-center"><b>Save this key safely! It cannot be recovered later.</b></p>
             `;
 
-                alert("Master Key saved successfully! Make sure to copy and store your Recovery Key.");
+        alert("Master Key saved successfully! Make sure to copy and store your Recovery Key.");
     }
 
 
-        function generateRecoveryKey() {
-    let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let key = "";
-    for (let i = 0; i < 16; i++) {
-        key += chars.charAt(Math.floor(Math.random() * chars.length));
+    function generateRecoveryKey() {
+        let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        let key = "";
+        for (let i = 0; i < 16; i++) {
+            key += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return key;
     }
-    return key;
-}
 
-        function copyRecoveryKey() {
+    function copyRecoveryKey() {
         let recoveryKeyText = document.getElementById("generatedRecoveryKey").innerText;
-        
+
         navigator.clipboard.writeText(recoveryKeyText).then(() => {
             alert("Recovery Key copied to clipboard!");
         }).catch(err => {
             alert("Failed to copy Recovery Key: " + err);
         });
-}
+    }
 
-        function setMasterKeyTimeout() {
-            masterKeyTimeout = setTimeout(() => {
-                masterKeyValidated = false;
-                alert("Master Key session expired! Please enter again.");
-            }, 1 * 60 * 1000);  // 5 minutes timeout
-        }
-
-        function startMasterKeyTimer() {
-    clearInterval(timerInterval); // Reset if already running
-
-    function updateTimerDisplay() {
-        let minutes = Math.floor(sessionTimeLeft / 60);
-        let seconds = sessionTimeLeft % 60;
-        document.getElementById("timerDisplay").innerText = ` ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-        
-        if (sessionTimeLeft <= 0) {
-            clearInterval(timerInterval);
+    function setMasterKeyTimeout() {
+        masterKeyTimeout = setTimeout(() => {
             masterKeyValidated = false;
             alert("Master Key session expired! Please enter again.");
-            document.getElementById("timerDisplay").innerText = "Session Expired!";
-        }
-
-        sessionTimeLeft--;
+        }, 1 * 60 * 1000);  // 5 minutes timeout
     }
 
-    updateTimerDisplay(); // Show first immediately
-    timerInterval = setInterval(updateTimerDisplay, 1000); // Update every second
-}
+    function startMasterKeyTimer() {
+        clearInterval(timerInterval); // Reset if already running
 
-function verifyMasterKey() {
-    let masterKey = prompt("Enter your Master Key:");
-    if (!masterKey) {
-        alert("Master Key is required!");
-        return;
+        function updateTimerDisplay() {
+            let minutes = Math.floor(sessionTimeLeft / 60);
+            let seconds = sessionTimeLeft % 60;
+            document.getElementById("timerDisplay").innerText = ` ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+            if (sessionTimeLeft <= 0) {
+                clearInterval(timerInterval);
+                masterKeyValidated = false;
+                alert("Master Key session expired! Please enter again.");
+                document.getElementById("timerDisplay").innerText = "Session Expired!";
+            }
+
+            sessionTimeLeft--;
+        }
+
+        updateTimerDisplay(); // Show first immediately
+        timerInterval = setInterval(updateTimerDisplay, 1000); // Update every second
     }
-    if (CryptoJS.SHA256(masterKey).toString() !== storedHash) {
-        alert("Incorrect Master Key!");
-        return;
+
+    function verifyMasterKey() {
+        let masterKey = prompt("Enter your Master Key:");
+        if (!masterKey) {
+            alert("Master Key is required!");
+            return;
+        }
+        if (CryptoJS.SHA256(masterKey).toString() !== storedHash) {
+            alert("Incorrect Master Key!");
+            return;
+        }
+        masterKeyValidated = true;
+        sessionTimeLeft = 5 * 60; // Reset timer
+        startMasterKeyTimer();
+        alert("Master Key Verified!");
     }
-    masterKeyValidated = true;
-    sessionTimeLeft = 5 * 60; // Reset timer
-    startMasterKeyTimer();
-    alert("Master Key Verified!");
-}
 
-        function getMasterKey() {
-            if (!masterKeyValidated) {
-                alert("Session Expired! Enter Master Key Again.");
-                return null;
-            }
-            return document.getElementById("masterKey").value;
+    function getMasterKey() {
+        if (!masterKeyValidated) {
+            alert("Session Expired! Enter Master Key Again.");
+            return null;
+        }
+        return document.getElementById("masterKey").value;
+    }
+
+    function encryptPassword(password, key) {
+        return CryptoJS.AES.encrypt(password, key).toString();
+    }
+
+    // function decryptPassword(encrypted, key) {
+    //     try {
+    //         let bytes = CryptoJS.AES.decrypt(encrypted, key);
+    //         return bytes.toString(CryptoJS.enc.Utf8);
+    //     } catch (e) {
+    //         alert("Decryption failed! Incorrect Master Key?");
+    //         return null;
+    //     }
+    // }
+
+//     function decryptPassword(username, masterKey) {
+//     // Retrieve stored passwords from localStorage
+//     let storedPasswords = JSON.parse(localStorage.getItem("passwords")) || {};
+
+//     // Check if the username exists in storage
+//     if (!storedPasswords.hasOwnProperty(username)) {
+//         alert("⚠ No password found for " + username);
+//         return null;
+//     }
+
+//     // Get the encrypted password for the given username
+//     let encryptedPassword = storedPasswords[username];
+
+//     // Attempt decryption
+//     try {
+//         let bytes = CryptoJS.AES.decrypt(encryptedPassword, masterKey);
+//         let decryptedPassword = bytes.toString(CryptoJS.enc.Utf8);
+
+//         // If decryption fails (empty result), incorrect master key
+//         if (!decryptedPassword) {
+//             alert("❌ Incorrect Master Key!");
+//             return null;
+//         }
+
+//         return decryptedPassword;
+//     } catch (error) {
+//         alert("❌ Error decrypting password!");
+//         return null;
+//     }
+// }
+
+
+    function savePassword() {
+        let masterKey = getMasterKey();
+        if (!masterKey) return;
+
+        let website = document.getElementById("website").value;
+        let username = document.getElementById("username").value;
+        let password = document.getElementById("password").value;
+
+        if (!website || !username || !password) {
+            alert("All fields are required!");
+            return;
         }
 
-        function encryptPassword(password, key) {
-            return CryptoJS.AES.encrypt(password, key).toString();
+        passwords[username] = encryptPassword(password, masterKey);
+        localStorage.setItem("passwords", JSON.stringify(passwords));
+        alert("Password saved securely!");
+    }
+
+    function checkPasswordStrength() {
+        let password = document.getElementById("password").value;
+        let strengthMeter = document.getElementById("strengthMeter");
+        let strengthText = document.getElementById("strengthText");
+
+        // Use regex to check complexity
+        let patterns = [/[A-Z]/, /[a-z]/, /[0-9]/, /[\W_]/];
+        let strength = patterns.reduce((score, pattern) => score + pattern.test(password), 0);
+
+        // Boost score for longer passwords
+        if (password.length >= 12) strength++;
+
+        // Update UI based on strength score
+        const strengthLevels = ["Weak", "Medium", "Strong"];
+        const classNames = ["weak", "medium", "strong"];
+
+        let index = Math.min(strength, 2); // Ensure index is between 0-2
+        strengthMeter.className = `strength-meter ${classNames[index]}`;
+        strengthText.innerText = strengthLevels[index];
+    }
+
+
+    function showUsernames() {
+        if (!masterKeyValidated) {
+            alert("Session Expired! Enter Master Key Again.");
+            return;
         }
 
-        function decryptPassword(encrypted, key) {
-            try {
-                let bytes = CryptoJS.AES.decrypt(encrypted, key);
-                return bytes.toString(CryptoJS.enc.Utf8);
-            } catch (e) {
-                alert("Decryption failed! Incorrect Master Key?");
-                return null;
-            }
+        let userListDiv = document.getElementById("userList");
+
+        if (Object.keys(passwords).length === 0) {
+            userListDiv.innerHTML = "<tr><td colspan='4' style='text-align:center;'>No saved passwords.</td></tr>";
+            return;
         }
 
-        function savePassword() {
-            let masterKey = getMasterKey();
-            if (!masterKey) return;
 
-            let website = document.getElementById("website").value;
-            let username = document.getElementById("username").value;
-            let password = document.getElementById("password").value;
-            
-            if (!website || !username || !password) {
-                alert("All fields are required!");
-                return;
-            }
+        userListDiv.innerHTML = "";
+        Object.keys(passwords).forEach(user => {
+            let chip = document.createElement("div");
+            chip.classList.add("chip");
+            chip.innerText = user;
+            chip.onclick = () => document.getElementById("selectedUser").value = user;
+            userListDiv.appendChild(chip);
+        });
+    }
 
-            passwords[username] = encryptPassword(password, masterKey);
+//     function searchUsernames() {
+//     let searchInput = document.getElementById("searchUser").value.toLowerCase();
+//     let userList = document.getElementById("userList");
+
+//     // Retrieve and parse passwords from localStorage
+//     let storedPasswords = JSON.parse(localStorage.getItem("passwords") || "{}");
+
+//     // Convert object keys (usernames) into an array
+//     let usersArray = Object.keys(storedPasswords);
+
+//     // Filter usernames based on search input
+//     let filteredUsers = usersArray.filter(username => username.toLowerCase().includes(searchInput));
+
+//     // Clear previous results
+//     userList2.innerHTML = "";
+
+//     // Display matching results
+//     filteredUsers.forEach(username => {
+//         let listItem = document.createElement("li");
+//         listItem.textContent = username;
+//         listItem.className = "user-item";
+        
+//         // On click, autofill username field
+//         listItem.onclick = function () {
+//             document.getElementById("username").value = username;
+//             userList2.innerHTML = ""; // Hide list after selection
+//         };
+
+//         userList2.appendChild(listItem);
+//     });
+
+//     // If no results, show message
+//     if (filteredUsers.length === 0) {
+//         userList2.innerHTML = "<li>No matching users found</li>";
+//     }
+// }
+
+// // Event listener for search input
+// document.getElementById("searchUser").addEventListener("input", searchUsernames);
+
+
+
+
+    function revealPassword() {
+        let masterKey = getMasterKey();
+        if (!masterKey) return;
+
+        let user = document.getElementById("selectedUser").value;
+        if (passwords[user]) {
+            document.getElementById("revealedPassword").innerText = decryptPassword(passwords[user], masterKey);
+        } else {
+            alert("No password found!");
+        }
+    }
+
+    function copyPassword() {
+        let password = document.getElementById("revealedPassword").innerText;
+        if (!password) return alert("No password to copy!");
+        navigator.clipboard.writeText(password);
+        alert("Copied to clipboard!");
+    }
+
+    function deletePassword() {
+        let user = document.getElementById("selectedUser").value;
+        if (passwords[user]) {
+            delete passwords[user];
             localStorage.setItem("passwords", JSON.stringify(passwords));
-            alert("Password saved securely!");
+            alert("Password deleted!");
+        } else {
+            alert("User not found!");
+        }
+    }
+
+
+    function recoverMasterKey() {
+        let enteredRecoveryKey = prompt("Enter your Recovery Key:");
+        if (!enteredRecoveryKey) return;
+
+        let encryptedMasterKey = localStorage.getItem("recoveryKey");
+        if (!encryptedMasterKey) {
+            alert("No recovery key found!");
+            return;
         }
 
-        function checkPasswordStrength() {
-            let password = document.getElementById("password").value;
-            let strengthMeter = document.getElementById("strengthMeter");
-            let strengthText = document.getElementById("strengthText");
-
-            // Use regex to check complexity
-            let patterns = [/[A-Z]/, /[a-z]/, /[0-9]/, /[\W_]/];
-            let strength = patterns.reduce((score, pattern) => score + pattern.test(password), 0);
-
-            // Boost score for longer passwords
-            if (password.length >= 12) strength++;
-            
-            // Update UI based on strength score
-            const strengthLevels = ["Weak", "Medium", "Strong"];
-            const classNames = ["weak", "medium", "strong"];
-            
-            let index = Math.min(strength, 2); // Ensure index is between 0-2
-            strengthMeter.className = `strength-meter ${classNames[index]}`;
-            strengthText.innerText = strengthLevels[index];
-}
-
-
-        function showUsernames() {
-            if (!masterKeyValidated) {
-                alert("Session Expired! Enter Master Key Again.");
-                return;
-            }
-
-            let userListDiv = document.getElementById("userList");
-
-            if (Object.keys(passwords).length === 0) {
-                userListDiv.innerHTML = "<tr><td colspan='4' style='text-align:center;'>No saved passwords.</td></tr>";
-                return;
-            }
-
-            
-            userListDiv.innerHTML = "";
-            Object.keys(passwords).forEach(user => {
-                let chip = document.createElement("div");
-                chip.classList.add("chip");
-                chip.innerText = user;
-                chip.onclick = () => document.getElementById("selectedUser").value = user;
-                userListDiv.appendChild(chip);
-            });
+        let decryptedMasterKey;
+        try {
+            decryptedMasterKey = CryptoJS.AES.decrypt(encryptedMasterKey, enteredRecoveryKey).toString(CryptoJS.enc.Utf8);
+        } catch (error) {
+            alert("Invalid Recovery Key!");
+            return;
         }
 
-        function revealPassword() {
-            let masterKey = getMasterKey();
-            if (!masterKey) return;
-
-            let user = document.getElementById("selectedUser").value;
-            if (passwords[user]) {
-                document.getElementById("revealedPassword").innerText = decryptPassword(passwords[user], masterKey);
-            } else {
-                alert("No password found!");
-            }
+        if (!decryptedMasterKey) {
+            alert("Incorrect Recovery Key!");
+            return;
         }
 
-        function copyPassword() {
-            let password = document.getElementById("revealedPassword").innerText;
-            if (!password) return alert("No password to copy!");
-            navigator.clipboard.writeText(password);
-            alert("Copied to clipboard!");
+        let newMasterKey = prompt("Recovery Key Validated success! Enter a new Master Key");
+        if (!newMasterKey) {
+            alert("Master Key update canceled.");
+            return;
         }
 
-        function deletePassword() {
-            let user = document.getElementById("selectedUser").value;
-            if (passwords[user]) {
-                delete passwords[user];
-                localStorage.setItem("passwords", JSON.stringify(passwords));
-                alert("Password deleted!");
-            } else {
-                alert("User not found!");
-            }
-        }
+        let hashedNewMasterKey = CryptoJS.SHA256(newMasterKey).toString();
+        localStorage.setItem("masterKey", hashedNewMasterKey);
+        //sessionStorage.setItem("currentMasterKey", newMasterKey);
+
+        alert("Master Key has been successfully recovered and updated!");
+    }
+
+    function exportPasswords() {
+        let dataStr = JSON.stringify(passwords, null, 2);
+        let blob = new Blob([dataStr], { type: "application/json" });
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement("a");
+        a.href = url;
+        a.download = "passwords.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    function importPasswords(event) {
+        let file = event.target.files[0];
+        if (!file) return;
+
+        let reader = new FileReader();
+        reader.onload = function (e) {
+            passwords = JSON.parse(e.target.result);
+            localStorage.setItem("passwords", JSON.stringify(passwords));
+            alert("Passwords imported successfully!");
+        };
+        reader.readAsText(file);
+    }
 
 
-        function recoverMasterKey() {
-            let enteredRecoveryKey = prompt("Enter your Recovery Key:");
-            if (!enteredRecoveryKey) return;
-
-            let encryptedMasterKey = localStorage.getItem("recoveryKey");
-            if (!encryptedMasterKey) {
-                alert("No recovery key found!");
-                return;
-            }
-
-            let decryptedMasterKey;
-            try {
-                decryptedMasterKey = CryptoJS.AES.decrypt(encryptedMasterKey, enteredRecoveryKey).toString(CryptoJS.enc.Utf8);
-            } catch (error) {
-                alert("Invalid Recovery Key!");
-                return;
-            }
-
-            if (!decryptedMasterKey) {
-                alert("Incorrect Recovery Key!");
-                return;
-            }
-
-            let newMasterKey = prompt("Recovery Key Validated success! Enter a new Master Key");
-            if (!newMasterKey) {
-                alert("Master Key update canceled.");
-                return;
-            }
-
-            let hashedNewMasterKey = CryptoJS.SHA256(newMasterKey).toString();
-            localStorage.setItem("masterKey", hashedNewMasterKey);
-            //sessionStorage.setItem("currentMasterKey", newMasterKey);
-
-            alert("Master Key has been successfully recovered and updated!");
-}
-
-        function exportPasswords() {
-            let dataStr = JSON.stringify(passwords, null, 2);
-            let blob = new Blob([dataStr], { type: "application/json" });
-            let url = URL.createObjectURL(blob);
-            let a = document.createElement("a");
-            a.href = url;
-            a.download = "passwords.json";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-
-        function importPasswords(event) {
-            let file = event.target.files[0];
-            if (!file) return;
-
-            let reader = new FileReader();
-            reader.onload = function(e) {
-                passwords = JSON.parse(e.target.result);
-                localStorage.setItem("passwords", JSON.stringify(passwords));
-                alert("Passwords imported successfully!");
-            };
-            reader.readAsText(file);
-        }
-
-
-        function clearPasswords() {
-        if (confirm("Are you sure you want to clear Key & all saved passwords? This action cannot be undone!"))
-        {
+    function clearPasswords() {
+        if (confirm("Are you sure you want to clear Key & all saved passwords? This action cannot be undone!")) {
             localStorage.removeItem("passwords");
             localStorage.removeItem("masterKeyHash");
             alert("All saved passwords have been cleared!");
-        } 
+        }
         else {
             alert("Operation canceled. Your passwords are safe.");
         }
     }
 
     function showHint() {
-            let hint = localStorage.getItem("hint");
-            alert(hint ? "Your hint: " + hint : "No hint is set.");
+        let hint = localStorage.getItem("hint");
+        alert(hint ? "Your hint: " + hint : "No hint is set.");
+    }
+
+    function sendRecoveryKey() {
+        let recoveryKey = localStorage.getItem("recoveryKey");
+        if (!recoveryKey) {
+            alert("No recovery key found!");
+            return;
         }
 
-        function sendRecoveryKey() {
-            let recoveryKey = localStorage.getItem("recoveryKey");
-            if (!recoveryKey) {
-                alert("No recovery key found!");
-                return;
-            }
+        let whatsappURL = `https://api.whatsapp.com/send?text=Your%20Recovery%20Key:%20${recoveryKey}`;
+        window.open(whatsappURL, "_blank");
+    }
 
-            let whatsappURL = `https://api.whatsapp.com/send?text=Your%20Recovery%20Key:%20${recoveryKey}`;
-            window.open(whatsappURL, "_blank");
+    function downloadRecoveryKey() {
+        let recoveryKey = localStorage.getItem("recoveryKey");
+        if (!recoveryKey) {
+            alert("No recovery key found!");
+            return;
         }
 
-        function downloadRecoveryKey() {
-            let recoveryKey = localStorage.getItem("recoveryKey");
-            if (!recoveryKey) {
-                alert("No recovery key found!");
-                return;
-            }
-
-            let blob = new Blob([recoveryKey], { type: "text/plain" });
-            let link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = "recovery_key.txt";
-            link.click();
-        }
+        let blob = new Blob([recoveryKey], { type: "text/plain" });
+        let link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "recovery_key.txt";
+        link.click();
+    }
 
 </script>
+
 </html>
