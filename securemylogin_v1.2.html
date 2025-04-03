@@ -232,7 +232,7 @@
             </div>
         </div>
 
-        <div class="card p-3 mb-2" id="masterKeyStatus"></div>
+        <div class="card p-3 mb-2" id="masterKeyStatus" onchange="keyStatus()"></div>
 
         <!-- Set Master Key Section -->
         <div class="card p-3 mb-4">
@@ -321,6 +321,8 @@
             <button class="btn btn-primary w-100 mb-2" onclick="showHint()">🔑 Show Hint</button>
             <button class="btn btn-warning w-100 mb-2" onclick="sendRecoveryKey()">📩 Send via WhatsApp</button>
             <button class="btn btn-info w-100" onclick="downloadRecoveryKey()">💾 Save Locally</button>
+            <button class="btn btn-info w-100" onclick="decryptRecoveryKey()">GetBackKey</button>
+            
         </div>
 
     </div>
@@ -330,21 +332,28 @@
 <script>
 
     window.onload = function () {
-        let savedMasterKey = localStorage.getItem("masterKey");
-        let masterKeyStatus = document.getElementById("masterKeyStatus");
-
-        if (!savedMasterKey) {
-            alert("No Master Key found. Please Set your Master Key");
-        }
-
         //startSessionTimer(sessionTimeout);
-
-        masterKeyStatus.innerHTML = savedMasterKey
-            ? `<span style="color: green;">✅ Master Key is set.</span>`
-            : `<span style="color: red;">⚠ No Master Key found.</span>`;
+        keyStatus();
     };
 
+    function keyStatus() {
+    let savedMasterKey = localStorage.getItem("masterKeyHash"); // Correct key
+    let masterKeyStatus = document.getElementById("masterKeyStatus");
 
+    if (!masterKeyStatus) {
+        console.error("❌ Error: Element with ID 'masterKeyStatus' not found!");
+        return;
+    }
+
+    if (!savedMasterKey) {
+        masterKeyStatus.innerHTML = `<span style="color: red;">⚠ No Master Key found.</span>`;
+        alert("⚠ No Master Key found. Please set your Master Key.");
+    } else {
+        masterKeyStatus.innerHTML = `<span style="color: green;">✅ Master Key is set.</span>`;
+    }
+}
+
+    
 
 
     let passwords = JSON.parse(localStorage.getItem("passwords")) || {};
@@ -357,49 +366,137 @@
         location.reload();
     }
 
-    function setMasterKey() {
-        let masterKey = document.getElementById("masterKey").value;
-        if (!masterKey) {
-            alert("Master Key cannot be empty!");
-            return;
-        }
+let masterKeyValidated = false;
+let sessionTimeLeft = 5 * 60; // 5 minutes in seconds
+let timerInterval;
 
-
-        let hashedKey = CryptoJS.SHA256(masterKey).toString();
-        localStorage.setItem("masterKeyHash", hashedKey);
-        localStorage.setItem("masterKey", hashedKey);
-
-        // Generate a one-time recovery key
-        let recoveryKey = CryptoJS.lib.WordArray.random(16).toString(CryptoJS.enc.Hex);
-        let encryptedMasterKey = CryptoJS.AES.encrypt(masterKey, recoveryKey).toString();
-        localStorage.setItem("recoveryKey", encryptedMasterKey);
-
-        // Show the recovery key only once
-        //showRecoveryKey(recoveryKey);
-
-        let hint = document.getElementById("hint").value.trim(); // Get the value properly
-
-        if (hint) {
-            localStorage.setItem("hint", hint); // Save hint
-            alert("Hint saved successfully!");
-        }
-
-        //alert("Master Key Set Successfully!");
-
-        // Show Recovery Key with Copy Button
-        document.getElementById("recoveryKeySection").innerHTML = `
-            <div class="alert alert-info text-center">
-                <strong>Your Recovery Key:</strong> <span id="generatedRecoveryKey">${recoveryKey}</span>
-                <button class="btn btn-sm btn-primary" onclick="copyRecoveryKey()">Copy</button>
-            </div>
-            <p class="text-danger text-center"><b>Save this key safely! It cannot be recovered later.</b></p>
-            `;
-
-        alert("Master Key saved successfully! Make sure to copy and store your Recovery Key.");
+// 🏆 1️⃣ Set Master Key with Recovery Key & Hint
+function setMasterKey() {
+    let masterKey = document.getElementById("masterKey").value.trim();
+    if (!masterKey) {
+        alert("⚠ Master Key cannot be empty!");
+        return;
     }
 
+    let hashedKey = CryptoJS.SHA256(masterKey).toString();
+    localStorage.setItem("masterKeyHash", hashedKey);
+    //localStorage.setItem("masterKey", hashedKey);
 
-    function generateRecoveryKey() {
+    // Generate a one-time recovery key
+    let recoveryKey = CryptoJS.lib.WordArray.random(16).toString(CryptoJS.enc.Hex);
+    let encryptedMasterKey = CryptoJS.AES.encrypt(masterKey, recoveryKey).toString();
+    localStorage.setItem("recoveryKey", encryptedMasterKey);
+
+    alert("✅ Master Key Set Successfully! Save your Recovery Key.");
+
+    // Save Hint
+    let hint = document.getElementById("hint").value.trim();
+    if (hint) {
+        localStorage.setItem("hint", hint);
+        alert("✅ Hint saved successfully!");
+    }
+
+    keyStatus();
+
+    // Display Recovery Key (One-Time)
+    document.getElementById("recoveryKeySection").innerHTML = `
+        <div class="alert alert-info text-center">
+            <strong>Your Recovery Key:</strong> <span id="generatedRecoveryKey">${recoveryKey}</span>
+            <button class="btn btn-sm btn-primary" onclick="copyRecoveryKey()">Copy</button>
+        </div>
+        <p class="text-danger text-center"><b>⚠ Save this key safely! It cannot be recovered later.</b></p>
+    `;
+
+    
+}
+
+function resetMasterKey() {
+    let recoveryKey = prompt("Enter your Recovery Key:");
+    if (!recoveryKey) {
+        alert("⚠ Recovery Key is required!");
+        return;
+    }
+
+    let encryptedMasterKey = localStorage.getItem("recoveryKey");
+    if (!encryptedMasterKey) {
+        alert("❌ No Recovery Key found! Cannot retrieve the old Master Key.");
+        return;
+    }
+
+    // 🔓 Try to decrypt the Master Key using Recovery Key
+    try {
+        let bytes = CryptoJS.AES.decrypt(encryptedMasterKey, recoveryKey);
+        let oldMasterKey = bytes.toString(CryptoJS.enc.Utf8);
+
+        if (!oldMasterKey) {
+            throw new Error("Decryption failed - Invalid Recovery Key");
+        }
+
+        // ✅ Show the Old Master Key
+        alert("✅ Your Old Master Key: " + oldMasterKey);
+        console.log("Your Old Master Key:", oldMasterKey);
+
+        return oldMasterKey;
+    } catch (error) {
+        alert("❌ Invalid Recovery Key! Cannot retrieve Master Key.");
+        return null;
+    }
+}
+
+
+function decryptRecoveryKey() {
+    let passphrase = prompt("Enter the passphrase you used to encrypt the Recovery Key:");
+    if (!passphrase) {
+        alert("Passphrase is required!");
+        return;
+    }
+
+    let encryptedRecoveryKey = localStorage.getItem("recoveryKey"); // Get stored recovery key
+    if (!encryptedRecoveryKey) {
+        alert("No recovery key found.");
+        return;
+    }
+
+    try {
+        let decryptedKey = CryptoJS.AES.decrypt(encryptedRecoveryKey, passphrase).toString(CryptoJS.enc.Utf8);
+        if (!decryptedKey) throw new Error("Decryption failed");
+
+        console.log("✅ Decrypted Recovery Key:", decryptedKey);
+        alert("Recovery Key successfully decrypted: " + decryptedKey);
+        return decryptedKey;
+    } catch (error) {
+        console.error("❌ Error decrypting Recovery Key:", error);
+        alert("⚠ Failed to decrypt Recovery Key. Check your passphrase.");
+        return null;
+    }
+}
+
+
+function decryptSecondRecoveryKey() {
+    let encryptedRecoveryKey = "U2FsdGVkX19ylDiZ6V57mRvzuuDatRrQHEQOnhdX6RA="; // Your second recovery key
+    let recoveryKeyPassphrase = "07b4bd1050415d82abf7b19123099a04"; // Your first recovery key
+
+    try {
+        let decryptedBytes = CryptoJS.AES.decrypt(encryptedRecoveryKey, recoveryKeyPassphrase);
+        let decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
+
+        if (!decryptedText) throw new Error("Decryption failed");
+
+        console.log("🔓 Decrypted Recovery Key:", decryptedText);
+        alert("✅ Your Actual Recovery Key is: " + decryptedText);
+    } catch (error) {
+        console.error("❌ Error decrypting second recovery key:", error);
+        alert("⚠ Failed to decrypt Recovery Key. Make sure the passphrase is correct.");
+    }
+}
+
+//decryptSecondRecoveryKey();
+
+
+
+
+
+function generateRecoveryKey() {
         let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         let key = "";
         for (let i = 0; i < 16; i++) {
@@ -420,111 +517,148 @@
 
 
 
-    // 🔥 7️⃣ Session Timer & Auto-Logout
-    function startSessionTimer(duration) {
-        let timer = duration;
-        let timerInterval = setInterval(function () {
-            let minutes = Math.floor(timer / 60);
-            let seconds = timer % 60;
-            document.getElementById("timerDisplay").innerText =
-                (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
-
-            if (--timer < 0) {
-                clearInterval(timerInterval);
-                alert("⏳ Session Expired! Re-enter Master Key.");
-                masterKeyValidated = false;
-                sessionStorage.removeItem("encryptedMasterKey"); // Clear Master Key on expiry
-                verifyMasterKey();
-            }
-        }, 1000);
+    // 🏆 2️⃣ Verify Master Key
+function verifyMasterKey() {
+    let enteredKey = prompt("Enter your Master Key:");
+    if (!enteredKey) {
+        alert("Master Key is required!");
+        return false;
     }
 
-    // 🔄 8️⃣ Reset session timer whenever a new key is entered
-    function resetSessionTimer() {
-        sessionTimeout = 300; // Reset to 5 minutes
-        startSessionTimer(sessionTimeout);
+    let hashedEnteredKey = CryptoJS.SHA256(enteredKey).toString();
+    let storedHash = localStorage.getItem("masterKeyHash");
+
+    if (hashedEnteredKey !== storedHash) {
+        alert("❌ Incorrect Master Key!");
+        return false;
     }
 
+    masterKeyValidated = true;
+    sessionTimeLeft = 5 * 60; // Reset 5 min timer
+    startMasterKeyTimer();
+    alert("✅ Master Key Verified!");
+    return true;
+}
 
-    function refreshPage() {
-        location.reload();
+// 🏆 3️⃣ Get Master Key (Ensures session is valid)
+function getMasterKey() {
+    if (!masterKeyValidated) {
+        alert("⚠ Session Expired! Enter Master Key Again.");
+        return verifyMasterKey() ? true : null;
     }
+    return true;
+}
 
-    let masterKeyValidated = false;
-    let sessionTimeout = 300; // 5 minutes in seconds
+// 🏆 4️⃣ Timer for Session Expiry
+function startMasterKeyTimer() {
+    clearInterval(timerInterval);
 
+    function updateTimerDisplay() {
+        let minutes = Math.floor(sessionTimeLeft / 60);
+        let seconds = sessionTimeLeft % 60;
+        document.getElementById("timerDisplay").innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 
-    // 🏆 1️⃣ Master Key Verification
-    function verifyMasterKey() {
-        let enteredKey = prompt("🔑 Enter Master Key:");
-        if (enteredKey) {
-            masterKeyValidated = true;
-            let hashedKey = CryptoJS.SHA256(enteredKey).toString(); // Hash key before storing
-            sessionStorage.setItem("encryptedMasterKey", hashedKey);
-            alert("✅ Master Key validated!");
-            resetSessionTimer(); // Reset session on key entry
-        } else {
+        if (sessionTimeLeft <= 0) {
+            clearInterval(timerInterval);
             masterKeyValidated = false;
-        }
-    }
-
-    // 🚀 2️⃣ Get Master Key from Session
-    function getMasterKey() {
-        let savedKey = sessionStorage.getItem("encryptedMasterKey");
-
-        if (!masterKeyValidated || !savedKey) {
-            alert("⚠ Session Expired! Enter Master Key Again.");
-            verifyMasterKey();
-            return sessionStorage.getItem("encryptedMasterKey");
+            alert("🔐 Master Key session expired! Please enter again.");
+            document.getElementById("timerDisplay").innerText = "Session Expired!";
         }
 
-        return savedKey;
+        sessionTimeLeft--;
     }
 
+    updateTimerDisplay();
+    timerInterval = setInterval(updateTimerDisplay, 1000);
+}
 
-    // 🔒 3️⃣ Encrypt Password
-    function encryptPassword(password, masterKey) {
-        return CryptoJS.AES.encrypt(password, masterKey).toString();
+// 🏆 5️⃣ Encrypt & Decrypt Functions
+function encryptPassword(password) {
+    let key = localStorage.getItem("masterKeyHash");
+    return CryptoJS.AES.encrypt(password, key).toString();
+}
+
+function decryptPassword(encrypted) {
+    let key = localStorage.getItem("masterKeyHash");
+    try {
+        let bytes = CryptoJS.AES.decrypt(encrypted, key);
+        return bytes.toString(CryptoJS.enc.Utf8);
+    } catch (e) {
+        alert("❌ Decryption failed! Incorrect Master Key?");
+        return null;
+    }
+}
+
+// 🏆 6️⃣ Save Password
+function savePassword() {
+    if (!getMasterKey()) return;
+
+    let website = document.getElementById("website").value;
+    let username = document.getElementById("username").value;
+    let password = document.getElementById("password").value;
+
+    if (!website || !username || !password) {
+        alert("All fields are required!");
+        return;
     }
 
-    // 🔓 4️⃣ Decrypt Password
-    function decryptPassword(encryptedPassword, masterKey) {
-        let bytes = CryptoJS.AES.decrypt(encryptedPassword, masterKey);
-        return bytes.toString(CryptoJS.enc.Utf8) || "❌ Wrong Master Key!";
+    let encryptedPassword = encryptPassword(password);
+    let passwords = JSON.parse(localStorage.getItem("passwords")) || {};
+    passwords[username] = encryptedPassword;
+    localStorage.setItem("passwords", JSON.stringify(passwords));
+
+    alert("✅ Password saved securely!");
+}
+
+// 🏆 7️⃣ Reveal Password
+function revealPassword() {
+    if (!getMasterKey()) return;
+
+    let user = document.getElementById("selectedUser").value;
+    let passwords = JSON.parse(localStorage.getItem("passwords")) || {};
+
+    if (passwords[user]) {
+        document.getElementById("revealedPassword").innerText = decryptPassword(passwords[user]);
+    } else {
+        alert("❌ No password found!");
+    }
+}
+
+// 🏆 8️⃣ Recover Master Key
+function recoverMasterKey() {
+    let enteredRecoveryKey = prompt("Enter your Recovery Key:");
+    if (!enteredRecoveryKey) return;
+
+    let encryptedMasterKey = localStorage.getItem("recoveryKey");
+    if (!encryptedMasterKey) {
+        alert("⚠ No recovery key found!");
+        return;
     }
 
-    // 📥 5️⃣ Save Password Securely
-    function savePassword() {
-        let masterKey = getMasterKey();
-        if (!masterKey) return;
-
-        let website = document.getElementById("website").value;
-        let username = document.getElementById("username").value;
-        let password = document.getElementById("password").value;
-
-        if (!website || !username || !password) {
-            alert("⚠ All fields are required!");
-            return;
-        }
-
-        passwords[username] = encryptPassword(password, masterKey);
-        localStorage.setItem("passwords", JSON.stringify(passwords));
-        alert("✅ Password saved securely!");
+    let decryptedMasterKey;
+    try {
+        decryptedMasterKey = CryptoJS.AES.decrypt(encryptedMasterKey, enteredRecoveryKey).toString(CryptoJS.enc.Utf8);
+    } catch (error) {
+        alert("❌ Invalid Recovery Key!");
+        return;
     }
 
-    // 📤 6️⃣ Reveal Password
-    function revealPassword() {
-        let masterKey = getMasterKey();
-        if (!masterKey) return;
-
-        let user = document.getElementById("selectedUser").value;
-        if (passwords[user]) {
-            document.getElementById("revealedPassword").innerText = decryptPassword(passwords[user], masterKey);
-        } else {
-            alert("❌ No password found!");
-        }
+    if (!decryptedMasterKey) {
+        alert("❌ Incorrect Recovery Key!");
+        return;
     }
 
+    let newMasterKey = prompt("Recovery Key Validated! Enter a new Master Key:");
+    if (!newMasterKey) {
+        alert("Master Key update canceled.");
+        return;
+    }
+
+    let hashedNewMasterKey = CryptoJS.SHA256(newMasterKey).toString();
+    localStorage.setItem("masterKeyHash", hashedNewMasterKey);
+
+    alert("✅ Master Key has been successfully recovered and updated!");
+}
 
 
 
@@ -609,43 +743,6 @@
         } else {
             alert("User not found!");
         }
-    }
-
-
-    function recoverMasterKey() {
-        let enteredRecoveryKey = prompt("Enter your Recovery Key:");
-        if (!enteredRecoveryKey) return;
-
-        let encryptedMasterKey = localStorage.getItem("recoveryKey");
-        if (!encryptedMasterKey) {
-            alert("No recovery key found!");
-            return;
-        }
-
-        let decryptedMasterKey;
-        try {
-            decryptedMasterKey = CryptoJS.AES.decrypt(encryptedMasterKey, enteredRecoveryKey).toString(CryptoJS.enc.Utf8);
-        } catch (error) {
-            alert("Invalid Recovery Key!");
-            return;
-        }
-
-        if (!decryptedMasterKey) {
-            alert("Incorrect Recovery Key!");
-            return;
-        }
-
-        let newMasterKey = prompt("✅ Success! Recovery Key Validated! Enter a new Master Key");
-        if (!newMasterKey) {
-            alert("Master Key update canceled.");
-            return;
-        }
-
-        let hashedNewMasterKey = CryptoJS.SHA256(newMasterKey).toString();
-        localStorage.setItem("masterKey", hashedNewMasterKey);
-        //sessionStorage.setItem("currentMasterKey", newMasterKey);
-
-        alert("Master Key has been successfully recovered and updated!");
     }
 
     function exportPasswords() {
