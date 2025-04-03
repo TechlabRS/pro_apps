@@ -107,14 +107,14 @@ button {
             cursor: pointer;
         }
 
-        #timerDisplay {
+    .timer {
     font-size: 18px;
     font-weight: bold;
     color: yellow;
     background-color: #333;
     padding: 10px;
     border-radius: 5px;
-    display: inline-block;
+    text-align: center;
 }
 
 /* Mobile View - Stack elements */
@@ -135,20 +135,29 @@ button {
     }
 }
 
-
-    </style>
+#masterKeyStatus {
+    font-weight: bold;
+    font-size: 18px;
+    text-align: center;
+    
+    background-color: rebeccapurple;
+}
+</style>
 </head>
 <body>
 
     <div class="container mt-4">
         <h4 class="text-center">🔐 R' $ecure PaswdMgr</h4>
-        <button class="btn btn-secondary w-100 mb-3" onclick="refreshPage()">🔄 Refresh</button>
+        <button class="btn btn-secondary w-100 mb-3" onclick="refreshPage()">🔄 Refresh</button> </br>
 
-        
-            <p class="text-center" id="timerDisplay"> --:--</p>
+        <p class="timer card p-3 mb-2" id="timerDisplay"> --:--</p>
+
+        <div class="card p-3 mb-2" id="masterKeyStatus"></div>
         
         <!-- Set Master Key Section -->
         <div class="card p-3 mb-4">
+            
+
             <h5 class="text-center">Set Master Key</h5>
             <div class="mb-3">
                 <input type="password" class="form-control" id="masterKey" placeholder="Enter a Master Key">
@@ -232,6 +241,22 @@ button {
 
 <script>
 
+window.onload = function () {
+    let savedMasterKey = localStorage.getItem("masterKey");
+    let masterKeyStatus = document.getElementById("masterKeyStatus");
+
+    if (!savedMasterKey) {
+        alert("No Master Key found. Please Set your Master Key");
+    }
+
+    masterKeyStatus.innerHTML = savedMasterKey
+        ? `<span style="color: green;">✅ Master Key is set.</span>`
+        : `<span style="color: red;">⚠ No Master Key found.</span>`;
+};
+
+
+
+
         let passwords = JSON.parse(localStorage.getItem("passwords")) || {};
         let storedHash = localStorage.getItem("masterKeyHash");
         let masterKeyValidated = false;
@@ -242,6 +267,8 @@ button {
         let sessionTimeLeft = 5 * 60; // 5 minutes in seconds
         let timerInterval;
 
+
+
         //localStorage.setItem("recoveryKey", hashedRecoveryKey);
 
         // function verifyMasterKy(){
@@ -250,41 +277,49 @@ button {
 
 function refreshPage() {
             location.reload();
-        }
-        function setMasterKey() {
+}
+
+function setMasterKey() {
             let masterKey = document.getElementById("masterKey").value;
             if (!masterKey) {
                 alert("Master Key cannot be empty!");
                 return;
             }
 
-
+            
             let hashedKey = CryptoJS.SHA256(masterKey).toString();
             localStorage.setItem("masterKeyHash", hashedKey);
             localStorage.setItem("masterKey", hashedKey);
     
-    // Generate a one-time recovery key
-    let recoveryKey = CryptoJS.lib.WordArray.random(16).toString(CryptoJS.enc.Hex);
-    let encryptedMasterKey = CryptoJS.AES.encrypt(masterKey, recoveryKey).toString();
-    localStorage.setItem("recoveryKey", encryptedMasterKey);
+            // Generate a one-time recovery key
+            let recoveryKey = CryptoJS.lib.WordArray.random(16).toString(CryptoJS.enc.Hex);
+            let encryptedMasterKey = CryptoJS.AES.encrypt(masterKey, recoveryKey).toString();
+            localStorage.setItem("recoveryKey", encryptedMasterKey);
 
-    // Show the recovery key only once
-    //showRecoveryKey(recoveryKey);
+            // Show the recovery key only once
+            //showRecoveryKey(recoveryKey);
 
             
             alert("Master Key Set Successfully!");
 
-            // Show Recovery Key with Copy Button
-        document.getElementById("recoveryKeySection").innerHTML = `
-        <div class="alert alert-info text-center">
-            <strong>Your Recovery Key:</strong> <span id="generatedRecoveryKey">${recoveryKey}</span>
-            <button class="btn btn-sm btn-primary" onclick="copyRecoveryKey()">Copy</button>
-        </div>
-        <p class="text-danger text-center"><b>Save this key safely! It cannot be recovered later.</b></p>
-        `;
+            let hint = document.getElementById("hint").value.trim(); // Get the value properly
 
-            alert("Master Key saved successfully! Make sure to copy and store your Recovery Key.");
-        }
+            if (hint) {
+                localStorage.setItem("hint", hint); // Save hint
+                alert("Hint saved successfully!");
+            }
+
+            // Show Recovery Key with Copy Button
+            document.getElementById("recoveryKeySection").innerHTML = `
+            <div class="alert alert-info text-center">
+                <strong>Your Recovery Key:</strong> <span id="generatedRecoveryKey">${recoveryKey}</span>
+                <button class="btn btn-sm btn-primary" onclick="copyRecoveryKey()">Copy</button>
+            </div>
+            <p class="text-danger text-center"><b>Save this key safely! It cannot be recovered later.</b></p>
+            `;
+
+                alert("Master Key saved successfully! Make sure to copy and store your Recovery Key.");
+    }
 
 
         function generateRecoveryKey() {
@@ -394,11 +429,24 @@ function verifyMasterKey() {
         function checkPasswordStrength() {
             let password = document.getElementById("password").value;
             let strengthMeter = document.getElementById("strengthMeter");
+            let strengthText = document.getElementById("strengthText");
 
-            if (password.length < 6) strengthMeter.className = "strength-meter weak";
-            else if (password.length < 12) strengthMeter.className = "strength-meter medium";
-            else strengthMeter.className = "strength-meter strong";
-        }
+            // Use regex to check complexity
+            let patterns = [/[A-Z]/, /[a-z]/, /[0-9]/, /[\W_]/];
+            let strength = patterns.reduce((score, pattern) => score + pattern.test(password), 0);
+
+            // Boost score for longer passwords
+            if (password.length >= 12) strength++;
+            
+            // Update UI based on strength score
+            const strengthLevels = ["Weak", "Medium", "Strong"];
+            const classNames = ["weak", "medium", "strong"];
+            
+            let index = Math.min(strength, 2); // Ensure index is between 0-2
+            strengthMeter.className = `strength-meter ${classNames[index]}`;
+            strengthText.innerText = strengthLevels[index];
+}
+
 
         function showUsernames() {
             if (!masterKeyValidated) {
@@ -528,6 +576,36 @@ function verifyMasterKey() {
             alert("Operation canceled. Your passwords are safe.");
         }
     }
+
+    function showHint() {
+            let hint = localStorage.getItem("hint");
+            alert(hint ? "Your hint: " + hint : "No hint is set.");
+        }
+
+        function sendRecoveryKey() {
+            let recoveryKey = localStorage.getItem("recoveryKey");
+            if (!recoveryKey) {
+                alert("No recovery key found!");
+                return;
+            }
+
+            let whatsappURL = `https://api.whatsapp.com/send?text=Your%20Recovery%20Key:%20${recoveryKey}`;
+            window.open(whatsappURL, "_blank");
+        }
+
+        function downloadRecoveryKey() {
+            let recoveryKey = localStorage.getItem("recoveryKey");
+            if (!recoveryKey) {
+                alert("No recovery key found!");
+                return;
+            }
+
+            let blob = new Blob([recoveryKey], { type: "text/plain" });
+            let link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "recovery_key.txt";
+            link.click();
+        }
 
 </script>
 </html>
