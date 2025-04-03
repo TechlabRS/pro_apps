@@ -134,7 +134,7 @@
             cursor: pointer;
         }
 
-        .timer {
+        /* .timer {
             font-size: 18px;
             font-weight: bold;
             color: yellow;
@@ -142,7 +142,30 @@
             padding: 10px;
             border-radius: 5px;
             text-align: center;
+        } */
+
+        .timer-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100px;
+            /* Circle size */
+            height: 100px;
+            /* Circle size */
+            background-color: #333;
+            /* Dark background */
+            color: yellow;
+            /* Text color */
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 50%;
+            /* Makes it a perfect circle */
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            position: relative;
+            /* Fixes any shifting issues */
         }
+
 
         /* Mobile View - Stack elements */
         @media (max-width: 600px) {
@@ -160,7 +183,7 @@
                 gap: 5px;
             }
 
-        button {
+            button {
                 width: 100%;
             }
         }
@@ -174,25 +197,24 @@
         }
 
         #userList2 {
-    list-style-type: none;
-    padding: 0;
-    border: 1px solid #ccc;
-    max-height: 200px;
-    overflow-y: auto;
-    background: white;
-    position: absolute;
-    width: 100%;
-    }
+            list-style-type: none;
+            padding: 0;
+            border: 1px solid #ccc;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            position: absolute;
+            width: 100%;
+        }
 
-    .user-item {
-        padding: 8px;
-        cursor: pointer;
-    }
+        .user-item {
+            padding: 8px;
+            cursor: pointer;
+        }
 
-    .user-item:hover {
-        background-color: #f0f0f0;
-    }
-
+        .user-item:hover {
+            background-color: #f0f0f0;
+        }
     </style>
 </head>
 
@@ -200,9 +222,15 @@
 
     <div class="container mt-4">
         <h4 class="text-center">🔐 R' $ecure PaswdMgr</h4>
-        <button class="btn btn-secondary w-100 mb-3" onclick="refreshPage()">🔄 Refresh</button> </br>
+        <div class="d-flex justify-content-center mb-3">
+            <button class="btn btn-secondary" onclick="refreshPage()">🔄 Refresh</button>
+        </div>
 
-        <p class="timer card p-3 mb-2" id="timerDisplay"> --:--</p>
+        <div class="d-flex justify-content-center">
+            <div class="timer-container card p-3 mb-2">
+                <p id="timerDisplay"> --:--</p>
+            </div>
+        </div>
 
         <div class="card p-3 mb-2" id="masterKeyStatus"></div>
 
@@ -241,6 +269,7 @@
                     oninput="checkPasswordStrength()">
             </div>
             <div class="strength-meter" id="strengthMeter"></div>
+            <p id="strengthText"></p>
             <button class="btn btn-info" onclick="savePassword()">Save Securely</button>
             <button class="btn btn-info" onclick="verifyMasterKey()">VerifyKey</button>
         </div>
@@ -308,6 +337,8 @@
             alert("No Master Key found. Please Set your Master Key");
         }
 
+        //startSessionTimer(sessionTimeout);
+
         masterKeyStatus.innerHTML = savedMasterKey
             ? `<span style="color: green;">✅ Master Key is set.</span>`
             : `<span style="color: red;">⚠ No Master Key found.</span>`;
@@ -317,22 +348,10 @@
 
 
     let passwords = JSON.parse(localStorage.getItem("passwords")) || {};
-    let storedHash = localStorage.getItem("masterKeyHash");
-    let masterKeyValidated = false;
-    let masterKeyTimeout;
+
     //let recoveryKey = generateRecoveryKey();
     //let hashedRecoveryKey = CryptoJS.SHA256(recoveryKey).toString();
 
-    let sessionTimeLeft = 5 * 60; // 5 minutes in seconds
-    let timerInterval;
-
-
-
-    //localStorage.setItem("recoveryKey", hashedRecoveryKey);
-
-    // function verifyMasterKy(){
-    //     masterKeyValidated = true;
-    // }
 
     function refreshPage() {
         location.reload();
@@ -358,15 +377,14 @@
         // Show the recovery key only once
         //showRecoveryKey(recoveryKey);
 
-
-        alert("Master Key Set Successfully!");
-
         let hint = document.getElementById("hint").value.trim(); // Get the value properly
 
         if (hint) {
             localStorage.setItem("hint", hint); // Save hint
             alert("Hint saved successfully!");
         }
+
+        //alert("Master Key Set Successfully!");
 
         // Show Recovery Key with Copy Button
         document.getElementById("recoveryKeySection").innerHTML = `
@@ -400,105 +418,82 @@
         });
     }
 
-    function setMasterKeyTimeout() {
-        masterKeyTimeout = setTimeout(() => {
-            masterKeyValidated = false;
-            alert("Master Key session expired! Please enter again.");
-        }, 1 * 60 * 1000);  // 5 minutes timeout
-    }
 
-    function startMasterKeyTimer() {
-        clearInterval(timerInterval); // Reset if already running
 
-        function updateTimerDisplay() {
-            let minutes = Math.floor(sessionTimeLeft / 60);
-            let seconds = sessionTimeLeft % 60;
-            document.getElementById("timerDisplay").innerText = ` ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    // 🔥 7️⃣ Session Timer & Auto-Logout
+    function startSessionTimer(duration) {
+        let timer = duration;
+        let timerInterval = setInterval(function () {
+            let minutes = Math.floor(timer / 60);
+            let seconds = timer % 60;
+            document.getElementById("timerDisplay").innerText =
+                (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
 
-            if (sessionTimeLeft <= 0) {
+            if (--timer < 0) {
                 clearInterval(timerInterval);
+                alert("⏳ Session Expired! Re-enter Master Key.");
                 masterKeyValidated = false;
-                alert("Master Key session expired! Please enter again.");
-                document.getElementById("timerDisplay").innerText = "Session Expired!";
+                sessionStorage.removeItem("encryptedMasterKey"); // Clear Master Key on expiry
+                verifyMasterKey();
             }
-
-            sessionTimeLeft--;
-        }
-
-        updateTimerDisplay(); // Show first immediately
-        timerInterval = setInterval(updateTimerDisplay, 1000); // Update every second
+        }, 1000);
     }
 
+    // 🔄 8️⃣ Reset session timer whenever a new key is entered
+    function resetSessionTimer() {
+        sessionTimeout = 300; // Reset to 5 minutes
+        startSessionTimer(sessionTimeout);
+    }
+
+
+    function refreshPage() {
+        location.reload();
+    }
+
+    let masterKeyValidated = false;
+    let sessionTimeout = 300; // 5 minutes in seconds
+
+
+    // 🏆 1️⃣ Master Key Verification
     function verifyMasterKey() {
-        let masterKey = prompt("Enter your Master Key:");
-        if (!masterKey) {
-            alert("Master Key is required!");
-            return;
+        let enteredKey = prompt("🔑 Enter Master Key:");
+        if (enteredKey) {
+            masterKeyValidated = true;
+            let hashedKey = CryptoJS.SHA256(enteredKey).toString(); // Hash key before storing
+            sessionStorage.setItem("encryptedMasterKey", hashedKey);
+            alert("✅ Master Key validated!");
+            resetSessionTimer(); // Reset session on key entry
+        } else {
+            masterKeyValidated = false;
         }
-        if (CryptoJS.SHA256(masterKey).toString() !== storedHash) {
-            alert("Incorrect Master Key!");
-            return;
-        }
-        masterKeyValidated = true;
-        sessionTimeLeft = 5 * 60; // Reset timer
-        startMasterKeyTimer();
-        alert("Master Key Verified!");
     }
 
+    // 🚀 2️⃣ Get Master Key from Session
     function getMasterKey() {
-        if (!masterKeyValidated) {
-            alert("Session Expired! Enter Master Key Again.");
-            return null;
+        let savedKey = sessionStorage.getItem("encryptedMasterKey");
+
+        if (!masterKeyValidated || !savedKey) {
+            alert("⚠ Session Expired! Enter Master Key Again.");
+            verifyMasterKey();
+            return sessionStorage.getItem("encryptedMasterKey");
         }
-        return document.getElementById("masterKey").value;
+
+        return savedKey;
     }
 
-    function encryptPassword(password, key) {
-        return CryptoJS.AES.encrypt(password, key).toString();
+
+    // 🔒 3️⃣ Encrypt Password
+    function encryptPassword(password, masterKey) {
+        return CryptoJS.AES.encrypt(password, masterKey).toString();
     }
 
-    // function decryptPassword(encrypted, key) {
-    //     try {
-    //         let bytes = CryptoJS.AES.decrypt(encrypted, key);
-    //         return bytes.toString(CryptoJS.enc.Utf8);
-    //     } catch (e) {
-    //         alert("Decryption failed! Incorrect Master Key?");
-    //         return null;
-    //     }
-    // }
+    // 🔓 4️⃣ Decrypt Password
+    function decryptPassword(encryptedPassword, masterKey) {
+        let bytes = CryptoJS.AES.decrypt(encryptedPassword, masterKey);
+        return bytes.toString(CryptoJS.enc.Utf8) || "❌ Wrong Master Key!";
+    }
 
-//     function decryptPassword(username, masterKey) {
-//     // Retrieve stored passwords from localStorage
-//     let storedPasswords = JSON.parse(localStorage.getItem("passwords")) || {};
-
-//     // Check if the username exists in storage
-//     if (!storedPasswords.hasOwnProperty(username)) {
-//         alert("⚠ No password found for " + username);
-//         return null;
-//     }
-
-//     // Get the encrypted password for the given username
-//     let encryptedPassword = storedPasswords[username];
-
-//     // Attempt decryption
-//     try {
-//         let bytes = CryptoJS.AES.decrypt(encryptedPassword, masterKey);
-//         let decryptedPassword = bytes.toString(CryptoJS.enc.Utf8);
-
-//         // If decryption fails (empty result), incorrect master key
-//         if (!decryptedPassword) {
-//             alert("❌ Incorrect Master Key!");
-//             return null;
-//         }
-
-//         return decryptedPassword;
-//     } catch (error) {
-//         alert("❌ Error decrypting password!");
-//         return null;
-//     }
-// }
-
-
+    // 📥 5️⃣ Save Password Securely
     function savePassword() {
         let masterKey = getMasterKey();
         if (!masterKey) return;
@@ -508,28 +503,59 @@
         let password = document.getElementById("password").value;
 
         if (!website || !username || !password) {
-            alert("All fields are required!");
+            alert("⚠ All fields are required!");
             return;
         }
 
         passwords[username] = encryptPassword(password, masterKey);
         localStorage.setItem("passwords", JSON.stringify(passwords));
-        alert("Password saved securely!");
+        alert("✅ Password saved securely!");
     }
 
+    // 📤 6️⃣ Reveal Password
+    function revealPassword() {
+        let masterKey = getMasterKey();
+        if (!masterKey) return;
+
+        let user = document.getElementById("selectedUser").value;
+        if (passwords[user]) {
+            document.getElementById("revealedPassword").innerText = decryptPassword(passwords[user], masterKey);
+        } else {
+            alert("❌ No password found!");
+        }
+    }
+
+
+
+
     function checkPasswordStrength() {
-        let password = document.getElementById("password").value;
+        let password = document.getElementById("password")?.value;
         let strengthMeter = document.getElementById("strengthMeter");
         let strengthText = document.getElementById("strengthText");
 
-        // Use regex to check complexity
-        let patterns = [/[A-Z]/, /[a-z]/, /[0-9]/, /[\W_]/];
-        let strength = patterns.reduce((score, pattern) => score + pattern.test(password), 0);
+        if (!strengthMeter || !strengthText) {
+            console.error("Strength meter or text element not found!");
+            return;
+        }
 
-        // Boost score for longer passwords
-        if (password.length >= 12) strength++;
+        // Define regex patterns for required characters
+        let hasUpperCase = /[A-Z]/.test(password);
+        let hasLowerCase = /[a-z]/.test(password);
+        let hasNumber = /[0-9]/.test(password);
+        let hasSpecialChar = /[/*\-#$%^&*()!@]/.test(password);
 
-        // Update UI based on strength score
+        // Check password length
+        let isMinLength = password.length >= 6;
+
+        // Count strength based on the presence of each type
+        let strength = hasUpperCase + hasLowerCase + hasNumber + hasSpecialChar;
+
+        // If password length is less than 6, consider it weak
+        if (!isMinLength) {
+            strength = 0;
+        }
+
+        // Define strength levels
         const strengthLevels = ["Weak", "Medium", "Strong"];
         const classNames = ["weak", "medium", "strong"];
 
@@ -537,6 +563,7 @@
         strengthMeter.className = `strength-meter ${classNames[index]}`;
         strengthText.innerText = strengthLevels[index];
     }
+
 
 
     function showUsernames() {
@@ -563,60 +590,8 @@
         });
     }
 
-//     function searchUsernames() {
-//     let searchInput = document.getElementById("searchUser").value.toLowerCase();
-//     let userList = document.getElementById("userList");
-
-//     // Retrieve and parse passwords from localStorage
-//     let storedPasswords = JSON.parse(localStorage.getItem("passwords") || "{}");
-
-//     // Convert object keys (usernames) into an array
-//     let usersArray = Object.keys(storedPasswords);
-
-//     // Filter usernames based on search input
-//     let filteredUsers = usersArray.filter(username => username.toLowerCase().includes(searchInput));
-
-//     // Clear previous results
-//     userList2.innerHTML = "";
-
-//     // Display matching results
-//     filteredUsers.forEach(username => {
-//         let listItem = document.createElement("li");
-//         listItem.textContent = username;
-//         listItem.className = "user-item";
-        
-//         // On click, autofill username field
-//         listItem.onclick = function () {
-//             document.getElementById("username").value = username;
-//             userList2.innerHTML = ""; // Hide list after selection
-//         };
-
-//         userList2.appendChild(listItem);
-//     });
-
-//     // If no results, show message
-//     if (filteredUsers.length === 0) {
-//         userList2.innerHTML = "<li>No matching users found</li>";
-//     }
-// }
-
-// // Event listener for search input
-// document.getElementById("searchUser").addEventListener("input", searchUsernames);
 
 
-
-
-    function revealPassword() {
-        let masterKey = getMasterKey();
-        if (!masterKey) return;
-
-        let user = document.getElementById("selectedUser").value;
-        if (passwords[user]) {
-            document.getElementById("revealedPassword").innerText = decryptPassword(passwords[user], masterKey);
-        } else {
-            alert("No password found!");
-        }
-    }
 
     function copyPassword() {
         let password = document.getElementById("revealedPassword").innerText;
@@ -660,7 +635,7 @@
             return;
         }
 
-        let newMasterKey = prompt("Recovery Key Validated success! Enter a new Master Key");
+        let newMasterKey = prompt("✅ Success! Recovery Key Validated! Enter a new Master Key");
         if (!newMasterKey) {
             alert("Master Key update canceled.");
             return;
