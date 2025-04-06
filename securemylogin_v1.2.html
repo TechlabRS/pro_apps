@@ -39,10 +39,16 @@
         }
 
         .btn {
-            max-width: fit-content;
+            max-width: 100%;
             align-self: center;
         }
 
+        .cp{
+            max-width: 50%; height: 50px; float: left;
+        }
+        .del{
+        margin-left: 50%; height: 50px;
+        }
         .hidden-password {
             font-weight: bold;
             color: gray;
@@ -270,8 +276,8 @@
             </div>
             <div class="strength-meter" id="strengthMeter"></div>
             <p id="strengthText"></p>
-            <button class="btn btn-info" onclick="savePassword()">Save Securely</button>
-            <button class="btn btn-info" onclick="verifyMasterKey()">VerifyKey</button>
+            <button class="btn btn-info w-100" onclick="savePassword()">Save Securely</button>
+            <button class="btn btn-info w-100" onclick="verifyMasterKey()">VerifyKey</button>
         </div>
 
         <!-- Saved Passwords -->
@@ -284,10 +290,12 @@
 
             <h5>Reveal Password</h5>
             <input class="form-control" type="text" id="selectedUser" placeholder="Enter Username">
-            <button class="btn btn-warning w-100 mb-2" onclick="revealPassword()">REVEAL PASSWORD</button>
+            <button class="btn btn-warning w-100 mb-2 mt-2" onclick="revealPassword()">REVEAL PASSWORD</button>
             <p>Password: <span id="revealedPassword"></span></p>
-            <button class="btn-small green" onclick="copyPassword()">COPY</button>
-            <button class="btn-small red" onclick="deletePassword()">DELETE</button>
+            <div>
+            <button class="btn-small green col-5" onclick="copyPassword()">COPY</button>
+            <button class="btn-small red col-5" onclick="deletePassword()">DELETE</button>
+            </div>    
         </div>
 
         <!-- <div class="card p-3 mb-3">
