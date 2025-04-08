@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Diary App with PIN</title>
+
+<header>
+    
+    <div style="display: flex; align-items: center; gap: 10px;">
+    <label class="switch">
+        <input type="checkbox" id="theme-toggle">
+        <span class="slider round"></span>
+    </label>
+    <span id="theme-label">Dark Mode</span>
+    
+   
+</div>
+ <button id="logout-btn" style="max-width: 100px;">Logout</button>
+    
+</header>
+<style>
+   body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #f0f2f5, #c9d6ff);
+      color: #333;
+    }
+    
+    
+    
+    
+    header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #3b82f6;
+  color: white;
+}
+
+
+
+#entry-form, #login-screen, #pin-setup {
+  max-width: 600px;
+  margin: 2rem auto;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+label {
+  display: block;
+  margin-top: 1rem;
+}
+
+input, select, textarea, button {
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+button {
+  background-color: #3b82f6;
+  color: white;
+  cursor: pointer;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0;
+  right: 0; bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px; width: 20px;
+  left: 3px; bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+input:checked + .slider {
+  background-color: #2196F3;
+}
+input:checked + .slider:before {
+  transform: translateX(24px);
+}
+
+.dark-mode {
+  background: linear-gradient(135deg, #1e1e2f, #2a2a40);
+  color: #f5f5f5;
+}
+.dark-mode input,
+.dark-mode textarea,
+.dark-mode select,
+.dark-mode button {
+  background: #2d2d44;
+  color: #fff;
+  border: 1px solid #555;
+}
+.dark-mode header {
+  background: #1d4ed8;
+}
+.dark-mode #entry-form,
+.dark-mode #login-screen,
+.dark-mode #pin-setup {
+  background: #2e2e44;
+}
+
+  </style>
+</style>
+
+
+<!-- PIN Setup Screen -->
+<div id="pin-setup" style="display: none;">
+    <h2>Set Your 4-digit PIN</h2>
+    <input type="password" id="new-pin" placeholder="Enter 4-digit PIN" maxlength="4">
+    <input type="text" id="security-question" placeholder="Security Question (e.g. Your pet's name?)">
+    <input type="text" id="security-answer" placeholder="Security Answer">
+    <button id="set-pin-btn">Set PIN</button>
+</div>
+
+<!-- Login Screen -->
+<div id="login-screen" style="display: none;">
+    <h2>Enter Your PIN</h2>
+    <p id="pin-display"></p>
+    <input type="password" id="pin-input" placeholder="Enter PIN">
+    <button id="login-btn">Login</button>
+    <button id="forgot-pin-btn">Forgot PIN?</button>
+</div>
+
+<!-- Forgot PIN Modal -->
+<div id="forgot-pin-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000;">
+    <div style="background: white; padding: 20px; border-radius: 8px; width: 300px;">
+        <p id="modal-security-question"></p>
+        <input type="text" id="modal-security-answer" placeholder="Enter Answer">
+        <div style="margin-top: 10px;">
+            <button id="confirm-reset-btn">Reset PIN</button>
+            <button id="cancel-reset-btn">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- App Screen -->
+<div id="app-screen" style="display: none;">
+    <header>
+        <h1>My Diary</h1>
+        <input type="text" id="search-input" placeholder="Search entries...">
+        <button id="add-entry-btn">Add Entry</button>
+        <button id="backup-btn">Export CSV</button>
+    </header>
+
+    <!-- Diary Entry Form (your provided form preserved) -->
+    <div id="entry-form" style="display: none;">
+        <header>
+            <h2>New Entry</h2>
+            <button id="close-form-btn">Close</button>
+        </header>
+        <form id="diary-form">
+            <label>Date:
+                <input type="date" id="entry-date">
+            </label>
+            <label>Mood:
+                <select id="entry-mood">
+                    <option>😊 Happy</option>
+                    <option>😢 Sad</option>
+                    <option>😡 Angry</option>
+                    <option>😴 Tired</option>
+                    <option>😎 Cool</option>
+                </select>
+            </label>
+            <label>Title:
+                <input type="text" id="entry-title" placeholder="Entry Title">
+            </label>
+            <label>Content:
+                <textarea id="entry-content" placeholder="Write your thoughts..."></textarea>
+            </label>
+            <label>Tags:
+                <select id="entry-tags">
+                    <option value="">Select a Tag</option>
+                    <option value="MySelf">🌟 MySelf</option>
+                    <option value="Realize">💭 Realize</option>
+                    <option value="Learning">📚 Learning</option>
+                    <option value="InnoV">💡 InnoV</option>
+                    <option value="Accept">🤝 Accept</option>
+                </select>
+            </label>
+            <button type="submit">Save Entry</button>
+        </form>
+    </div>
+
+    <!-- Entries List -->
+    <ul id="entries-list"></ul>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const loginScreen = document.getElementById('login-screen');
+    const appScreen = document.getElementById('app-screen');
+    const entryForm = document.getElementById('entry-form');
+
+    const pinInput = document.getElementById('pin-input');
+    const loginBtn = document.getElementById('login-btn');
+    const pinSetup = document.getElementById('pin-setup');
+    const newPinInput = document.getElementById('new-pin');
+    const setPinBtn = document.getElementById('set-pin-btn');
+
+    const secQ = document.getElementById('security-question');
+    const secA = document.getElementById('security-answer');
+
+    const addEntryBtn = document.getElementById('add-entry-btn');
+    const closeFormBtn = document.getElementById('close-form-btn');
+    const diaryForm = document.getElementById('diary-form');
+
+    const entriesList = document.getElementById('entries-list');
+    const backupBtn = document.getElementById('backup-btn');
+    const searchInput = document.getElementById('search-input');
+
+    const forgotPinBtn = document.getElementById('forgot-pin-btn');
+    const forgotModal = document.getElementById('forgot-pin-modal');
+    const modalSecAns = document.getElementById('modal-security-answer');
+    const confirmResetBtn = document.getElementById('confirm-reset-btn');
+    const cancelResetBtn = document.getElementById('cancel-reset-btn');
+    const modalSecQText = document.getElementById('modal-security-question');
+    
+    
+
+    // Init
+    let pin = localStorage.getItem('diaryAppPin');
+    document.getElementById('pin-display').textContent = pin ? `Your PIN: ${pin}` : 'No PIN set yet.';
+
+    if (!pin) {
+        pinSetup.style.display = 'block';
+        loginScreen.style.display = 'none';
+        appScreen.style.display = 'none';
+    } else {
+        pinSetup.style.display = 'none';
+        loginScreen.style.display = 'block';
+        appScreen.style.display = 'none';
+    }
+    
+    
+    const logoutBtn = document.getElementById('logout-btn');
+
+logoutBtn.addEventListener('click', () => {
+    appScreen.style.display = 'none';
+    loginScreen.style.display = 'block';
+    pinInput.value = ''; // clear input
+});
+
+    // Set PIN
+    setPinBtn.addEventListener('click', () => {
+        const pinVal = newPinInput.value;
+        const question = secQ.value.trim();
+        const answer = secA.value.trim().toLowerCase();
+        if (/^\d{4}$/.test(pinVal) && question && answer) {
+            localStorage.setItem('diaryAppPin', pinVal);
+            localStorage.setItem('diarySecurityQuestion', question);
+            localStorage.setItem('diarySecurityAnswer', answer);
+            alert('PIN and Security Question Set!');
+            pinSetup.style.display = 'none';
+            loginScreen.style.display = 'block';
+        } else {
+            alert('Enter 4-digit PIN + valid security Q&A');
+        }
+    });
+    
+    const themeToggle = document.getElementById('theme-toggle');
+const themeLabel = document.getElementById('theme-label');
+
+function setTheme(mode) {
+    if (mode === 'dark') {
+        document.body.classList.add('dark-mode');
+        themeToggle.checked = true;
+        themeLabel.textContent = 'Dark Mode';
+    } else {
+        document.body.classList.remove('dark-mode');
+        themeToggle.checked = false;
+        themeLabel.textContent = 'Light Mode';
+    }
+    localStorage.setItem('theme', mode);
+}
+
+// Toggle on click
+themeToggle.addEventListener('change', () => {
+    const newTheme = themeToggle.checked ? 'dark' : 'light';
+    setTheme(newTheme);
+});
+
+// On page load
+document.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    setTheme(savedTheme);
+});
+
+    // Login
+    loginBtn.addEventListener('click', () => {
+        if (pinInput.value === localStorage.getItem('diaryAppPin')) {
+            loginScreen.style.display = 'none';
+            appScreen.style.display = 'block';
+        } else {
+            alert('Incorrect PIN!');
+        }
+    });
+
+    // Forgot PIN
+    forgotPinBtn.addEventListener('click', () => {
+        const question = localStorage.getItem('diarySecurityQuestion');
+        if (question) {
+            modalSecQText.textContent = `Security Question: ${question}`;
+            forgotModal.style.display = 'flex';
+        } else {
+            alert('No security question set.');
+        }
+    });
+
+    cancelResetBtn.addEventListener('click', () => {
+        forgotModal.style.display = 'none';
+    });
+
+    confirmResetBtn.addEventListener('click', () => {
+        const storedAnswer = localStorage.getItem('diarySecurityAnswer');
+        if (modalSecAns.value.trim().toLowerCase() === storedAnswer) {
+            localStorage.removeItem('diaryAppPin');
+            alert('PIN reset! Reload to set a new one.');
+            location.reload();
+        } else {
+            alert('Incorrect answer!');
+        }
+    });
+
+    // Entry Form Controls
+    //addEntryBtn.addEventListener('click', () => entryForm.style.display = 'block');
+
+addEntryBtn.addEventListener('click', () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('entry-date').value = today;
+    entryForm.style.display = 'block';
+});
+    closeFormBtn.addEventListener('click', () => entryForm.style.display = 'none');
+
+    diaryForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const date = document.getElementById('entry-date').value || new Date().toISOString().split('T')[0];
+        const mood = document.getElementById('entry-mood').value;
+        const title = document.getElementById('entry-title').value;
+        const content = document.getElementById('entry-content').value;
+        const tags = document.getElementById('entry-tags').value;
+
+        const entry = { date, mood, title, content, tags };
+        const entries = JSON.parse(localStorage.getItem('diaryEntries')) || [];
+        entries.push(entry);
+        localStorage.setItem('diaryEntries', JSON.stringify(entries));
+        renderEntries(entries);
+        diaryForm.reset();
+        entryForm.style.display = 'none';
+    });
+
+    // Render
+    function renderEntries(filtered = null) {
+        const entries = filtered || JSON.parse(localStorage.getItem('diaryEntries')) || [];
+        entriesList.innerHTML = entries.map(entry => `
+            <li>
+                <h3>${entry.title}</h3>
+                <p>${entry.date} | ${entry.mood}</p>
+                <p>${entry.content}</p>
+                <p><strong>Tags:</strong> ${entry.tags}</p>
+            </li>
+        `).join('');
+    }
+
+    // Search
+    searchInput.addEventListener('input', () => {
+        const term = searchInput.value.toLowerCase();
+        const all = JSON.parse(localStorage.getItem('diaryEntries')) || [];
+        const filtered = all.filter(e =>
+            e.title.toLowerCase().includes(term) ||
+            e.content.toLowerCase().includes(term) ||
+            e.tags.toLowerCase().includes(term)
+        );
+        renderEntries(filtered);
+    });
+
+    // Backup
+    backupBtn.addEventListener('click', () => {
+        const entries = JSON.parse(localStorage.getItem('diaryEntries')) || [];
+        if (entries.length === 0) {
+            alert('No entries available to backup.');
+            return;
+        }
+
+        const csvContent = [
+            ['Date', 'Mood', 'Title', 'Content', 'Tags'],
+            ...entries.map(entry => [
+                entry.date,
+                entry.mood,
+                entry.title,
+                entry.content.replace(/(\r\n|\n|\r)/gm, ''),
+                entry.tags
+            ])
+        ]
+            .map(row => row.map(cell => `"${cell}"`).join(','))
+            .join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `diary_backup_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+
+    renderEntries(); // initial load
+});
+</script>
