@@ -1,6 +1,113 @@
-<html>
-  <h1>
-    All your apps in one Go!!
-    <a href="https://techlabrs.github.io/9slabs/securemylogin.html"> SecurePswd </a>
-  </h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stunning 3x3 Grid</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+    font-family: sans-serif;
+    margin: 20px;
+    background-color: #f4f4f4;
+    display: flex;
+    flex-direction: column; /* Arrange header and grid vertically */
+    align-items: center; /* Center items horizontally */
+    min-height: 100vh;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px; /* Add some space between the header and the grid */
+    color: #333;
+}
+
+header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    max-width: 960px;
+    width: 100%;
+}
+
+.card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.3s ease-in-out;
+}
+
+.card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.card h2 {
+    color: #333;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.card p {
+    color: #666;
+    margin-bottom: 15px;
+    line-height: 1.6;
+}
+
+.card a {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.card a:hover {
+    background-color: #0056b3;
+}
+
+
+    </style>
+</head>
+<header>
+    <h1>
+        Hey all my one stop HIT!
+    </h1>
+</header>
+<body>
+        
+    <div class="grid-container">
+        <div class="card">
+            <h2>RDiaries</h2>
+            <p>Your simple stories and sweet memories!!</p>
+            <a href="https://techlabrs.github.io/9slabs/mydiaryapp1.0.html" target="_blank">Visit Link</a>
+        </div>
+        <div class="card">
+            <h2>Password Mgr</h2>
+            <p>Save your passwords securely and confidently</p>
+            <a href="https://techlabrs.github.io/9slabs/securemylogin_v1.2.html" target="_blank">Visit Link</a>
+        </div>
+        <div class="card">
+            <h2>ExpenseTracker</h2>
+            <p>Keep an eye what you actually spends before your pockets empty!!</p>
+            <a href="https://techlabrs.github.io/9slabs/trackmyexpenses.html" target="_blank">Visit Link</a>
+        </div>
+        <div class="card">
+            <h2>1Stop4EmployeeMgt</h2>
+            <p>All your employees and related expenses and track your projects status</p>
+            <a href="https://techlabrs.github.io/employeetracking" target="_blank">Visit Link</a>
+        </div>
+        
+    </div>
+    
+</body>
 </html>
