@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Money Tracker v1.3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-50 pb-32">
+
+    <div class="max-w-md mx-auto bg-white rounded-b-3xl shadow-md overflow-hidden">
+
+        <!-- Header -->
+        <div class="bg-blue-600 text-white p-4 rounded-b-3xl flex justify-between items-center">
+            <h1 class="text-lg font-semibold">MoneyTracker</h1>
+            <div class="flex items-center gap-2">
+                <span class="text-lg font-bold" id="totalBalance">₹0.00</span>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-2 gap-3 p-4">
+            <div class="bg-gray-100 rounded-xl p-4">
+                <p class="text-sm text-gray-500">This Month</p>
+                <p class="text-xl font-semibold" id="thisMonth">₹0.00</p>
+            </div>
+            <div class="bg-gray-100 rounded-xl p-4">
+                <p class="text-sm text-gray-500">Remaining</p>
+                <p class="text-xl font-semibold text-green-600" id="remaining">₹0.00</p>
+            </div>
+            <div class="bg-gray-100 rounded-xl p-4">
+                <p class="text-sm text-gray-500">Top Category</p>
+                <p class="text-xl font-semibold" id="topCategory">-</p>
+            </div>
+            <div class="bg-gray-100 rounded-xl p-4">
+                <p class="text-sm text-gray-500">Daily Average</p>
+                <p class="text-xl font-semibold text-yellow-600" id="dailyAvg">₹0.00</p>
+            </div>
+        </div>
+
+        <!-- Search, Filter, Add -->
+        <div class="px-4 flex items-center gap-2 mb-2">
+            <input id="searchInput" type="text" placeholder="Search" class="flex-1 p-2 border rounded" />
+            <button onclick="openModal()" class="bg-blue-600 text-white px-4 py-2 rounded">+ Add</button>
+        </div>
+
+
+
+
+        <!-- Month & Year Filters -->
+        <div class="px-4 mb-4 flex gap-2">
+            <select id="monthFilter" class="p-2 border rounded" onchange="applyDateFilters()">
+                <option value="">All Months</option>
+                <option value="0">Jan</option>
+                <option value="1">Feb</option>
+                <option value="2">Mar</option>
+                <option value="3">Apr</option>
+                <option value="4">May</option>
+                <option value="5">Jun</option>
+                <option value="6">Jul</option>
+                <option value="7">Aug</option>
+                <option value="8">Sep</option>
+                <option value="9">Oct</option>
+                <option value="10">Nov</option>
+                <option value="11">Dec</option>
+            </select>
+
+            <select id="yearFilter" class="p-2 border rounded" onchange="applyDateFilters()">
+                <option value="">All Years</option>
+                <!-- Years will be added dynamically -->
+            </select>
+
+            <select id="tagFilter" class="p-2 border rounded" onchange="applyDateFilters()">
+                <option value="">All Tags</option>
+                <!-- dynamic tag options -->
+            </select>
+
+        </div>
+
+
+        <!-- Filters -->
+        <div class="px-4 mb-4 flex gap-2">
+            <button onclick="applyFilter('all')"
+                class="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded-full">All</button>
+            <button onclick="applyFilter('month')" class="text-sm px-3 py-1 bg-gray-200 text-gray-600 rounded-full">This
+                Month</button>
+            <button onclick="applyFilter('week')" class="text-sm px-3 py-1 bg-gray-200 text-gray-600 rounded-full">This
+                Week</button>
+        </div>
+
+        <div class="flex justify-end mb-2">
+            <button onclick="toggleChartType()" class="text-sm bg-gray-200 text-gray-700 px-3 py-1 rounded">
+                Toggle Chart
+            </button>
+        </div>
+
+
+        <!-- Chart -->
+        <div class="px-4 mb-4">
+            <div class="bg-gray-100 rounded-xl p-4">
+                <h2 class="font-medium text-gray-700 mb-2">Spending by category</h2>
+                <canvas id="categoryChart" class="w-full h-40"></canvas>
+            </div>
+        </div>
+
+        <!-- Income vs Spend Chart -->
+        <div class="px-4 mb-4">
+            <div class="bg-gray-100 rounded-xl p-4">
+                <h2 class="font-medium text-gray-700 mb-2">Income vs Spend</h2>
+                <canvas id="incomeVsSpendChart" class="w-full h-40"></canvas>
+            </div>
+        </div>
+
+
+        <!-- Import/Export -->
+        <div class="px-4 mb-4 flex gap-2">
+            <button onclick="exportData()" class="text-sm bg-green-600 text-white px-4 py-2 rounded">Export</button>
+            <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)" />
+            <button onclick="document.getElementById('importFile').click()"
+                class="text-sm bg-gray-600 text-white px-4 py-2 rounded">Import</button>
+        </div>
+
+        <!-- Transactions List -->
+        <div id="transactionList" class="px-4 pb-6 space-y-4"></div>
+    </div>
+
+    <!-- Floating Add Button -->
+    <button onclick="openModal()"
+        class="fixed bottom-20 right-6 bg-blue-600 text-white w-14 h-14 rounded-full shadow-lg text-3xl flex items-center justify-center z-10">+</button>
+
+    <!-- Modal -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-40 hidden justify-center items-center z-20">
+        <div class="bg-white rounded-xl p-6 w-11/12 max-w-sm space-y-4">
+            <h2 class="text-lg font-semibold" id="modalTitle">Add Transaction</h2>
+            <select id="typeInput" class="w-full p-2 border rounded">
+                <option value="income">Income</option>
+                <option value="spend">Spend</option>
+                <option value="investment">Investment</option>
+                <option value="transfer">Transfer</option>
+            </select>
+            <input type="text" id="labelInput" placeholder="Label" class="w-full p-2 border rounded" />
+            <input type="number" id="amountInput" placeholder="Amount" class="w-full p-2 border rounded" />
+            <input type="text" id="categoryInput" placeholder="Category" class="w-full p-2 border rounded" />
+            <input type="text" id="tagsInput" placeholder="Tags (comma-separated)" class="w-full p-2 border rounded" />
+            <input type="date" id="dateInput" class="w-full p-2 border rounded" />
+            <button onclick="saveTransaction()" class="w-full bg-blue-600 text-white py-2 rounded">Save</button>
+            <button onclick="closeModal()" class="w-full text-gray-500 text-sm">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+        let editingIndex = null;
+        let currentChartType = 'doughnut'; // default
+        let chartInstance = null;
+        let incomeSpendChart = null;
+
+
+
+        const saveToStorage = () => localStorage.setItem('transactions', JSON.stringify(transactions));
+
+        function updateUI() {
+            applyDateFilters(); // trigger current filters on load
+            populateYearDropdown(); // auto-fill year list
+            populateTagDropdown();
+
+        }
+
+        function updateUIWithData(filteredData, filter = 'all') {
+            const list = document.getElementById('transactionList');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            list.innerHTML = '';
+
+            let filtered = [...filteredData];  // Start with filteredData passed to the function
+
+            // Apply time filter
+            const today = new Date();
+            if (filter === 'month') {
+                filtered = filtered.filter(tx => new Date(tx.date).getMonth() === today.getMonth());
+            }
+            if (filter === 'week') {
+                const lastWeek = new Date();
+                lastWeek.setDate(today.getDate() - 7);
+                filtered = filtered.filter(tx => new Date(tx.date) >= lastWeek);
+            }
+
+            // Apply search filter
+            filtered = filtered.filter(tx =>
+                tx.label.toLowerCase().includes(search) ||
+                tx.category.toLowerCase().includes(search)
+            );
+
+            // Render the filtered transactions
+            filtered.forEach((tx, index) => {
+                const sign = tx.amount < 0 ? '-' : '+';
+                const color = tx.amount < 0 ? 'text-red-500' : 'text-green-600';
+                list.innerHTML += `
+        <div class="border-b pb-2">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="font-medium">${tx.label}</p>
+              <span class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">${tx.category}</span>
+              ${tx.tags.map(tag => `<span class="text-xs bg-yellow-100 text-yellow-600 px-2 py-0.5 ml-1 rounded">${tag}</span>`).join('')}
+
+            </div>
+            <div class="text-right">
+              <p class="text-sm text-gray-500">${tx.date}</p>
+              <p class="${color} font-semibold">${sign}₹${Math.abs(tx.amount).toFixed(2)}</p>
+              <div class="flex gap-2 mt-1 text-xs">
+                <button onclick="editTransaction(${index})" class="text-blue-600">🖉</button>
+                <button onclick="deleteTransaction(${index})" class="text-red-500">🗑️</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+            });
+
+            // Calculate totals and render them
+            const total = filteredData.reduce((acc, tx) => acc + tx.amount, 0);
+            const monthTotal = filteredData
+                .filter(tx => new Date(tx.date).getMonth() === today.getMonth())
+                .reduce((acc, tx) => acc + (tx.amount < 0 ? tx.amount : 0), 0);
+
+            const categories = {};
+            filteredData.forEach(tx => {
+                if (tx.amount < 0) {
+                    categories[tx.category] = (categories[tx.category] || 0) + Math.abs(tx.amount);
+                }
+            });
+
+            const topCategory = Object.entries(categories).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
+
+            // Update the UI elements
+            document.getElementById('totalBalance').textContent = `₹${total.toFixed(2)}`;
+            document.getElementById('thisMonth').textContent = `₹${Math.abs(monthTotal).toFixed(2)}`;
+            document.getElementById('remaining').textContent = `₹${(total - Math.abs(monthTotal)).toFixed(2)}`;
+            document.getElementById('topCategory').textContent = topCategory;
+            document.getElementById('dailyAvg').textContent = `₹${(Math.abs(monthTotal) / 30).toFixed(2)}`;
+
+            // Render the chart with the filtered categories
+            renderChart(categories);
+            renderIncomeVsSpend(filtered);
+
+        }
+
+
+        function renderChart(categoryData) {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: currentChartType,
+                data: {
+                    labels: Object.keys(categoryData),
+                    datasets: [{
+                        data: Object.values(categoryData),
+                        label: 'Category Spend',
+                        backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: currentChartType === 'bar' ? 'top' : 'bottom'
+                        }
+                    },
+                    scales: currentChartType === 'bar' ? {
+                        y: {
+                            beginAtZero: true
+                        }
+                    } : {}
+                }
+            });
+        }
+
+        function toggleChartType() {
+            currentChartType = currentChartType === 'doughnut' ? 'bar' : 'doughnut';
+            applyDateFilters(); // re-render with current filtered data
+        }
+
+        function renderIncomeVsSpend(data) {
+            const income = data.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0);
+            const spend = data.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+
+            const ctx = document.getElementById('incomeVsSpendChart').getContext('2d');
+            if (incomeSpendChart) incomeSpendChart.destroy();
+
+            incomeSpendChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Income', 'Spend'],
+                    datasets: [{
+                        label: 'Amount',
+                        data: [income, spend],
+                        backgroundColor: ['#10b981', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+
+
+        const openModal = (editing = false) => {
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+            if (!editing) {
+                document.getElementById('modalTitle').textContent = "Add Transaction";
+                document.getElementById('labelInput').value = '';
+                document.getElementById('amountInput').value = '';
+                document.getElementById('categoryInput').value = '';
+                document.getElementById('typeInput').value = 'income';
+                editingIndex = null;
+            }
+        };
+
+        const closeModal = () => {
+            document.getElementById('modal').classList.add('hidden');
+        };
+
+        const saveTransaction = () => {
+            const label = document.getElementById('labelInput').value.trim();
+            const amount = parseFloat(document.getElementById('amountInput').value);
+            const category = document.getElementById('categoryInput').value.trim();
+            const type = document.getElementById('typeInput').value;
+            const date = document.getElementById('dateInput').value;
+            const tagsRaw = document.getElementById('tagsInput').value.trim();
+            const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()) : [];
+
+            if (!label || isNaN(amount) || !category || !date) return alert('Fill all fields');
+
+            let adjustedAmount = Math.abs(amount);
+            if (type === 'spend' || type === 'investment') adjustedAmount *= -1;
+            if (type === 'transfer') adjustedAmount = 0;
+
+            // const newTx = { label, amount: adjustedAmount, category, date, type };
+            const newTx = { label, amount: adjustedAmount, category, date, type, tags };
+
+
+            if (editingIndex !== null) {
+                transactions[editingIndex] = newTx;
+                editingIndex = null;
+            } else {
+                transactions.push(newTx);
+            }
+
+            saveToStorage();
+            closeModal();
+            updateUI();
+        };
+
+        const editTransaction = (index) => {
+            const tx = transactions[index];
+            editingIndex = index;
+            document.getElementById('labelInput').value = tx.label;
+            document.getElementById('amountInput').value = Math.abs(tx.amount);
+            document.getElementById('categoryInput').value = tx.category;
+            document.getElementById('typeInput').value = tx.type;
+            document.getElementById('dateInput').value = tx.date;
+            document.getElementById('modalTitle').textContent = "Edit Transaction";
+            openModal(true);
+        };
+
+        const deleteTransaction = (index) => {
+            if (confirm("Delete this transaction?")) {
+                transactions.splice(index, 1);
+                saveToStorage();
+                updateUI();
+            }
+        };
+
+        const applyFilter = (filterType) => {
+            updateUI(filterType);
+        };
+
+        const exportData = () => {
+            const blob = new Blob([JSON.stringify(transactions, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'transactions.json';
+            a.click();
+        };
+
+        const importData = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (Array.isArray(data)) {
+                        transactions = data;
+                        saveToStorage();
+                        updateUI();
+                    } else {
+                        alert("Invalid JSON");
+                    }
+                } catch {
+                    alert("Import failed");
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        function applyDateFilters() {
+            const month = document.getElementById('monthFilter').value;
+            const year = document.getElementById('yearFilter').value;
+
+            const tag = document.getElementById('tagFilter').value;
+
+
+
+
+            let filtered = [...transactions];
+
+            if (tag !== "") {
+                filtered = filtered.filter(tx => tx.tags && tx.tags.includes(tag));
+            }
+
+            if (month !== "") {
+                filtered = filtered.filter(tx => new Date(tx.date).getMonth() == month);
+            }
+
+            if (year !== "") {
+                filtered = filtered.filter(tx => new Date(tx.date).getFullYear() == year);
+            }
+
+            updateUIWithData(filtered);
+        }
+
+        function populateYearDropdown() {
+            const years = [...new Set(transactions.map(tx => new Date(tx.date).getFullYear()))].sort();
+            const yearFilter = document.getElementById('yearFilter');
+            yearFilter.innerHTML = '<option value="">All Years</option>';
+            years.forEach(y => {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = y;
+                yearFilter.appendChild(opt);
+            });
+        }
+
+        function populateTagDropdown() {
+            const tagSet = new Set();
+            transactions.forEach(tx => (tx.tags || []).forEach(tag => tagSet.add(tag)));
+            const tagFilter = document.getElementById('tagFilter');
+            tagFilter.innerHTML = '<option value="">All Tags</option>';
+            [...tagSet].sort().forEach(tag => {
+                const opt = document.createElement('option');
+                opt.value = tag;
+                opt.textContent = tag;
+                tagFilter.appendChild(opt);
+            });
+        }
+
+
+
+
+        document.getElementById('searchInput').addEventListener('input', () => updateUI());
+
+        window.onload = () => updateUI();
+    </script>
+</body>
+
+</html>
