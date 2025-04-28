@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Job/Application Tracker - Full Upgrade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .active-btn {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .progress-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            margin-top: 16px;
+        }
+
+        .progress-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background-color: #d1d5db;
+            transform: translateY(-50%);
+            z-index: 0;
+        }
+
+        .progress-fill {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            height: 4px;
+            background-color: #3b82f6;
+            transform: translateY(-50%);
+            z-index: 1;
+            transition: width 0.5s ease-in-out;
+            /* <-- smooth animation here */
+        }
+
+        .progress-step {
+            position: relative;
+            z-index: 2;
+            background-color: white;
+            border: 2px solid #d1d5db;
+            color: #6b7280;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease, transform 0.3s ease;
+            /* add glow animation */
+        }
+
+        .progress-step.active {
+            background-color: #3b82f6;
+            border-color: #3b82f6;
+            color: white;
+            transform: scale(1.1);
+            /* slightly bigger active dot */
+            box-shadow: 0 0 8px #3b82f6;
+            /* glowing effect */
+        }
+
+        .progress-label {
+            font-size: 10px;
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        /* Floating "+" Button */
+        .add-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background-color: #3b82f6;
+            color: white;
+            font-size: 32px;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 50;
+            transition: background-color 0.3s;
+        }
+
+        .add-btn:hover {
+            background-color: #2563eb;
+            /* hover darker */
+        }
+
+        /* Added Styles */
+        .offered-card {
+            border: 4px solid #48bb78;
+            /* Green border for offers */
+        }
+
+        .offered-row {
+            background-color: #f0fff4;
+            /* Light green background for offers */
+        }
+
+        .stage-date-tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            z-index: 10;
+            bottom: -28px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            display: none;
+        }
+
+        .progress-step:hover .stage-date-tooltip {
+            display: block;
+        }
+        
+        .copy-btn {
+            background-color: #4caf50;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+
+        .copy-btn:hover {
+            background-color: #45a049;
+        }
+        
+         /* Mobile View Adjustments */
+    @media (max-width: 600px) {
+        .progress-step {
+            width: 24px;
+            height: 24px;
+            font-size: 10px;
+            margin-right: 8px;
+        }
+
+        .progress-label {
+            font-size: 8px;
+            margin-top: 2px;
+        }
+
+        .progress-container {
+            margin-top: 12px;
+        }
+    }
+    </style>
+
+</head>
+
+<body class="bg-gray-100 p-4 min-h-screen relative">
+    <div class="max-w-4xl mx-auto space-y-4">
+        <h1 class="text-2xl font-bold text-center">📋 Job / Application Tracker</h1>
+
+        <div id="summary" class="bg-white p-4 rounded shadow">
+            </div>
+
+        <div class="flex justify-between items-center mt-6">
+            <input type="text" id="search" placeholder="🔍 Search company..." class="border p-2 rounded w-1/2">
+            <div>
+                <button id="cardViewBtn" class="px-3 py-1 rounded active-btn">Card</button>
+                <button id="tableViewBtn" class="px-3 py-1 rounded">Table</button>
+            </div>
+        </div>
+
+        <div id="displayArea" class="space-y-2"></div>
+    </div>
+
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-6 w-96 space-y-2">
+            <h2 class="text-xl font-bold text-blue-700">➕ Add New Application</h2>
+            <form id="entryForm" class="space-y-3">
+                <input required name="company" placeholder="🏢 Company" class="w-full border p-2 rounded">
+                <input name="hr" placeholder="👤 HR Name" class="w-full border p-2 rounded">
+                <input name="mobile" placeholder="📱 Mobile" class="w-full border p-2 rounded">
+                <input name="skill" placeholder="💡 Skill" class="w-full border p-2 rounded">
+                <input name="np" placeholder="⏳ NP (Notice Period)" class="w-full border p-2 rounded">
+                <button type="submit" class="bg-blue-600 text-white w-full py-2 rounded">Save</button>
+                <button type="button" onclick="closeModal()" class="mt-1 bg-gray-400 text-white w-full py-2 rounded">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="add-btn" onclick="openModal()">+</div>
+
+    <script>
+        const entryForm = document.getElementById('entryForm');
+        const displayArea = document.getElementById('displayArea');
+        const search = document.getElementById('search');
+        const cardViewBtn = document.getElementById('cardViewBtn');
+        const tableViewBtn = document.getElementById('tableViewBtn');
+        const modal = document.getElementById('modal');
+        const summaryDiv = document.getElementById('summary'); // Added
+
+        const stages = ["Call Recvd", "Call Schedule", "L1 Clear", "L2 Clear", "Final Disc(HR)", "Offered"];
+
+        let entries = JSON.parse(localStorage.getItem('entries') || '[]');
+        let isCardView = true;
+
+        function saveData() {
+            localStorage.setItem('entries', JSON.stringify(entries));
+            render();
+            updateSummary(); // Update summary after data changes
+        }
+
+    function advanceStage(index) {
+    if (entries[index].stage === undefined) {
+        entries[index].stage = {
+            current: 0,
+            dates: [new Date().toISOString()]
+        };
+    } else if (entries[index].stage.current < stages.length - 1) {
+        entries[index].stage.current++;
+        entries[index].stage.dates[entries[index].stage.current] = new Date().toISOString();
+    }
+
+    if (entries[index].stage.current === stages.length - 1) {
+        alert(`🎉 Congratulations! You received an offer from ${entries[index].company}! 🎉`);
+    }
+
+    render(); //  <-----  RENDER BEFORE SAVING!
+    saveData();
+}
+
+function render() {
+    const keyword = search.value.toLowerCase();
+    const filtered = entries.filter(e => e.company.toLowerCase().includes(keyword));
+    displayArea.innerHTML = '';
+
+    if (isCardView) {
+        filtered.forEach((e, i) => {
+            let progressPercent = (e.stage.current || 0) / (stages.length - 1) * 100;
+            let cardClass = "bg-white p-4 rounded shadow space-y-2";
+            if (e.stage.current === stages.length - 1) {
+                cardClass += " offered-card";
+            }
+
+            let stageDotsHTML = stages.map((stage, idx) => {
+                let tooltipHTML = '';
+                if (e.stage.dates[idx]) {
+                    const formattedDate = new Date(e.stage.dates[idx]).toLocaleDateString();
+                    tooltipHTML = `<div class="stage-date-tooltip">${formattedDate}</div>`;
+                }
+                let stepClass = `progress-step ${e.stage.current >= idx ? 'active' : ''}`; // Dynamic active class
+                return `
+                    <div class="flex flex-col items-center">
+                        <div class="${stepClass}" onclick="advanceStage(${i})">
+                            ${idx+1}
+                            ${tooltipHTML}
+                        </div>
+                        <div class="progress-label">${stage}</div>
+                    </div>
+                    `;
+            }).join('');
+
+            displayArea.innerHTML += `
+          <div class="${cardClass}">
+            <h2 class="font-bold text-blue-600 text-lg">${e.company}</h2>
+            <div>👤 <strong>HR:</strong> ${e.hr}</div>
+            <div>📱 <strong>Mobile:</strong> ${e.mobile}
+            <button class="copy-btn" onclick="copyToClipboard('${e.mobile}')">Copy</button>
+            </div>
+            <div>💡 <strong>Skill:</strong> ${e.skill}</div>
+            <div>⏳ <strong>NP:</strong> ${e.np}</div>
+
+            <div class="progress-container">
+              <div class="progress-line"></div>
+              <div class="progress-fill" style="width:${progressPercent}%"></div>
+              ${stageDotsHTML}
+            </div>
+
+            <div class="space-x-2 mt-2">
+              <button onclick="editEntry(${i})" class="bg-yellow-400 px-2 py-1 rounded">Edit</button>
+              <button onclick="deleteEntry(${i})" class="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
+            </div>
+          </div>`;
+        });
+    }
+	else {
+                let table = `<table class="w-full text-sm bg-white rounded shadow">
+            <thead class="bg-gray-200"><tr>
+              <th>Company</th><th>HR</th><th>Mobile</th><th>Skill</th><th>NP</th><th>Latest Stage Date</th><th>Actions</th>
+            </tr></thead><tbody>`;
+                filtered.forEach((e, i) => {
+                    let rowClass = "border-t";
+                    if (e.stage.current === stages.length - 1) {
+                        rowClass += " offered-row"; // Apply special style
+                    }
+                    const latestStageDate = new Date(e.stage.dates[e.stage.current]).toLocaleDateString();
+                    table += `<tr class="${rowClass}">
+              <td>${e.company}</td>
+              <td>${e.hr}</td><td>${e.mobile}</td><td>${e.skill}</td><td>${e.np}</td>
+              <td>${latestStageDate}</td>
+              <td>
+                <button onclick="editEntry(${i})" class="bg-yellow-400 px-2 py-1 rounded">Edit</button>
+                <button onclick="deleteEntry(${i})" class="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
+              </td></tr>`;
+                });
+                table += '</tbody></table>';
+                displayArea.innerHTML = table;
+            }
+}
+
+        
+
+        function editEntry(index) {
+            const e = entries[index];
+            openModal();
+            entryForm.company.value = e.company;
+            entryForm.hr.value = e.hr;
+            entryForm.mobile.value = e.mobile;
+            entryForm.skill.value = e.skill;
+            entryForm.np.value = e.np;
+            entries.splice(index, 1);
+            saveData();
+        }
+
+        function deleteEntry(index) {
+            if (confirm('Delete this entry?')) {
+                entries.splice(index, 1);
+                saveData();
+            }
+        }
+
+        function openModal() {
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            entryForm.reset();
+        }
+
+        entryForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newEntry = {
+                company: entryForm.company.value,
+                hr: entryForm.hr.value,
+                mobile: entryForm.mobile.value,
+                skill: entryForm.skill.value,
+                np: entryForm.np.value,
+                stage: {
+                    current: 0,
+                    dates: [new Date().toISOString()]
+                } // Initialize stage with current date
+            };
+            entries.push(newEntry);
+            saveData();
+            closeModal();
+        });
+
+        search.addEventListener('input', render);
+
+        cardViewBtn.addEventListener('click', () => {
+            isCardView = true;
+            render();
+            cardViewBtn.classList.add('active-btn');
+            tableViewBtn.classList.remove('active-btn');
+        });
+
+        tableViewBtn.addEventListener('click', () => {
+            isCardView = false;
+            render();
+            cardViewBtn.classList.remove('active-btn');
+            tableViewBtn.classList.add('active-btn');
+        });
+
+        function updateSummary() {
+            const offerCount = entries.filter(e => e.stage.current === stages.length - 1).length;
+            const totalApplications = entries.length;
+            summaryDiv.innerHTML = `
+          <div>Total Applications: ${totalApplications}</div>
+          <div>Offers Received: ${offerCount}</div>
+        `;
+        }
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text)
+                .then(() => alert(`Copied ${text} to clipboard`))
+                .catch(err => console.error('Could not copy text: ', err));
+        }
+
+        render();
+        updateSummary(); // Initial summary update
+    </script>
+</body>
+
+</html>
