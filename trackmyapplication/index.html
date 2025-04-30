@@ -11,6 +11,16 @@
             background-color: #3b82f6;
             color: white;
         }
+		
+		button {
+		  padding: 0.6rem 1.2rem;
+		  margin-right: 1rem;
+		  font-size: 1rem;
+		}
+		#status {
+		margin-top: 1rem;
+		font-weight: bold;
+		}
 
         .progress-container {
             display: flex;
@@ -181,8 +191,14 @@
             <div>
                 <button id="cardViewBtn" class="px-3 py-1 rounded active-btn">Card</button>
                 <button id="tableViewBtn" class="px-3 py-1 rounded">Table</button>
+				
             </div>
+			
         </div>
+		<h1>🔁 Firebase Sync for <code>entries</code></h1>
+  <button onclick="syncToFirebase()">☁️ Sync to Firebase</button>
+  <button onclick="restoreFromFirebase()">⬇️ Restore from Firebase</button>
+  <div id="status"></div>
 
         <div id="displayArea" class="space-y-2"></div>
     </div>
@@ -404,6 +420,61 @@ function render() {
         render();
         updateSummary(); // Initial summary update
     </script>
+	
+	<!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+  <script>
+    // ✅ Your Firebase config — make sure to update this
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGTNO6ygnAE8QG5Hs-rcPRX3TzqrKQa5w",
+    authDomain: "rprofbdb.firebaseapp.com",
+    databaseURL: "https://rprofbdb-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "rprofbdb",
+    storageBucket: "rprofbdb.firebasestorage.app",
+    messagingSenderId: "452736310737",
+    appId: "1:452736310737:web:79c2ec79fda09bde7f14f0",
+    measurementId: "G-HKEZZQZDW2"
+    };
+
+    // ✅ Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function syncToFirebase() {
+  const entries = JSON.parse(localStorage.getItem("entries") || "[]");
+
+  if (!Array.isArray(entries) || entries.length === 0) {
+    document.getElementById("status").textContent = "⚠️ Local data is empty. Sync skipped to avoid overwriting Firebase.";
+    return;
+  }
+
+  firebase.database().ref("entries").set(entries)
+    .then(() => {
+      document.getElementById("status").textContent = "✅ entries synced to Firebase.";
+    })
+    .catch(error => {
+      document.getElementById("status").textContent = "❌ Sync failed: " + error.message;
+    });
+}
+
+
+    function restoreFromFirebase() {
+      db.ref("entries").once("value")
+        .then(snapshot => {
+          const data = snapshot.val() || [];
+          localStorage.setItem("entries", JSON.stringify(data));
+          document.getElementById("status").textContent = "✅ entries restored from Firebase.";
+          location.reload(); // Optional: reload to reflect data
+        })
+        .catch(error => {
+          document.getElementById("status").textContent = "❌ Restore failed: " + error.message;
+        });
+    }
+  </script>
+	
+	
 </body>
 
 </html>
