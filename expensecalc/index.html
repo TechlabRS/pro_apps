@@ -8,201 +8,305 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      background: linear-gradient(to right, #1e293b, #0f172a);
-      color: white;
-      padding: 20px;
+      background-color: #f9f9f9;
+      color: #222;
     }
     .card-custom {
-      background-color: #1e293b;
-      border: none;
-      border-radius: 1rem;
+      background-color: #ffffff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      border-radius: 12px;
     }
     .balance-positive {
-      color: #4ade80;
+      color: green;
     }
     .balance-negative {
-      color: #f87171;
+      color: red;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1 class="text-center mb-4">💸 Money Tracker</h1>
+<div class="container py-4">
+  <h1 class="text-center mb-4">💸 Money Tracker</h1>
 
-    <div class="card card-custom p-4 mb-4">
-      <form id="transactionForm" class="row g-3">
-        <div class="col-md-3">
-          <select class="form-select" id="type">
-            <option value="income">Income</option>
-            <option value="spend">Spend</option>
-            <option value="transfer">Transfer</option>
-            <option value="lend">Lend</option>
-            <option value="repay">Repay</option>
-            <option value="investment">Investment</option>
-            <option value="roi">ROI</option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <input type="number" class="form-control" id="amount" placeholder="Amount">
-        </div>
-        <div class="col-md-2">
-          <select class="form-select" id="from">
-            <option value="cash">Cash</option>
-            <option value="bankA">Bank A</option>
-            <option value="bankB">Bank B</option>
-          </select>
-        </div>
-        <div class="col-md-2">
-          <select class="form-select" id="to">
-            <option value="">To (for transfer)</option>
-            <option value="cash">Cash</option>
-            <option value="bankA">Bank A</option>
-            <option value="bankB">Bank B</option>
-          </select>
-        </div>
-        <div class="col-md-2">
-          <input type="text" class="form-control" id="tag" placeholder="Tag">
-        </div>
-        <div class="col-md-4">
-          <input type="text" class="form-control" id="desc" placeholder="Description">
-        </div>
-        <div class="col-md-2">
-          <input type="date" class="form-control" id="date">
-        </div>
-        <div class="col-md-2">
-          <button type="submit" class="btn btn-success w-100">Add</button>
-        </div>
-      </form>
-    </div>
-
-    <div class="input-group mb-3">
-      <input type="text" id="filterTag" class="form-control" placeholder="Filter by tag">
-      <input type="month" id="filterMonth" class="form-control">
-      <button class="btn btn-outline-light" onclick="render()">Apply Filter</button>
-    </div>
-
-    <button class="btn btn-warning mb-3" onclick="exportData()">⬇️ Export</button>
-
-    <div class="card card-custom p-3 mb-4">
-      <h4>📊 Spend vs Income</h4>
-      <canvas id="summaryChart" height="100"></canvas>
-    </div>
-
-    <div class="row mb-4">
-      <div class="col-md-6">
-        <div class="card card-custom p-3">
-          <h4>🏦 Account Balances</h4>
-          <ul id="balanceList"></ul>
+  <div class="card card-custom p-4 mb-4">
+    <form id="transactionForm" class="row g-3">
+      <input type="hidden" id="editIndex">
+      <div class="col-md-2">
+        <select class="form-select" id="type" required>
+          <option value="income">Income</option>
+          <option value="spend">Spend</option>
+          <option value="transfer">Transfer</option>
+          <option value="lend">Lend</option>
+          <option value="repay">Repay</option>
+          <option value="investment">Investment</option>
+          <option value="roi">ROI</option>
+        </select>
+      </div>
+      <div class="col-md-2"><input type="number" class="form-control" id="amount" placeholder="Amount" required></div>
+      <div class="col-md-2"><input type="text" class="form-control" id="from" placeholder="From Account" required></div>
+      <div class="col-md-2"><input type="text" class="form-control" id="to" placeholder="To Account (if transfer)"></div>
+      <div class="col-md-2"><input type="text" class="form-control" id="tag" placeholder="Tag"></div>
+      <div class="col-md-2">
+        <select class="form-select" id="category">
+          <option value="">-- Category --</option>
+          <option value="groceries">Groceries</option>
+          <option value="food">Food</option>
+          <option value="travel">Travel</option>
+          <option value="atm">ATM Withdraw</option>
+          <option value="self-transfer">Self Transfer</option>
+          <option value="others-transfer">Transfer to Other</option>
+          <option value="gift">Gift / Help</option>
+          <option value="loan-payment">Loan Payment</option>
+        </select>
+      </div>
+      <div class="col-md-2"><input type="text" class="form-control" id="desc" placeholder="Description"></div>
+      <div class="col-md-2"><input type="date" class="form-control" id="date" required></div>
+      <div class="col-md-2">
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" id="recurring">
+          <label class="form-check-label" for="recurring">Recurring</label>
         </div>
       </div>
-      <div class="col-md-6">
-        <div class="card card-custom p-3">
-          <h4>📒 Transactions</h4>
-          <ul id="transactionList" class="list-group"></ul>
-        </div>
+      <div class="col-md-2"><button type="submit" class="btn btn-success w-100">Save</button></div>
+      <div class="col-md-2"><button type="button" class="btn btn-secondary w-100" onclick="resetForm()">Clear</button></div>
+    </form>
+  </div>
+
+  <div class="input-group mb-3">
+    <input type="text" id="filterTag" class="form-control" placeholder="Filter by tag">
+    <input type="month" id="filterMonth" class="form-control">
+    <button class="btn btn-outline-primary" onclick="render()">Apply Filter</button>
+    <button class="btn btn-warning" onclick="exportData()">⬇ Export</button>
+    <input type="file" id="importFile" accept=".json" class="form-control" onchange="importData(this)" />
+  </div>
+
+  <div class="card card-custom p-3 mb-4">
+    <h4>📊 Spend vs Income</h4>
+    <canvas id="summaryChart" height="100"></canvas>
+  </div>
+
+  <div class="card card-custom p-3 mb-4">
+    <h4>🧾 Spend by Category</h4>
+    <canvas id="tagChart" height="120"></canvas>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card card-custom p-3">
+        <h4>🏦 Account Balances</h4>
+        <ul id="balanceList"></ul>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card card-custom p-3">
+        <h4>📒 Transactions</h4>
+        <ul id="transactionList" class="list-group"></ul>
       </div>
     </div>
   </div>
+</div>
 
-  <script>
-    const form = document.getElementById('transactionForm');
-    const transactions = [];
-    const balance = { cash: 0, bankA: 0, bankB: 0 };
+<script>
+let transactions = JSON.parse(localStorage.getItem('money_tx') || "[]");
+let balance = {};
+document.getElementById("date").valueAsDate = new Date();
 
-    form.date.valueAsDate = new Date();
+document.getElementById("transactionForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  const index = document.getElementById('editIndex').value;
+  const t = {
+    type: type.value,
+    amount: parseFloat(amount.value),
+    from: from.value,
+    to: to.value,
+    tag: tag.value,
+    category: category.value,
+    desc: desc.value,
+    date: date.value,
+    recurring: document.getElementById("recurring").checked
+  };
 
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      const t = {
-        type: form.type.value,
-        amount: parseFloat(form.amount.value),
-        from: form.from.value,
-        to: form.to.value,
-        tag: form.tag.value,
-        desc: form.desc.value,
-        date: form.date.value,
-      };
-      transactions.push(t);
-      updateBalance(t);
-      render();
-      form.reset();
-      form.date.valueAsDate = new Date();
-    });
+  if (index !== '') {
+    transactions[index] = t;
+  } else {
+    transactions.push(t);
+  }
 
-    function updateBalance(t) {
-      const amt = t.amount;
-      switch (t.type) {
-        case 'income':
-        case 'repay':
-        case 'roi':
-          balance[t.from] += amt;
-          break;
-        case 'spend':
-        case 'lend':
-        case 'investment':
-          balance[t.from] -= amt;
-          break;
-        case 'transfer':
-          balance[t.from] -= amt;
-          balance[t.to] += amt;
-          break;
+  saveData();
+  resetForm();
+  render();
+});
+
+function resetForm() {
+  transactionForm.reset();
+  document.getElementById("editIndex").value = '';
+  document.getElementById("date").valueAsDate = new Date();
+}
+
+function saveData() {
+  localStorage.setItem("money_tx", JSON.stringify(transactions));
+}
+
+function updateBalances() {
+  balance = {};
+  transactions.forEach(t => {
+    const amt = t.amount;
+    if (t.type === 'income') {
+  if (t.category === 'atm') {
+    // ATM withdraw: from bank → cash
+    balance[t.to] = (balance[t.to] || 0) + t.amount; // cash++
+    balance[t.from] = (balance[t.from] || 0) - t.amount; // bank--
+  } else {
+    // Normal income
+    balance[t.from] = (balance[t.from] || 0) + t.amount;
+  }
+}
+    else if (['spend', 'lend', 'investment'].includes(t.type)) {
+      balance[t.from] = (balance[t.from] || 0) - amt;
+    } else if (t.type === 'transfer') {
+      balance[t.from] = (balance[t.from] || 0) - amt;
+      balance[t.to] = (balance[t.to] || 0) + amt;
+    }
+  });
+}
+
+function render() {
+  updateBalances();
+
+  const tagFilter = filterTag.value.trim().toLowerCase();
+  const monthFilter = filterMonth.value;
+
+  const filtered = transactions.filter(t =>
+    (!tagFilter || (t.tag && t.tag.toLowerCase().includes(tagFilter))) &&
+    (!monthFilter || t.date.startsWith(monthFilter))
+  );
+
+  balanceList.innerHTML = Object.entries(balance).map(([k, v]) => `
+    <li class="d-flex justify-content-between">
+      <span>${k}</span><span class="${v < 0 ? 'balance-negative' : 'balance-positive'}">₹${v.toFixed(2)}</span>
+    </li>
+  `).join('');
+
+  transactionList.innerHTML = filtered.slice().reverse().map((t, i) => `
+    <li class="list-group-item d-flex justify-content-between align-items-start">
+      <div>
+        <div class="fw-bold">${t.type.toUpperCase()} - ${t.tag || 'No Tag'}
+          ${t.recurring ? '<span class="badge bg-info ms-2">Recurring</span>' : ''}
+        </div>
+        <small>${t.desc} - ₹${t.amount} (${t.date})<br>
+        Category: ${t.category || 'None'}</small>
+      </div>
+      <div>
+        <button class="btn btn-sm btn-outline-primary me-1" onclick="editTransaction(${transactions.indexOf(t)})">✏️</button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteTransaction(${transactions.indexOf(t)})">🗑️</button>
+      </div>
+    </li>
+  `).join('');
+
+  renderChart(filtered);
+  renderCategoryChart(filtered);
+}
+
+function renderChart(data) {
+  const income = data.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0);
+  const spend = data.filter(t => t.type === 'spend').reduce((a, t) => a + t.amount, 0);
+
+  const ctx = document.getElementById('summaryChart').getContext('2d');
+  if (window.summaryChart && typeof window.summaryChart.destroy === 'function') {
+    window.summaryChart.destroy();
+  }
+
+  window.summaryChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Income', 'Spend'],
+      datasets: [{
+        label: '₹',
+        data: [income, spend],
+        backgroundColor: ['#28a745', '#dc3545']
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+function renderCategoryChart(data) {
+  const catTotals = {};
+  data.filter(t => t.type === 'spend').forEach(t => {
+    const cat = t.category || 'Uncategorized';
+    catTotals[cat] = (catTotals[cat] || 0) + t.amount;
+  });
+
+  const ctx = document.getElementById('tagChart').getContext('2d');
+  if (window.tagChart && typeof window.tagChart.destroy === 'function') window.tagChart.destroy();
+
+  window.tagChart = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: Object.keys(catTotals),
+      datasets: [{
+        data: Object.values(catTotals),
+        backgroundColor: Object.keys(catTotals).map((_, i) => `hsl(${i * 40}, 70%, 60%)`)
+      }]
+    }
+  });
+}
+
+function editTransaction(index) {
+  const t = transactions[index];
+  type.value = t.type;
+  amount.value = t.amount;
+  from.value = t.from;
+  to.value = t.to;
+  tag.value = t.tag;
+  category.value = t.category || '';
+  desc.value = t.desc;
+  date.value = t.date;
+  recurring.checked = t.recurring || false;
+  editIndex.value = index;
+}
+
+function deleteTransaction(index) {
+  if (confirm("Are you sure to delete this transaction?")) {
+    transactions.splice(index, 1);
+    saveData();
+    render();
+  }
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(transactions, null, 2)], { type: "application/json" });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = "transactions.json";
+  a.click();
+}
+
+function importData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (Array.isArray(imported)) {
+        transactions = imported;
+        saveData();
+        render();
+        alert("Transactions imported successfully.");
+      } else {
+        alert("Invalid file format.");
       }
+    } catch {
+      alert("Error reading file.");
     }
+  };
+  reader.readAsText(file);
+}
 
-    function renderChart(filtered) {
-      const spend = filtered.filter(t => t.type === 'spend').reduce((a, b) => a + b.amount, 0);
-      const income = filtered.filter(t => t.type === 'income').reduce((a, b) => a + b.amount, 0);
-
-      const ctx = document.getElementById('summaryChart').getContext('2d');
-      if (window.summaryChart) window.summaryChart.destroy();
-
-      window.summaryChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Income', 'Spend'],
-          datasets: [{
-            label: '₹ Amount',
-            data: [income, spend],
-            backgroundColor: ['#4ade80', '#f87171']
-          }]
-        },
-        options: {
-          plugins: { legend: { display: false } }
-        }
-      });
-    }
-
-    function render() {
-      const tagFilter = document.getElementById('filterTag').value.trim().toLowerCase();
-      const monthFilter = document.getElementById('filterMonth').value;
-
-      let filtered = [...transactions];
-      if (tagFilter) filtered = filtered.filter(t => t.tag.toLowerCase().includes(tagFilter));
-      if (monthFilter) filtered = filtered.filter(t => t.date.startsWith(monthFilter));
-
-      const balList = document.getElementById('balanceList');
-      balList.innerHTML = Object.keys(balance).map(k => `<li class="d-flex justify-content-between">
-        <span>${k}</span><span class="${balance[k] < 0 ? 'balance-negative' : 'balance-positive'}">₹${balance[k].toFixed(2)}</span>
-      </li>`).join('');
-
-      const txList = document.getElementById('transactionList');
-      txList.innerHTML = filtered.slice().reverse().map(t => `
-        <li class="list-group-item bg-dark text-light border-secondary">
-          <div class="fw-bold">${t.type.toUpperCase()} - ${t.tag || 'No Tag'}</div>
-          <div>${t.desc} - ₹${t.amount} (${t.date})</div>
-        </li>
-      `).join('');
-
-      renderChart(filtered);
-    }
-
-    function exportData() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions));
-      const dlAnchor = document.createElement('a');
-      dlAnchor.setAttribute("href", dataStr);
-      dlAnchor.setAttribute("download", "transactions.json");
-      dlAnchor.click();
-    }
-  </script>
+render();
+</script>
 </body>
 </html>
