@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -11,16 +12,17 @@
             background-color: #3b82f6;
             color: white;
         }
-		
-		button {
-		  padding: 0.6rem 1.2rem;
-		  margin-right: 1rem;
-		  font-size: 1rem;
-		}
-		#status {
-		margin-top: 1rem;
-		font-weight: bold;
-		}
+
+        button {
+            padding: 0.5rem 1rem; /* Adjusted padding for better fit */
+            margin-right: 0.5rem; /* Adjusted margin */
+            font-size: 0.875rem; /* Slightly smaller font for more buttons */
+            border-radius: 0.375rem; /* Standard tailwind rounded-md */
+        }
+        #status {
+            margin-top: 1rem;
+            font-weight: bold;
+        }
 
         .progress-container {
             display: flex;
@@ -50,7 +52,6 @@
             transform: translateY(-50%);
             z-index: 1;
             transition: width 0.5s ease-in-out;
-            /* <-- smooth animation here */
         }
 
         .progress-step {
@@ -68,7 +69,6 @@
             font-size: 12px;
             cursor: pointer;
             transition: all 0.3s ease, transform 0.3s ease;
-            /* add glow animation */
         }
 
         .progress-step.active {
@@ -76,18 +76,28 @@
             border-color: #3b82f6;
             color: white;
             transform: scale(1.1);
-            /* slightly bigger active dot */
             box-shadow: 0 0 8px #3b82f6;
-            /* glowing effect */
         }
+        .progress-step.hold {
+            background-color: #f59e0b; /* Amber 500 */
+            border-color: #f59e0b;
+            color: white;
+        }
+        .progress-step.rejected {
+            background-color: #ef4444; /* Red 500 */
+            border-color: #ef4444;
+            color: white;
+        }
+
 
         .progress-label {
             font-size: 10px;
             text-align: center;
             margin-top: 4px;
+            max-width: 60px; /* Ensure labels don't stretch too much */
+            overflow-wrap: break-word;
         }
 
-        /* Floating "+" Button */
         .add-btn {
             position: fixed;
             bottom: 24px;
@@ -109,18 +119,14 @@
 
         .add-btn:hover {
             background-color: #2563eb;
-            /* hover darker */
         }
 
-        /* Added Styles */
         .offered-card {
-            border: 4px solid #48bb78;
-            /* Green border for offers */
+            border: 4px solid #48bb78; /* Green border for offers */
         }
 
         .offered-row {
-            background-color: #f0fff4;
-            /* Light green background for offers */
+            background-color: #f0fff4; /* Light green background for offers */
         }
 
         .stage-date-tooltip {
@@ -131,7 +137,7 @@
             border-radius: 4px;
             font-size: 0.75rem;
             z-index: 10;
-            bottom: -28px;
+            bottom: -28px; /* Adjusted for better visibility */
             left: 50%;
             transform: translateX(-50%);
             white-space: nowrap;
@@ -141,7 +147,7 @@
         .progress-step:hover .stage-date-tooltip {
             display: block;
         }
-        
+
         .copy-btn {
             background-color: #4caf50;
             color: white;
@@ -156,64 +162,92 @@
         .copy-btn:hover {
             background-color: #45a049;
         }
-        
-         /* Mobile View Adjustments */
-    @media (max-width: 600px) {
-        .progress-step {
-            width: 24px;
-            height: 24px;
-            font-size: 10px;
-            margin-right: 8px;
+
+        @media (max-width: 768px) { /* Adjusted breakpoint */
+            .progress-step {
+                width: 28px; /* Slightly larger for mobile */
+                height: 28px;
+                font-size: 10px;
+            }
+
+            .progress-label {
+                font-size: 9px;
+            }
+            .action-buttons-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); /* Responsive grid for buttons */
+                gap: 0.5rem;
+            }
+        }
+         /* Tailwind Custom Form Inputs (Optional, for better aesthetics) */
+        .form-input {
+            @apply w-full border p-2 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500;
+        }
+        .btn {
+            @apply px-4 py-2 rounded font-semibold shadow-md transition-colors duration-150;
+        }
+        .btn-primary {
+            @apply bg-blue-600 text-white hover:bg-blue-700;
+        }
+        .btn-secondary {
+            @apply bg-gray-400 text-white hover:bg-gray-500;
+        }
+        .btn-danger {
+            @apply bg-red-500 text-white hover:bg-red-600;
+        }
+        .btn-warning {
+            @apply bg-yellow-500 text-white hover:bg-yellow-600;
+        }
+        .btn-success {
+            @apply bg-green-500 text-white hover:bg-green-600;
+        }
+        .btn-info {
+            @apply bg-sky-500 text-white hover:bg-sky-600;
         }
 
-        .progress-label {
-            font-size: 8px;
-            margin-top: 2px;
-        }
-
-        .progress-container {
-            margin-top: 12px;
-        }
-    }
     </style>
 
 </head>
 
 <body class="bg-gray-100 p-4 min-h-screen relative">
-    <div class="max-w-4xl mx-auto space-y-4">
-        <h1 class="text-2xl font-bold text-center">📋 Job / Application Tracker</h1>
+    <div class="max-w-5xl mx-auto space-y-4"> <h1 class="text-3xl font-bold text-center text-gray-700">📋 Job / Application Tracker</h1>
 
-        <div id="summary" class="bg-white p-4 rounded shadow">
+        <div id="summary" class="bg-white p-4 rounded-lg shadow-md text-sm text-gray-600">
             </div>
 
-        <div class="flex justify-between items-center mt-6">
-            <input type="text" id="search" placeholder="🔍 Search company..." class="border p-2 rounded w-1/2">
-            <div>
-                <button id="cardViewBtn" class="px-3 py-1 rounded active-btn">Card</button>
-                <button id="tableViewBtn" class="px-3 py-1 rounded">Table</button>
-				
+        <div class="flex flex-col sm:flex-row justify-between items-center mt-6 space-y-2 sm:space-y-0">
+            <input type="text" id="search" placeholder="🔍 Search company, skill, or HR..." class="form-input w-full sm:w-1/2">
+            <div class="flex space-x-2">
+                <button id="cardViewBtn" class="btn btn-primary active-btn">Card View</button>
+                <button id="tableViewBtn" class="btn btn-primary">Table View</button>
             </div>
-			
         </div>
-		<h1>🔁 Firebase Sync for <code>entries</code></h1>
-  <button onclick="syncToFirebase()">☁️ Sync to Firebase</button>
-  <button onclick="restoreFromFirebase()">⬇️ Restore from Firebase</button>
-  <div id="status"></div>
+        <div class="my-4 p-3 bg-white rounded-lg shadow-md">
+            <h2 class="text-lg font-semibold text-gray-700 mb-2">🔁 Firebase Sync for <code>entries</code></h2>
+            <div class="flex space-x-2">
+                <button onclick="syncToFirebase()" class="btn btn-info">☁️ Sync to Firebase</button>
+                <button onclick="restoreFromFirebase()" class="btn btn-success">⬇️ Restore from Firebase</button>
+            </div>
+            <div id="status" class="mt-2 text-sm"></div>
+        </div>
 
-        <div id="displayArea" class="space-y-2"></div>
+        <div id="displayArea" class="space-y-4"></div>
     </div>
 
-    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl p-6 w-96 space-y-2">
-            <h2 class="text-xl font-bold text-blue-700">➕ Add New Application</h2>
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl p-6 w-full max-w-md space-y-4 shadow-xl">
+            <h2 id="modalTitle" class="text-2xl font-bold text-blue-700">➕ Add New Application</h2>
             <form id="entryForm" class="space-y-3">
-                <input required name="company" placeholder="🏢 Company" class="w-full border p-2 rounded">
-                <input name="hr" placeholder="👤 HR Name" class="w-full border p-2 rounded">
-                <input name="mobile" placeholder="📱 Mobile" class="w-full border p-2 rounded">
-                <input name="skill" placeholder="💡 Skill" class="w-full border p-2 rounded">
-                <input name="np" placeholder="⏳ NP (Notice Period)" class="w-full border p-2 rounded">
-                <button type="submit" class="bg-blue-600 text-white w-full py-2 rounded">Save</button>
-                <button type="button" onclick="closeModal()" class="mt-1 bg-gray-400 text-white w-full py-2 rounded">Cancel</button>
+                <input required name="company" placeholder="🏢 Company Name" class="form-input">
+                <input name="hr" placeholder="👤 HR Name (Optional)" class="form-input">
+                <input name="mobile" placeholder="📱 Mobile (Optional)" class="form-input">
+                <input name="skill" placeholder="💡 Key Skill/Role" class="form-input">
+                <input name="np" placeholder="⏳ Notice Period (e.g., 30 days)" class="form-input">
+                <textarea name="notes" placeholder="📝 Additional Notes (Optional)" class="form-input h-24"></textarea>
+                <div class="flex space-x-2">
+                    <button type="submit" class="btn btn-primary w-full">Save</button>
+                    <button type="button" onclick="closeModal()" class="btn btn-secondary w-full">Cancel</button>
+                </div>
             </form>
         </div>
     </div>
@@ -223,258 +257,452 @@
     <script>
         const entryForm = document.getElementById('entryForm');
         const displayArea = document.getElementById('displayArea');
-        const search = document.getElementById('search');
+        const searchInput = document.getElementById('search'); // Renamed for clarity
         const cardViewBtn = document.getElementById('cardViewBtn');
         const tableViewBtn = document.getElementById('tableViewBtn');
         const modal = document.getElementById('modal');
-        const summaryDiv = document.getElementById('summary'); // Added
+        const modalTitle = document.getElementById('modalTitle');
+        const summaryDiv = document.getElementById('summary');
 
-        const stages = ["Call Recvd", "Call Schedule", "L1 Clear", "L2 Clear", "Final Disc(HR)", "Offered"];
-
+        const linearStages = ["Call Recvd", "Call Schedule", "L1 Clear", "L2 Clear", "Final Disc(HR)", "Offered"];
         let entries = JSON.parse(localStorage.getItem('entries') || '[]');
         let isCardView = true;
+        let currentlyEditingOriginalIndex = null; // To track editing
 
         function saveData() {
             localStorage.setItem('entries', JSON.stringify(entries));
             render();
-            updateSummary(); // Update summary after data changes
+            updateSummary();
         }
 
-    function advanceStage(index) {
-    if (entries[index].stage === undefined) {
-        entries[index].stage = {
-            current: 0,
-            dates: [new Date().toISOString()]
-        };
-    } else if (entries[index].stage.current < stages.length - 1) {
-        entries[index].stage.current++;
-        entries[index].stage.dates[entries[index].stage.current] = new Date().toISOString();
-    }
+        function initializeNewStage() {
+            const initialStageDates = new Array(linearStages.length).fill(null);
+            initialStageDates[0] = new Date().toISOString(); // Date for "Call Recvd"
+            return {
+                lastLinearStageIndex: 0,
+                linearStageDates: initialStageDates,
+                currentOverallStatus: "Active", // "Active", "On Hold", "Rejected"
+                statusReason: "",
+                statusSetDate: null
+            };
+        }
 
-    if (entries[index].stage.current === stages.length - 1) {
-        alert(`🎉 Congratulations! You received an offer from ${entries[index].company}! 🎉`);
-    }
+        function advanceStage(originalEntryIndex) {
+            const entry = entries[originalEntryIndex];
+            if (!entry) return;
 
-    render(); //  <-----  RENDER BEFORE SAVING!
-    saveData();
-}
-
-function render() {
-    const keyword = search.value.toLowerCase();
-    const filtered = entries.filter(e => e.company.toLowerCase().includes(keyword));
-    displayArea.innerHTML = '';
-
-    if (isCardView) {
-        filtered.forEach((e, i) => {
-            let progressPercent = (e.stage.current || 0) / (stages.length - 1) * 100;
-            let cardClass = "bg-white p-4 rounded shadow space-y-2";
-            if (e.stage.current === stages.length - 1) {
-                cardClass += " offered-card";
+            if (entry.stage.currentOverallStatus !== "Active") {
+                alert(`Application is currently ${entry.stage.currentOverallStatus}. Cannot advance linearly. You might need to "Resume" it first if it's "On Hold".`);
+                return;
             }
 
-            let stageDotsHTML = stages.map((stage, idx) => {
-                let tooltipHTML = '';
-                if (e.stage.dates[idx]) {
-                    const formattedDate = new Date(e.stage.dates[idx]).toLocaleDateString();
-                    tooltipHTML = `<div class="stage-date-tooltip">${formattedDate}</div>`;
+            if (entry.stage.lastLinearStageIndex < linearStages.length - 1) {
+                entry.stage.lastLinearStageIndex++;
+                entry.stage.linearStageDates[entry.stage.lastLinearStageIndex] = new Date().toISOString();
+
+                if (linearStages[entry.stage.lastLinearStageIndex] === "Offered") {
+                    alert(`🎉 Congratulations! You received an offer from ${entry.company}! 🎉`);
+                    // Optionally, set overall status to "Offered" or similar if desired
+                    // entry.stage.currentOverallStatus = "Offered";
                 }
-                let stepClass = `progress-step ${e.stage.current >= idx ? 'active' : ''}`; // Dynamic active class
-                return `
-                    <div class="flex flex-col items-center">
-                        <div class="${stepClass}" onclick="advanceStage(${i})">
-                            ${idx+1}
-                            ${tooltipHTML}
-                        </div>
-                        <div class="progress-label">${stage}</div>
-                    </div>
-                    `;
-            }).join('');
-
-            displayArea.innerHTML += `
-          <div class="${cardClass}">
-            <h2 class="font-bold text-blue-600 text-lg">${e.company}</h2>
-            <div>👤 <strong>HR:</strong> ${e.hr}</div>
-            <div>📱 <strong>Mobile:</strong> ${e.mobile}
-            <button class="copy-btn" onclick="copyToClipboard('${e.mobile}')">Copy</button>
-            </div>
-            <div>💡 <strong>Skill:</strong> ${e.skill}</div>
-            <div>⏳ <strong>NP:</strong> ${e.np}</div>
-
-            <div class="progress-container">
-              <div class="progress-line"></div>
-              <div class="progress-fill" style="width:${progressPercent}%"></div>
-              ${stageDotsHTML}
-            </div>
-
-            <div class="space-x-2 mt-2">
-              <button onclick="editEntry(${i})" class="bg-yellow-400 px-2 py-1 rounded">Edit</button>
-              <button onclick="deleteEntry(${i})" class="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
-            </div>
-          </div>`;
-        });
-    }
-	else {
-                let table = `<table class="w-full text-sm bg-white rounded shadow">
-            <thead class="bg-gray-200"><tr>
-              <th>Company</th><th>HR</th><th>Mobile</th><th>Skill</th><th>NP</th><th>Latest Stage Date</th><th>Actions</th>
-            </tr></thead><tbody>`;
-                filtered.forEach((e, i) => {
-                    let rowClass = "border-t";
-                    if (e.stage.current === stages.length - 1) {
-                        rowClass += " offered-row"; // Apply special style
-                    }
-                    const latestStageDate = new Date(e.stage.dates[e.stage.current]).toLocaleDateString();
-                    table += `<tr class="${rowClass}">
-              <td>${e.company}</td>
-              <td>${e.hr}</td><td>${e.mobile}</td><td>${e.skill}</td><td>${e.np}</td>
-              <td>${latestStageDate}</td>
-              <td>
-                <button onclick="editEntry(${i})" class="bg-yellow-400 px-2 py-1 rounded">Edit</button>
-                <button onclick="deleteEntry(${i})" class="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
-              </td></tr>`;
-                });
-                table += '</tbody></table>';
-                displayArea.innerHTML = table;
+            } else if (linearStages[entry.stage.lastLinearStageIndex] === "Offered") {
+                 alert(`This application is already in the "Offered" stage.`);
             }
-}
-
-        
-
-        function editEntry(index) {
-            const e = entries[index];
-            openModal();
-            entryForm.company.value = e.company;
-            entryForm.hr.value = e.hr;
-            entryForm.mobile.value = e.mobile;
-            entryForm.skill.value = e.skill;
-            entryForm.np.value = e.np;
-            entries.splice(index, 1);
             saveData();
         }
 
-        function deleteEntry(index) {
-            if (confirm('Delete this entry?')) {
-                entries.splice(index, 1);
+        function setOverallStatus(originalEntryIndex, newStatus) {
+            const entry = entries[originalEntryIndex];
+            if (!entry) return;
+
+            let reason = "";
+            if (newStatus === "On Hold" || newStatus === "Rejected") {
+                reason = prompt(`Reason for setting status to "${newStatus}" for ${entry.company} (Optional):`);
+            }
+
+            entry.stage.currentOverallStatus = newStatus;
+            entry.stage.statusSetDate = new Date().toISOString();
+            entry.stage.statusReason = reason || ""; // Store empty string if no reason
+            
+            if (newStatus === "Active" && entry.stage.currentOverallStatus === "On Hold") { // Coming from Resume
+                 entry.stage.statusSetDate = null;
+                 entry.stage.statusReason = "";
+            }
+
+            saveData();
+        }
+        
+        function resumeApplication(originalEntryIndex) {
+            const entry = entries[originalEntryIndex];
+            if (!entry || entry.stage.currentOverallStatus !== "On Hold") {
+                alert("This application is not 'On Hold'.");
+                return;
+            }
+            setOverallStatus(originalEntryIndex, "Active"); // This will clear reason and date via setOverallStatus logic
+        }
+
+
+        function render() {
+            const keyword = searchInput.value.toLowerCase();
+            // Filter entries and store original index
+            const filteredEntriesWithOriginalIndex = entries.map((entry, index) => ({ entry, originalIndex: index }))
+                .filter(({ entry }) =>
+                    entry.company.toLowerCase().includes(keyword) ||
+                    (entry.hr && entry.hr.toLowerCase().includes(keyword)) ||
+                    (entry.skill && entry.skill.toLowerCase().includes(keyword))
+                );
+
+            displayArea.innerHTML = '';
+
+            if (filteredEntriesWithOriginalIndex.length === 0) {
+                displayArea.innerHTML = `<p class="text-center text-gray-500">No applications found matching your criteria.</p>`;
+                return;
+            }
+            
+            if (isCardView) {
+                filteredEntriesWithOriginalIndex.forEach(({ entry: e, originalIndex }) => {
+                    // Ensure stage object exists and is initialized
+                    if (!e.stage || !e.stage.linearStageDates) {
+                        e.stage = initializeNewStage();
+                    }
+
+                    let progressPercent = 0;
+                    if (e.stage.currentOverallStatus !== "Rejected" && e.stage.lastLinearStageIndex >= 0) {
+                         progressPercent = (e.stage.lastLinearStageIndex + 1) / linearStages.length * 100;
+                         if (linearStages[e.stage.lastLinearStageIndex] === "Offered") progressPercent = 100;
+                    }
+
+
+                    let cardClass = "bg-white p-4 rounded-lg shadow-md space-y-3";
+                    if (linearStages[e.stage.lastLinearStageIndex] === "Offered" && e.stage.currentOverallStatus !== "Rejected") {
+                        cardClass += " offered-card";
+                    }
+
+                    let stageDotsHTML = linearStages.map((stageName, idx) => {
+                        let tooltipHTML = '';
+                        if (e.stage.linearStageDates[idx]) {
+                            const formattedDate = new Date(e.stage.linearStageDates[idx]).toLocaleDateString();
+                            tooltipHTML = `<div class="stage-date-tooltip">${formattedDate}</div>`;
+                        }
+                        
+                        let stepDotClass = 'progress-step';
+                        if (idx <= e.stage.lastLinearStageIndex) {
+                            if (e.stage.currentOverallStatus === "Rejected") {
+                                // If rejected, active steps before rejection might be normal, or all grayed out
+                                // For now, let's make them look normal up to the point of rejection
+                                if (idx === e.stage.lastLinearStageIndex) stepDotClass += ' active'; // Keep last linear stage before rejection active-looking
+                            } else if (e.stage.currentOverallStatus === "On Hold") {
+                                 if (idx === e.stage.lastLinearStageIndex) stepDotClass += ' active hold'; else if (idx < e.stage.lastLinearStageIndex) stepDotClass += ' active';
+                            }
+                            else {
+                                stepDotClass += ' active';
+                            }
+                        }
+
+                        // Click handler for dots
+                        let dotClickHandler = '';
+                        if (e.stage.currentOverallStatus === 'Active') {
+                            // Allow clicking current or next uncompleted stage
+                            if (idx === e.stage.lastLinearStageIndex || idx === e.stage.lastLinearStageIndex + 1 ) {
+                                dotClickHandler = `onclick="advanceStage(${originalIndex})"`;
+                            } else {
+                                dotClickHandler = `style="cursor:not-allowed;"`; // Prevent jumping stages
+                            }
+                        } else if (e.stage.currentOverallStatus === 'On Hold' && idx === e.stage.lastLinearStageIndex +1){
+                             dotClickHandler = `onclick="alert('Resume application first to advance.')" style="cursor:help;"`;
+                        }
+                        else {
+                            dotClickHandler = `style="cursor:not-allowed;"`; // Not active, or rejected
+                        }
+                         if (idx > e.stage.lastLinearStageIndex + 1 && e.stage.currentOverallStatus === 'Active') {
+                            dotClickHandler = `style="cursor:not-allowed;"`; // Don't allow jumping way ahead
+                        }
+
+
+                        return `
+                            <div class="flex flex-col items-center">
+                                <div class="${stepDotClass}" ${dotClickHandler}>
+                                    ${idx + 1}
+                                    ${tooltipHTML}
+                                </div>
+                                <div class="progress-label">${stageName}</div>
+                            </div>`;
+                    }).join('');
+                    
+                    const overallStatusColor = e.stage.currentOverallStatus === 'Rejected' ? 'text-red-600' :
+                                           e.stage.currentOverallStatus === 'On Hold' ? 'text-yellow-600' :
+                                           (linearStages[e.stage.lastLinearStageIndex] === "Offered" ? 'text-green-600' : 'text-blue-600');
+
+
+                    displayArea.innerHTML += `
+                      <div class="${cardClass}">
+                        <h2 class="font-bold ${overallStatusColor} text-xl">${e.company}</h2>
+                        <div><strong>Status:</strong> <span class="font-semibold ${overallStatusColor}">${e.stage.currentOverallStatus}</span>
+                            ${e.stage.statusReason ? ` <span class="text-sm text-gray-500">(${e.stage.statusReason})</span>` : ''}
+                            ${e.stage.statusSetDate && e.stage.currentOverallStatus !== 'Active' ? ` <span class="text-xs text-gray-400">- ${new Date(e.stage.statusSetDate).toLocaleDateString()}</span>` : ''}
+                        </div>
+                        ${e.hr ? `<div>👤 <strong>HR:</strong> ${e.hr}</div>` : ''}
+                        ${e.mobile ? `<div>📱 <strong>Mobile:</strong> ${e.mobile} <button class="copy-btn" onclick="copyToClipboard('${e.mobile}')">Copy</button></div>` : ''}
+                        ${e.skill ? `<div>💡 <strong>Skill/Role:</strong> ${e.skill}</div>` : ''}
+                        ${e.np ? `<div>⏳ <strong>NP:</strong> ${e.np}</div>` : ''}
+                        ${e.notes ? `<div class="text-sm text-gray-600">📝 <strong>Notes:</strong> ${e.notes.replace(/\n/g, '<br>')}</div>` : ''}
+
+                        <div class="progress-container mt-3 mb-3">
+                          <div class="progress-line"></div>
+                          <div class="progress-fill" style="width:${progressPercent}%"></div>
+                          ${stageDotsHTML}
+                        </div>
+
+                        <div class="action-buttons-grid mt-3 border-t pt-3">
+                          <button onclick="setOverallStatus(${originalIndex}, 'On Hold')" class="btn btn-warning text-xs">Hold</button>
+                          <button onclick="setOverallStatus(${originalIndex}, 'Rejected')" class="btn btn-danger text-xs">Reject</button>
+                          ${e.stage.currentOverallStatus === 'On Hold' ? `<button onclick="resumeApplication(${originalIndex})" class="btn btn-success text-xs">Resume</button>` : ''}
+                          <button onclick="editEntry(${originalIndex})" class="btn btn-info text-xs">Edit Details</button>
+                          <button onclick="deleteEntry(${originalIndex})" class="btn btn-secondary text-xs">Delete Entry</button>
+                        </div>
+                      </div>`;
+                });
+            } else { // Table View
+                let table = `<div class="overflow-x-auto bg-white rounded-lg shadow-md"><table class="w-full text-sm">
+                    <thead class="bg-gray-200 text-gray-600 uppercase"><tr>
+                      <th class="p-3 text-left">Company</th><th class="p-3 text-left">Overall Status</th><th class="p-3 text-left">Current Linear Stage</th><th class="p-3 text-left">HR</th><th class="p-3 text-left">Skill/Role</th><th class="p-3 text-left">Actions</th>
+                    </tr></thead><tbody class="text-gray-700">`;
+                filteredEntriesWithOriginalIndex.forEach(({ entry: e, originalIndex }) => {
+                    if (!e.stage || !e.stage.linearStageDates) {
+                        e.stage = initializeNewStage();
+                    }
+                    let rowClass = "border-t border-gray-200 hover:bg-gray-50";
+                    if (linearStages[e.stage.lastLinearStageIndex] === "Offered" && e.stage.currentOverallStatus !== "Rejected") {
+                        rowClass += " offered-row";
+                    }
+                     const overallStatusColor = e.stage.currentOverallStatus === 'Rejected' ? 'text-red-600' :
+                                           e.stage.currentOverallStatus === 'On Hold' ? 'text-yellow-600' :
+                                           (linearStages[e.stage.lastLinearStageIndex] === "Offered" ? 'text-green-600' : 'text-blue-600');
+
+
+                    const currentLinearStageName = linearStages[e.stage.lastLinearStageIndex] || 'N/A';
+                    const linearStageDate = e.stage.linearStageDates[e.stage.lastLinearStageIndex] ? new Date(e.stage.linearStageDates[e.stage.lastLinearStageIndex]).toLocaleDateString() : 'N/A';
+
+                    table += `<tr class="${rowClass}">
+                      <td class="p-3 font-semibold">${e.company}</td>
+                      <td class="p-3"><span class="font-semibold ${overallStatusColor}">${e.stage.currentOverallStatus}</span> ${e.stage.statusReason ? `<span class="text-xs text-gray-500">(${e.stage.statusReason})</span>`:""}</td>
+                      <td class="p-3">${currentLinearStageName} <span class="text-xs text-gray-400">(${linearStageDate})</span></td>
+                      <td class="p-3">${e.hr || '-'}</td>
+                      <td class="p-3">${e.skill || '-'}</td>
+                      <td class="p-3 whitespace-nowrap action-buttons-grid">
+                        <button onclick="setOverallStatus(${originalIndex}, 'On Hold')" class="btn btn-warning btn-xs">Hold</button>
+                        <button onclick="setOverallStatus(${originalIndex}, 'Rejected')" class="btn btn-danger btn-xs">Reject</button>
+                        ${e.stage.currentOverallStatus === 'On Hold' ? `<button onclick="resumeApplication(${originalIndex})" class="btn btn-success btn-xs">Resume</button>` : ''}
+                        <button onclick="editEntry(${originalIndex})" class="btn btn-info btn-xs">Edit</button>
+                        <button onclick="deleteEntry(${originalIndex})" class="btn btn-secondary btn-xs">Del</button>
+                      </td></tr>`;
+                });
+                table += '</tbody></table></div>';
+                displayArea.innerHTML = table;
+            }
+        }
+
+        function editEntry(originalIndex) {
+            const entryToEdit = entries[originalIndex];
+            if (!entryToEdit) return;
+
+            currentlyEditingOriginalIndex = originalIndex;
+            modalTitle.textContent = `✏️ Edit Application: ${entryToEdit.company}`;
+            openModal();
+            entryForm.company.value = entryToEdit.company;
+            entryForm.hr.value = entryToEdit.hr || '';
+            entryForm.mobile.value = entryToEdit.mobile || '';
+            entryForm.skill.value = entryToEdit.skill || '';
+            entryForm.np.value = entryToEdit.np || '';
+            entryForm.notes.value = entryToEdit.notes || '';
+        }
+
+        function deleteEntry(originalIndex) {
+            const entryToDelete = entries[originalIndex];
+            if (confirm(`Are you sure you want to delete the application for ${entryToDelete.company}?`)) {
+                entries.splice(originalIndex, 1);
                 saveData();
             }
         }
 
         function openModal() {
+            if(currentlyEditingOriginalIndex === null) { // Only reset title if it's for a new entry
+                 modalTitle.textContent = '➕ Add New Application';
+            }
             modal.classList.remove('hidden');
         }
 
         function closeModal() {
             modal.classList.add('hidden');
             entryForm.reset();
+            currentlyEditingOriginalIndex = null; // Reset editing state
+            modalTitle.textContent = '➕ Add New Application'; // Reset title
         }
 
-        entryForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const newEntry = {
-                company: entryForm.company.value,
-                hr: entryForm.hr.value,
-                mobile: entryForm.mobile.value,
-                skill: entryForm.skill.value,
-                np: entryForm.np.value,
-                stage: {
-                    current: 0,
-                    dates: [new Date().toISOString()]
-                } // Initialize stage with current date
+        entryForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const formData = {
+                company: entryForm.company.value.trim(),
+                hr: entryForm.hr.value.trim(),
+                mobile: entryForm.mobile.value.trim(),
+                skill: entryForm.skill.value.trim(),
+                np: entryForm.np.value.trim(),
+                notes: entryForm.notes.value.trim()
             };
-            entries.push(newEntry);
+
+            if (!formData.company) {
+                alert("Company name is required.");
+                return;
+            }
+
+            if (currentlyEditingOriginalIndex !== null) {
+                const entryToUpdate = entries[currentlyEditingOriginalIndex];
+                Object.assign(entryToUpdate, formData); // Update fields, stage remains
+            } else {
+                const newEntry = {
+                    ...formData,
+                    stage: initializeNewStage()
+                };
+                entries.push(newEntry);
+            }
             saveData();
             closeModal();
         });
 
-        search.addEventListener('input', render);
+        searchInput.addEventListener('input', render);
 
         cardViewBtn.addEventListener('click', () => {
             isCardView = true;
             render();
             cardViewBtn.classList.add('active-btn');
             tableViewBtn.classList.remove('active-btn');
+            cardViewBtn.classList.add('btn-primary'); // Ensure it keeps primary style
+            tableViewBtn.classList.remove('btn-primary'); 
+            tableViewBtn.classList.add('btn-secondary'); // Make inactive button look secondary
         });
 
         tableViewBtn.addEventListener('click', () => {
             isCardView = false;
             render();
-            cardViewBtn.classList.remove('active-btn');
             tableViewBtn.classList.add('active-btn');
+            cardViewBtn.classList.remove('active-btn');
+            tableViewBtn.classList.add('btn-primary');
+            cardViewBtn.classList.remove('btn-primary');
+            cardViewBtn.classList.add('btn-secondary');
         });
-
+        
         function updateSummary() {
-            const offerCount = entries.filter(e => e.stage.current === stages.length - 1).length;
             const totalApplications = entries.length;
+            const offeredCount = entries.filter(e => linearStages[e.stage.lastLinearStageIndex] === "Offered" && e.stage.currentOverallStatus !== "Rejected").length;
+            const onHoldCount = entries.filter(e => e.stage.currentOverallStatus === "On Hold").length;
+            const rejectedCount = entries.filter(e => e.stage.currentOverallStatus === "Rejected").length;
+            const activeCount = entries.filter(e => e.stage.currentOverallStatus === "Active" && linearStages[e.stage.lastLinearStageIndex] !== "Offered").length;
+
+
             summaryDiv.innerHTML = `
-          <div>Total Applications: ${totalApplications}</div>
-          <div>Offers Received: ${offerCount}</div>
-        `;
+              <span class="mr-3"><strong>Total:</strong> ${totalApplications}</span>
+              <span class="mr-3 text-blue-600"><strong>Active:</strong> ${activeCount}</span>
+              <span class="mr-3 text-green-600"><strong>Offered:</strong> ${offeredCount}</span>
+              <span class="mr-3 text-yellow-600"><strong>On Hold:</strong> ${onHoldCount}</span>
+              <span class="text-red-600"><strong>Rejected:</strong> ${rejectedCount}</span>
+            `;
         }
         
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text)
-                .then(() => alert(`Copied ${text} to clipboard`))
+                .then(() => alert(`Copied "${text}" to clipboard.`))
                 .catch(err => console.error('Could not copy text: ', err));
         }
 
+        // Initial setup
+        if (isCardView) {
+             cardViewBtn.classList.add('btn-primary');
+             tableViewBtn.classList.add('btn-secondary');
+        } else {
+            tableViewBtn.classList.add('btn-primary');
+             cardViewBtn.classList.add('btn-secondary');
+        }
         render();
-        updateSummary(); // Initial summary update
-    </script>
-	
-	<!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+        updateSummary();
 
-  <script>
-    // ✅ Your Firebase config — make sure to update this
+    // Firebase SDKs (ensure these are correctly placed and config is yours)
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script>
+    // ✅ Your Firebase config — make sure to update this with your actual Firebase project config
     const firebaseConfig = {
-      apiKey: "AIzaSyDGTNO6ygnAE8QG5Hs-rcPRX3TzqrKQa5w",
-    authDomain: "rprofbdb.firebaseapp.com",
-    databaseURL: "https://rprofbdb-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "rprofbdb",
-    storageBucket: "rprofbdb.firebasestorage.app",
-    messagingSenderId: "452736310737",
-    appId: "1:452736310737:web:79c2ec79fda09bde7f14f0",
-    measurementId: "G-HKEZZQZDW2"
+      apiKey: "AIzaSyDGTNO6ygnAE8QG5Hs-rcPRX3TzqrKQa5w", // Replace with your actual API key
+      authDomain: "rprofbdb.firebaseapp.com", // Replace with your actual auth domain
+      databaseURL: "https://rprofbdb-default-rtdb.asia-southeast1.firebasedatabase.app", // Replace with your actual database URL
+      projectId: "rprofbdb", // Replace with your actual project ID
+      storageBucket: "rprofbdb.appspot.com", // Corrected: usually ends with .appspot.com
+      messagingSenderId: "452736310737", // Replace with your actual sender ID
+      appId: "1:452736310737:web:79c2ec79fda09bde7f14f0", // Replace with your actual App ID
+      measurementId: "G-HKEZZQZDW2" // Optional: Replace with your actual Measurement ID
     };
 
-    // ✅ Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    // Initialize Firebase
+    let db;
+    try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        console.log("Firebase initialized successfully.");
+    } catch (e) {
+        console.error("Firebase initialization failed:", e);
+        document.getElementById("status").textContent = "⚠️ Firebase initialization failed. Sync disabled.";
+    }
+
 
     function syncToFirebase() {
-  const entries = JSON.parse(localStorage.getItem("entries") || "[]");
+        if (!db) {
+            document.getElementById("status").textContent = "⚠️ Firebase not initialized. Cannot sync.";
+            return;
+        }
+        // Ensure entries are up-to-date from localStorage before syncing
+        const localEntries = JSON.parse(localStorage.getItem("entries") || "[]");
+        if (!Array.isArray(localEntries) || localEntries.length === 0) {
+            if (confirm("Local data is empty. Do you want to proceed and potentially clear Firebase data?")) {
+                 // Proceed to set empty array to Firebase
+            } else {
+                document.getElementById("status").textContent = "⚠️ Sync cancelled by user due to empty local data.";
+                return;
+            }
+        }
 
-  if (!Array.isArray(entries) || entries.length === 0) {
-    document.getElementById("status").textContent = "⚠️ Local data is empty. Sync skipped to avoid overwriting Firebase.";
-    return;
-  }
-
-  firebase.database().ref("entries").set(entries)
-    .then(() => {
-      document.getElementById("status").textContent = "✅ entries synced to Firebase.";
-    })
-    .catch(error => {
-      document.getElementById("status").textContent = "❌ Sync failed: " + error.message;
-    });
-}
-
+        db.ref("entries").set(localEntries)
+            .then(() => {
+            document.getElementById("status").textContent = "✅ Entries synced to Firebase.";
+            })
+            .catch(error => {
+            document.getElementById("status").textContent = "❌ Sync failed: " + error.message;
+            console.error("Firebase sync error:", error);
+            });
+    }
 
     function restoreFromFirebase() {
-      db.ref("entries").once("value")
-        .then(snapshot => {
-          const data = snapshot.val() || [];
-          localStorage.setItem("entries", JSON.stringify(data));
-          document.getElementById("status").textContent = "✅ entries restored from Firebase.";
-          location.reload(); // Optional: reload to reflect data
-        })
-        .catch(error => {
-          document.getElementById("status").textContent = "❌ Restore failed: " + error.message;
-        });
+         if (!db) {
+            document.getElementById("status").textContent = "⚠️ Firebase not initialized. Cannot restore.";
+            return;
+        }
+        if (confirm("This will overwrite your local data with data from Firebase. Are you sure?")) {
+            db.ref("entries").once("value")
+            .then(snapshot => {
+                const data = snapshot.val() || [];
+                localStorage.setItem("entries", JSON.stringify(data));
+                entries = data; // Update the in-memory 'entries' array
+                saveData(); // This will re-render and update summary with restored data
+                document.getElementById("status").textContent = "✅ Entries restored from Firebase. Page reloaded.";
+                // location.reload(); // Optional: reload to reflect data, but saveData() should handle it.
+            })
+            .catch(error => {
+                document.getElementById("status").textContent = "❌ Restore failed: " + error.message;
+                console.error("Firebase restore error:", error);
+            });
+        } else {
+             document.getElementById("status").textContent = "⚠️ Restore cancelled by user.";
+        }
     }
-  </script>
-	
-	
+    </script>
 </body>
-
 </html>
