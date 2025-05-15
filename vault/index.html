@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Password Manager v2.1 (Chips)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+
+    <style>
+        body {
+            background-color: #f0f2f5;
+            color: #333;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background-color: #0d6efd;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .view {
+            display: none;
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+        .active-view {
+            display: block;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background-color: #6c757d;
+            color: white;
+            font-weight: 500;
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .btn-primary:hover {
+            background-color: #0b5ed7;
+            border-color: #0a58ca;
+        }
+        .strength-meter {
+            height: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
+        .strength-meter div {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease-in-out, background-color 0.3s ease-in-out;
+        }
+        .strength-weak { width: 33%; background-color: #dc3545; }
+        .strength-medium { width: 66%; background-color: #ffc107; }
+        .strength-strong { width: 100%; background-color: #198754; }
+
+        .timer-display {
+            font-size: 1.1em;
+            font-weight: 500;
+            padding: 0.375rem 0.75rem;
+            color: #fff;
+            background-color: #28a745;
+            border-radius: 0.25rem;
+        }
+        .status-message {
+            font-weight: 500;
+        }
+        .status-locked { color: #dc3545; }
+        .status-unlocked { color: #198754; }
+        .status-setup { color: #ffc107; }
+
+        #recoveryKeyDisplayArea {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 1.1em;
+            word-break: break-all;
+            margin-bottom: 15px;
+        }
+        .modal-header {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .modal-title {
+            font-weight: 500;
+        }
+        .form-control-plaintext {
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .modal-body .alert {
+            margin-bottom: 0;
+        }
+
+        /* Chip Styles */
+        .password-chip-container {
+            display: flex;
+            flex-wrap: wrap; /* Allow chips to wrap */
+            gap: 10px; /* Space between chips */
+            max-height: 450px; /* Adjust as needed */
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #f8f9fa; /* Light background for the container */
+            border-radius: .25rem;
+            border: 1px solid #dee2e6;
+        }
+        .password-chip {
+            background-color: #fff;
+            border: 1px solid #ced4da;
+            border-radius: 20px; /* Pill shape */
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            min-width: 180px; /* Minimum width for chips */
+            flex-basis: calc(33.333% - 10px); /* Roughly 3 chips per row, adjusting for gap */
+        }
+        .password-chip:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-color: #0d6efd;
+        }
+        .password-chip .chip-website {
+            font-weight: 600;
+            color: #0d6efd;
+            margin-bottom: 2px;
+            font-size: 0.95rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .password-chip .chip-username {
+            font-size: 0.8rem;
+            color: #6c757d;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+         @media (max-width: 768px) {
+            .password-chip {
+                flex-basis: calc(50% - 10px); /* 2 chips per row on medium screens */
+            }
+        }
+        @media (max-width: 576px) {
+            .password-chip {
+                flex-basis: 100%; /* 1 chip per row on small screens */
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#" onclick="app.ui.refreshPage()"><i class="bi bi-shield-lock-fill"></i> SecurePass v2.1</a>
+            <div class="d-flex align-items-center">
+                <span id="masterKeyStatus" class="status-message me-3">Initializing...</span>
+                <div id="sessionTimerDisplay" class="timer-display" style="display: none;">--:--</div>
+                <button class="btn btn-sm btn-light ms-2" onclick="app.ui.refreshPage()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+                <button id="logoutButton" class="btn btn-sm btn-warning ms-2" style="display: none;" onclick="app.session.logout()">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="globalAlertPlaceholder"></div>
+
+        <div id="setupView" class="view card">
+            <div class="card-header"><i class="bi bi-key-fill"></i> Setup Your Secure Vault</div>
+            <div class="card-body">
+                <p>Welcome! Let's set up your master password to secure your vault.</p>
+                <div class="mb-3">
+                    <label for="setupMasterPassword" class="form-label">Master Password:</label>
+                    <input type="password" class="form-control" id="setupMasterPassword" oninput="app.passwords.checkPasswordStrength(this.value, 'setupPasswordStrengthMeter', 'setupPasswordStrengthText')">
+                </div>
+                <div class="strength-meter" id="setupPasswordStrengthMeter"><div></div></div>
+                <p id="setupPasswordStrengthText" class="form-text"></p>
+                <div class="mb-3">
+                    <label for="confirmMasterPassword" class="form-label">Confirm Master Password:</label>
+                    <input type="password" class="form-control" id="confirmMasterPassword">
+                </div>
+                <div class="mb-3">
+                    <label for="masterPasswordHint" class="form-label">Password Hint (Optional):</label>
+                    <input type="text" class="form-control" id="masterPasswordHint" placeholder="e.g., My first pet's name">
+                </div>
+                <button class="btn btn-primary w-100" onclick="app.masterKey.handleSetMasterKey()">
+                    <i class="bi bi-shield-check"></i> Create Vault & Generate Recovery Key
+                </button>
+            </div>
+        </div>
+
+        <div id="loginView" class="view card">
+            <div class="card-header"><i class="bi bi-box-arrow-in-right"></i> Unlock Your Vault</div>
+            <div class="card-body">
+                <p>Enter your master password to access your stored credentials.</p>
+                <div class="mb-3">
+                    <label for="loginMasterPassword" class="form-label">Master Password:</label>
+                    <input type="password" class="form-control" id="loginMasterPassword">
+                </div>
+                <button class="btn btn-primary w-100 mb-2" onclick="app.masterKey.handleLogin()">
+                    <i class="bi bi-unlock-fill"></i> Unlock
+                </button>
+                <button class="btn btn-link ps-0" onclick="app.ui.showHintModal()">Forgot password? Show Hint</button>
+                <button class="btn btn-link ps-0 float-end" onclick="app.ui.showRecoveryKeyModalPrompt()">Use Recovery Key</button>
+            </div>
+        </div>
+
+        <div id="mainAppView" class="view">
+            <div class="row">
+                <div class="col-md-5 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="bi bi-plus-circle-fill"></i> <span id="saveUpdateFormTitle">Add New Credential</span>
+                        </div>
+                        <div class="card-body">
+                            <input type="hidden" id="editingPasswordId">
+                            <div class="mb-3">
+                                <label for="website" class="form-label">Website/App URL (or Name):</label>
+                                <input type="text" class="form-control" id="website" placeholder="e.g., example.com">
+                            </div>
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username/Email:</label>
+                                <input type="text" class="form-control" id="username" placeholder="e.g., user@example.com">
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password:</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="password" oninput="app.passwords.checkPasswordStrength(this.value, 'passwordStrengthMeter', 'passwordStrengthText')">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="app.ui.togglePasswordVisibility('password')"><i class="bi bi-eye-fill"></i></button>
+                                    <button class="btn btn-outline-secondary" type="button" onclick="app.passwords.generateStrongPassword('password')"><i class="bi bi-magic"></i></button>
+                                </div>
+                            </div>
+                            <div class="strength-meter" id="passwordStrengthMeter"><div></div></div>
+                            <p id="passwordStrengthText" class="form-text"></p>
+                            <button class="btn btn-success w-100" id="savePasswordButton" onclick="app.passwords.handleSavePassword()">
+                                <i class="bi bi-save-fill"></i> Save Credential
+                            </button>
+                            <button class="btn btn-secondary w-100 mt-2" id="cancelEditButton" style="display:none;" onclick="app.ui.resetSaveForm()">
+                                Cancel Edit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-7 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="bi bi-list-stars"></i> Stored Credentials
+                            <input type="text" class="form-control form-control-sm float-end mt-0 mb-0" style="width: 200px;" id="searchInput" placeholder="Search..." onkeyup="app.ui.renderPasswordList()">
+                        </div>
+                        <div class="card-body">
+                            <div id="passwordChipContainer" class="password-chip-container">
+                                </div>
+                            <div id="noPasswordsMessage" class="text-center p-3" style="display:none;">
+                                <i class="bi bi-emoji-frown-fill fs-1 text-muted"></i>
+                                <p class="mt-2">No credentials saved yet. Add some!</p>
+                            </div>
+                             <div id="noSearchResultsMessage" class="text-center p-3" style="display:none;">
+                                <i class="bi bi-search fs-1 text-muted"></i>
+                                <p class="mt-2">No credentials match your search.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                     <div class="card">
+                        <div class="card-header"><i class="bi bi-gear-fill"></i> Settings & Data Management</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-2"><button class="btn btn-info w-100" onclick="app.ui.showHintModal(true)"><i class="bi bi-lightbulb-fill"></i> Show Hint</button></div>
+                                <div class="col-md-4 mb-2"><button class="btn btn-primary w-100" onclick="app.passwords.exportPasswords()"><i class="bi bi-download"></i> Export Data</button></div>
+                                <div class="col-md-4 mb-2"><button class="btn btn-secondary w-100" onclick="document.getElementById('importFile').click()"><i class="bi bi-upload"></i> Import Data</button>
+                                    <input type="file" id="importFile" style="display:none;" accept=".json, .txt" onchange="app.passwords.handleImportFile(event)"></div>
+                                <div class="col-md-4 mb-2 mt-md-2"><button class="btn btn-warning w-100" onclick="app.ui.showRecoveryKeyModalPrompt(true)"><i class="bi bi-shield-exclamation"></i> Recover Master Password</button></div>
+                                <div class="col-md-4 mb-2 mt-md-2"><button class="btn btn-danger w-100" onclick="app.ui.confirmClearAllData()"><i class="bi bi-trash3-fill"></i> Clear All Data</button></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="recoveryKeyModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-lg"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title"><i class="bi bi-shield-lock"></i> Your Recovery Key</h5></div>
+            <div class="modal-body">
+                <div id="recoveryKeyModalAlertPlaceholder"></div>
+                <p class="text-danger fw-bold">IMPORTANT: Save this Recovery Key safely. It's the ONLY way to regain access if you forget your master password.</p>
+                <div id="recoveryKeyDisplayArea" class="text-center"></div>
+                <div class="d-flex justify-content-center mt-3">
+                    <button class="btn btn-success me-2" onclick="app.masterKey.copyRecoveryKeyToClipboard()"><i class="bi bi-clipboard-check-fill"></i> Copy</button>
+                    <button class="btn btn-info me-2" onclick="app.masterKey.downloadRecoveryKey()"><i class="bi bi-download"></i> Download</button>
+                    <button class="btn btn-primary" onclick="app.masterKey.sendRecoveryKeyViaWhatsApp()"><i class="bi bi-whatsapp"></i> Send via WhatsApp</button>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-primary w-100" onclick="app.ui.hideModal('recoveryKeyModal'); app.ui.navigateToView('loginView')">STORED SAFELY</button></div>
+        </div></div>
+    </div>
+    <div class="modal fade" id="hintModal" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title"><i class="bi bi-lightbulb"></i> Master Password Hint</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body"><p id="hintDisplay"></p></div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+        </div></div>
+    </div>
+    <div class="modal fade" id="enterRecoveryKeyModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-lg"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title"><i class="bi bi-shield-exclamation"></i> Recover Master Password</h5><button type="button" class="btn-close" onclick="app.ui.hideModal('enterRecoveryKeyModal')"></button></div>
+            <div class="modal-body">
+                <p>Enter your saved Recovery Key to see your Master Password.</p>
+                <div id="enterRecoveryKeyModalAlertPlaceholder"></div>
+                <div class="mb-3"><label for="userProvidedRecoveryKey" class="form-label">Recovery Key:</label><textarea class="form-control" id="userProvidedRecoveryKey" rows="3"></textarea></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="app.ui.hideModal('enterRecoveryKeyModal')">Cancel</button><button type="button" class="btn btn-primary" onclick="app.masterKey.handleShowRecoveredMasterPassword()"><i class="bi bi-eye-fill"></i> Show Password</button></div>
+        </div></div>
+    </div>
+    <div class="modal fade" id="recoveredMasterPasswordDisplayModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title"><i class="bi bi-key-fill"></i> Your Recovered Master Password</h5></div>
+            <div class="modal-body">
+                <div id="recoveredMasterPasswordDisplayModalAlertPlaceholder"></div>
+                <p class="text-success fw-bold">Master Password recovered!</p><p>Use this password to log in.</p>
+                <div id="actualRecoveredPasswordDisplay" class="alert alert-info text-center fs-5 fw-bold" style="font-family: monospace; word-break: break-all;"></div>
+                <p class="text-danger small mt-2">This will be hidden when you close. Note it down.</p>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-success me-2" onclick="app.ui.copyRecoveredMasterPasswordToClipboard()"><i class="bi bi-clipboard-check-fill"></i> Copy</button><button type="button" class="btn btn-primary" onclick="app.ui.closeRecoveredPasswordModalAndFocusLogin()">OK (Go to Login)</button></div>
+        </div></div>
+    </div>
+    <div class="modal fade" id="confirmationModal" tabindex="-1">
+      <div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title" id="confirmationModalLabel">Confirm Action</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body"><p id="confirmationModalMessage"></p></div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="confirmationModalCancel">Cancel</button><button type="button" class="btn btn-danger" id="confirmationModalConfirm">Confirm</button></div>
+      </div></div>
+    </div>
+
+    <div class="modal fade" id="passwordActionModal" tabindex="-1" aria-labelledby="passwordActionModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="passwordActionModalLabel">Credential Actions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6 id="actionModalWebsite" class="fw-bold"></h6>
+                    <p class="text-muted mb-2" id="actionModalUsername" style="font-size: 0.9rem;"></p>
+                    <hr class="mt-1 mb-3">
+                    <div class="mb-3">
+                        <label class="form-label small">Password:</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control form-control-sm" id="actionModalPasswordDisplay" readonly value="************">
+                            <button class="btn btn-outline-secondary btn-sm" type="button" id="actionModalRevealBtn" onclick="app.passwords.revealPasswordInModal()">
+                                <i class="bi bi-eye-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="passwordActionModalAlertPlaceholder"></div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-danger" id="actionModalDeleteBtn" onclick="app.passwords.deletePasswordFromModal()"><i class="bi bi-trash-fill"></i> Delete</button>
+                    <div>
+                        <button type="button" class="btn btn-primary me-2" id="actionModalCopyBtn" onclick="app.passwords.copyPasswordFromModal()"><i class="bi bi-clipboard-fill"></i> Copy</button>
+                        <button type="button" class="btn btn-info" id="actionModalEditBtn" onclick="app.passwords.editPasswordFromModal()"><i class="bi bi-pencil-fill"></i> Edit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const app = {};
+        app.config = {
+            storageKeys: { appData: 'securePassV2AppData', passwords: 'securePassV2Passwords' },
+            pbkdf2: { iterations: 100000, keySize: 256 / 32, saltSize: 128 / 8 },
+            aes: { ivSize: 128 / 8 },
+            recoveryKeyLength: 32, sessionTimeoutDuration: 5 * 60 * 1000, strongPasswordLength: 16
+        };
+        app.state = {
+            masterKeySalt: null, derivedEncryptionKey: null, isAuthenticated: false, sessionTimeoutId: null,
+            currentRecoveryKey: null, passwords: [], editingPasswordId: null, tempRecoveredMasterPassword: null,
+            currentActionEntryId: null // For password actions modal
+        };
+
+        app.ui = {
+            elements: {
+                setupView: document.getElementById('setupView'), loginView: document.getElementById('loginView'),
+                mainAppView: document.getElementById('mainAppView'), masterKeyStatus: document.getElementById('masterKeyStatus'),
+                sessionTimerDisplay: document.getElementById('sessionTimerDisplay'), logoutButton: document.getElementById('logoutButton'),
+                globalAlertPlaceholder: document.getElementById('globalAlertPlaceholder'),
+                modals: {
+                    recoveryKeyModal: null, hintModal: null, enterRecoveryKeyModal: null,
+                    confirmationModal: null, recoveredMasterPasswordDisplayModal: null,
+                    passwordActionModal: null // NEW
+                },
+                actualRecoveredPasswordDisplay: document.getElementById('actualRecoveredPasswordDisplay'),
+                passwordChipContainer: document.getElementById('passwordChipContainer'), // MODIFIED
+                noPasswordsMessage: document.getElementById('noPasswordsMessage'),
+                noSearchResultsMessage: document.getElementById('noSearchResultsMessage'), // NEW
+                searchInput: document.getElementById('searchInput'), saveUpdateFormTitle: document.getElementById('saveUpdateFormTitle'),
+                editingPasswordIdField: document.getElementById('editingPasswordId'), websiteField: document.getElementById('website'),
+                usernameField: document.getElementById('username'), passwordField: document.getElementById('password'),
+                savePasswordButton: document.getElementById('savePasswordButton'), cancelEditButton: document.getElementById('cancelEditButton'),
+                // Action Modal Elements
+                actionModalWebsite: document.getElementById('actionModalWebsite'),
+                actionModalUsername: document.getElementById('actionModalUsername'),
+                actionModalPasswordDisplay: document.getElementById('actionModalPasswordDisplay'),
+                actionModalRevealBtnIcon: document.querySelector('#actionModalRevealBtn i')
+            },
+            initModals: () => {
+                for (const modalKey in app.ui.elements.modals) {
+                    const modalElement = document.getElementById(modalKey);
+                    if (modalElement) {
+                        app.ui.elements.modals[modalKey] = new bootstrap.Modal(modalElement);
+                    }
+                }
+            },
+            navigateToView: (viewId) => { /* ... (same as before) ... */
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active-view'));
+                document.getElementById(viewId).classList.add('active-view');
+                if (viewId === 'mainAppView' && app.state.isAuthenticated) {
+                    app.ui.elements.logoutButton.style.display = 'inline-block';
+                    app.ui.elements.sessionTimerDisplay.style.display = 'inline-block';
+                    app.ui.renderPasswordList();
+                } else {
+                    app.ui.elements.logoutButton.style.display = 'none';
+                     if (viewId !== 'loginView' || !app.storage.getAppData()?.masterKeySalt) { 
+                        app.ui.elements.sessionTimerDisplay.style.display = 'none';
+                    }
+                }
+                if (viewId === 'setupView') app.ui.updateMasterKeyStatus("Setup Required", "status-setup");
+                else if (viewId === 'loginView') {
+                     const appData = app.storage.getAppData();
+                     if(appData && appData.masterKeySalt) app.ui.updateMasterKeyStatus("Locked", "status-locked");
+                     else { app.ui.updateMasterKeyStatus("Error - No Master Key", "status-locked"); app.ui.navigateToView('setupView'); }
+                }
+            },
+            updateMasterKeyStatus: (text, cssClass) => { /* ... (same as before) ... */
+                const statusEl = app.ui.elements.masterKeyStatus;
+                statusEl.textContent = text;
+                statusEl.className = `status-message me-3 ${cssClass}`;
+            },
+            showAlert: (message, type = 'info', placeholderId = null, duration = 5000) => { /* ... (same as before) ... */
+                const alertPlaceholder = placeholderId ? document.getElementById(placeholderId) : app.ui.elements.globalAlertPlaceholder;
+                if (!alertPlaceholder) { console.warn(`Alert placeholder '${placeholderId || 'globalAlertPlaceholder'}' not found. Alert: ${type} - ${message}`); return; }
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = [`<div class="alert alert-${type} alert-dismissible fade show mt-2" role="alert">`, `   <i class="bi bi-${type === 'success' ? 'check-circle-fill' : type === 'danger' ? 'exclamation-triangle-fill' : 'info-circle-fill'} me-2"></i>`, `   ${message}`, '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>', '</div>'].join('');
+                while (alertPlaceholder.firstChild) { alertPlaceholder.removeChild(alertPlaceholder.firstChild); }
+                alertPlaceholder.append(wrapper.firstChild);
+                if (duration && duration > 0) { setTimeout(() => { const bsAlert = bootstrap.Alert.getOrCreateInstance(alertPlaceholder.querySelector('.alert')); if (bsAlert) bsAlert.close(); }, duration); }
+            },
+            showModal: (modalId) => app.ui.elements.modals[modalId]?.show(),
+            hideModal: (modalId) => app.ui.elements.modals[modalId]?.hide(),
+            displayRecoveryKey: (key) => { /* ... (same as before) ... */
+                document.getElementById('recoveryKeyDisplayArea').textContent = key;
+                app.ui.showModal('recoveryKeyModal');
+            },
+            showHintModal: (isFromMainView = false) => { /* ... (same as before) ... */
+                const appData = app.storage.getAppData();
+                if (!appData || !appData.masterKeySalt) { app.ui.showAlert("Master Key not set up yet.", "warning", 'globalAlertPlaceholder'); return; }
+                if(!app.state.isAuthenticated && isFromMainView) { app.ui.showAlert("Please login to view hint.", "warning", 'globalAlertPlaceholder'); app.ui.navigateToView('loginView'); return; }
+                const hint = appData.hint || "No hint was set for your master password.";
+                document.getElementById('hintDisplay').textContent = hint; app.ui.showModal('hintModal');
+            },
+            showRecoveryKeyModalPrompt: (isFromMainView = false) => { /* ... (same as before) ... */
+                if(!app.state.isAuthenticated && isFromMainView && app.storage.getAppData()?.masterKeySalt) { app.ui.showAlert("You are about to recover your master password.", "info", 'globalAlertPlaceholder', 7000); }
+                document.getElementById('userProvidedRecoveryKey').value = ''; app.ui.showModal('enterRecoveryKeyModal');
+            },
+            confirm: (message, onConfirm) => { /* ... (same as before) ... */
+                document.getElementById('confirmationModalMessage').textContent = message;
+                const confirmBtn = document.getElementById('confirmationModalConfirm');
+                const newConfirmBtn = confirmBtn.cloneNode(true); confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+                newConfirmBtn.addEventListener('click', () => { onConfirm(); app.ui.hideModal('confirmationModal'); }, { once: true });
+                app.ui.showModal('confirmationModal');
+            },
+            confirmClearAllData: () => { /* ... (same as before) ... */
+                 app.ui.confirm("DANGER ZONE! Are you sure you want to delete ALL your encrypted data AND your Master Key setup? This action cannot be undone.", () => { app.masterKey.clearAllData(); });
+            },
+            togglePasswordVisibility: (fieldId, iconElement = null) => { /* ... (same as before) ... */
+                const field = document.getElementById(fieldId); const icon = iconElement || field.nextElementSibling.querySelector('i');
+                if (field.type === "password") { field.type = "text"; icon?.classList.remove('bi-eye-fill'); icon?.classList.add('bi-eye-slash-fill'); }
+                else { field.type = "password"; icon?.classList.remove('bi-eye-slash-fill'); icon?.classList.add('bi-eye-fill'); }
+            },
+            // MODIFIED renderPasswordList to use chips
+            renderPasswordList: () => {
+                if (!app.state.isAuthenticated) return;
+                const searchTerm = app.ui.elements.searchInput.value.toLowerCase();
+                const container = app.ui.elements.passwordChipContainer;
+                container.innerHTML = '';
+
+                const filteredPasswords = app.state.passwords.filter(p =>
+                    p.website.toLowerCase().includes(searchTerm) ||
+                    p.username.toLowerCase().includes(searchTerm)
+                );
+
+                app.ui.elements.noPasswordsMessage.style.display = (filteredPasswords.length === 0 && !searchTerm && app.state.passwords.length === 0) ? 'block' : 'none';
+                app.ui.elements.noSearchResultsMessage.style.display = (filteredPasswords.length === 0 && searchTerm) ? 'block' : 'none';
+
+
+                if (filteredPasswords.length === 0) return;
+
+                filteredPasswords.forEach(p => {
+                    const chip = document.createElement('div');
+                    chip.className = 'password-chip';
+                    chip.dataset.id = p.id;
+                    chip.setAttribute('role', 'button');
+                    chip.tabIndex = 0; // Make it focusable
+                    chip.onclick = () => app.ui.showPasswordActions(p.id);
+                    chip.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') app.ui.showPasswordActions(p.id); };
+
+
+                    const websiteEl = document.createElement('div');
+                    websiteEl.className = 'chip-website';
+                    websiteEl.textContent = p.website;
+                    chip.appendChild(websiteEl);
+
+                    const usernameEl = document.createElement('div');
+                    usernameEl.className = 'chip-username';
+                    usernameEl.textContent = p.username;
+                    chip.appendChild(usernameEl);
+
+                    container.appendChild(chip);
+                });
+            },
+            resetSaveForm: () => { /* ... (same as before) ... */
+                app.ui.elements.saveUpdateFormTitle.textContent = "Add New Credential"; app.ui.elements.editingPasswordIdField.value = '';
+                app.ui.elements.websiteField.value = ''; app.ui.elements.usernameField.value = ''; app.ui.elements.passwordField.value = '';
+                app.ui.elements.passwordField.type = 'password'; const eyeIcon = app.ui.elements.passwordField.nextElementSibling.querySelector('i');
+                if (eyeIcon) { eyeIcon.classList.remove('bi-eye-slash-fill'); eyeIcon.classList.add('bi-eye-fill'); }
+                app.passwords.checkPasswordStrength('', 'passwordStrengthMeter', 'passwordStrengthText');
+                app.ui.elements.savePasswordButton.textContent = 'Save Credential'; app.ui.elements.savePasswordButton.classList.remove('btn-warning'); app.ui.elements.savePasswordButton.classList.add('btn-success');
+                app.ui.elements.cancelEditButton.style.display = 'none'; app.state.editingPasswordId = null;
+            },
+            refreshPage: () => window.location.reload(),
+            displayRecoveredMasterPassword: (masterPassword) => { /* ... (same as before) ... */
+                app.state.tempRecoveredMasterPassword = masterPassword; const displayElement = document.getElementById('actualRecoveredPasswordDisplay');
+                if (displayElement) { displayElement.textContent = masterPassword; } else { console.error("Element with ID 'actualRecoveredPasswordDisplay' not found."); }
+                app.ui.showModal('recoveredMasterPasswordDisplayModal');
+            },
+            copyRecoveredMasterPasswordToClipboard: () => { /* ... (same as before) ... */
+                if (app.state.tempRecoveredMasterPassword) { navigator.clipboard.writeText(app.state.tempRecoveredMasterPassword)
+                        .then(() => app.ui.showAlert("Recovered Master Password copied!", "success", 'recoveredMasterPasswordDisplayModalAlertPlaceholder', 2000))
+                        .catch(err => app.ui.showAlert("Failed to copy: " + err, "danger", 'recoveredMasterPasswordDisplayModalAlertPlaceholder', 3000)); }
+            },
+            closeRecoveredPasswordModalAndFocusLogin: () => { /* ... (same as before) ... */
+                app.ui.hideModal('recoveredMasterPasswordDisplayModal'); const displayElement = document.getElementById('actualRecoveredPasswordDisplay');
+                if(displayElement) displayElement.textContent = ""; app.state.tempRecoveredMasterPassword = null;
+                app.ui.navigateToView('loginView'); const loginPassField = document.getElementById('loginMasterPassword'); if(loginPassField) loginPassField.focus();
+            },
+            // NEW UI Function for Password Actions Modal
+            showPasswordActions: (entryId) => {
+                const entry = app.state.passwords.find(p => p.id === entryId);
+                if (!entry) {
+                    app.ui.showAlert("Credential not found.", "danger", 'globalAlertPlaceholder');
+                    return;
+                }
+                app.state.currentActionEntryId = entryId; // Store ID for modal actions
+
+                app.ui.elements.actionModalWebsite.textContent = entry.website;
+                app.ui.elements.actionModalUsername.textContent = entry.username;
+                app.ui.elements.actionModalPasswordDisplay.value = '************';
+                app.ui.elements.actionModalPasswordDisplay.type = 'password';
+                app.ui.elements.actionModalRevealBtnIcon.classList.remove('bi-eye-slash-fill');
+                app.ui.elements.actionModalRevealBtnIcon.classList.add('bi-eye-fill');
+                
+                // Clear any previous alerts in this specific modal
+                const alertPlaceholder = document.getElementById('passwordActionModalAlertPlaceholder');
+                if (alertPlaceholder) alertPlaceholder.innerHTML = '';
+
+                app.ui.showModal('passwordActionModal');
+                app.session.resetTimer();
+            }
+        };
+
+        app.crypto = { /* ... (same as before) ... */
+            generateSalt: () => CryptoJS.lib.WordArray.random(app.config.pbkdf2.saltSize).toString(CryptoJS.enc.Hex),
+            deriveKey: (password, saltHex) => { const salt = CryptoJS.enc.Hex.parse(saltHex); return CryptoJS.PBKDF2(password, salt, { keySize: app.config.pbkdf2.keySize, iterations: app.config.pbkdf2.iterations, hasher: CryptoJS.algo.SHA256 }); },
+            encrypt: (plaintext, key) => { const iv = CryptoJS.lib.WordArray.random(app.config.aes.ivSize); const encrypted = CryptoJS.AES.encrypt(plaintext, key, { iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 }); return { iv: iv.toString(CryptoJS.enc.Hex), ciphertext: encrypted.ciphertext.toString(CryptoJS.enc.Base64) }; },
+            decrypt: (encryptedData, key) => { if (!encryptedData || !encryptedData.iv || !encryptedData.ciphertext) { console.error("Invalid encrypted data structure for decryption."); return null; } const iv = CryptoJS.enc.Hex.parse(encryptedData.iv); const cipherParams = CryptoJS.lib.CipherParams.create({ ciphertext: CryptoJS.enc.Base64.parse(encryptedData.ciphertext) }); const decrypted = CryptoJS.AES.decrypt(cipherParams, key, { iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 }); try { return decrypted.toString(CryptoJS.enc.Utf8); } catch (e) { console.error("Decryption error (likely incorrect key or malformed data):", e); return null; } },
+            generateRandomKey: (byteLength) => CryptoJS.lib.WordArray.random(byteLength).toString(CryptoJS.enc.Hex)
+        };
+        app.storage = { /* ... (same as before) ... */
+            getAppData: () => { const data = localStorage.getItem(app.config.storageKeys.appData); return data ? JSON.parse(data) : null; },
+            saveAppData: (data) => { localStorage.setItem(app.config.storageKeys.appData, JSON.stringify(data)); },
+            getPasswordsData: () => { const data = localStorage.getItem(app.config.storageKeys.passwords); return data ? JSON.parse(data) : []; },
+            savePasswordsData: (passwordsArray) => { localStorage.setItem(app.config.storageKeys.passwords, JSON.stringify(passwordsArray)); }
+        };
+        app.masterKey = { /* ... (same as before, including handleSetMasterKey, handleLogin, copyRecoveryKeyToClipboard, downloadRecoveryKey, sendRecoveryKeyViaWhatsApp, handleShowRecoveredMasterPassword, clearAllData) ... */
+             handleSetMasterKey: () => {
+                const masterPassword = document.getElementById('setupMasterPassword').value; const confirmPassword = document.getElementById('confirmMasterPassword').value; const hint = document.getElementById('masterPasswordHint').value.trim();
+                if (!masterPassword || !confirmPassword) { app.ui.showAlert("Master Password and confirmation are required.", "danger", 'globalAlertPlaceholder'); return; }
+                if (masterPassword !== confirmPassword) { app.ui.showAlert("Master Passwords do not match.", "danger", 'globalAlertPlaceholder'); return; }
+                if (masterPassword.length < 8) { app.ui.showAlert("Master Password should be at least 8 characters long.", "warning", 'globalAlertPlaceholder'); return; }
+                app.state.masterKeySalt = app.crypto.generateSalt(); app.state.currentRecoveryKey = app.crypto.generateRandomKey(app.config.recoveryKeyLength);
+                const recoveryEncryptionKey = CryptoJS.enc.Hex.parse(app.state.currentRecoveryKey); const encryptedMasterPasswordForRecovery = app.crypto.encrypt(masterPassword, recoveryEncryptionKey);
+                const appData = { masterKeySalt: app.state.masterKeySalt, hint: hint, recoveryData: { iv: encryptedMasterPasswordForRecovery.iv, ciphertext: encryptedMasterPasswordForRecovery.ciphertext } };
+                app.storage.saveAppData(appData); app.storage.savePasswordsData([]); app.ui.showAlert("Master Key setup successful! Your vault is created.", "success", 'globalAlertPlaceholder');
+                app.ui.displayRecoveryKey(app.state.currentRecoveryKey); document.getElementById('setupMasterPassword').value = ''; document.getElementById('confirmMasterPassword').value = ''; document.getElementById('masterPasswordHint').value = '';
+            },
+            handleLogin: () => {
+                const masterPassword = document.getElementById('loginMasterPassword').value; if (!masterPassword) { app.ui.showAlert("Please enter your Master Password.", "warning", 'globalAlertPlaceholder'); return; }
+                const appData = app.storage.getAppData(); if (!appData || !appData.masterKeySalt) { app.ui.showAlert("Master Key not set up. Please go through setup.", "danger", 'globalAlertPlaceholder'); app.ui.navigateToView('setupView'); return; }
+                app.state.masterKeySalt = appData.masterKeySalt; const derivedKey = app.crypto.deriveKey(masterPassword, app.state.masterKeySalt);
+                const storedPasswords = app.storage.getPasswordsData();
+                if (storedPasswords.length > 0) { const firstPassData = storedPasswords[0].encryptedPasswordData; const decryptedTest = app.crypto.decrypt(firstPassData, derivedKey); if (decryptedTest === null && storedPasswords[0].website) { app.ui.showAlert("Invalid Master Password.", "danger", 'globalAlertPlaceholder'); app.state.derivedEncryptionKey = null; document.getElementById('loginMasterPassword').value = ''; return; } }
+                app.state.derivedEncryptionKey = derivedKey; app.state.isAuthenticated = true; app.state.passwords = storedPasswords;
+                app.ui.showAlert("Successfully logged in!", "success", 'globalAlertPlaceholder'); app.ui.updateMasterKeyStatus("Unlocked", "status-unlocked"); app.ui.navigateToView('mainAppView'); app.session.start(); document.getElementById('loginMasterPassword').value = '';
+            },
+            copyRecoveryKeyToClipboard: () => { if (app.state.currentRecoveryKey) { navigator.clipboard.writeText(app.state.currentRecoveryKey).then(() => app.ui.showAlert("Recovery Key copied!", "success", 'recoveryKeyModalAlertPlaceholder', 2000)).catch(err => app.ui.showAlert("Failed to copy: " + err, "danger", 'recoveryKeyModalAlertPlaceholder', 3000)); } },
+            downloadRecoveryKey: () => { if (app.state.currentRecoveryKey) { const blob = new Blob([`Your SecurePass v2.1 Recovery Key:\n\n${app.state.currentRecoveryKey}\n\nPlease store this file in a secure, offline location.`], { type: "text/plain" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "SecurePass_Recovery_Key.txt"; document.body.appendChild(link); link.click(); document.body.removeChild(link); app.ui.showAlert("Recovery key download initiated.", "info", 'recoveryKeyModalAlertPlaceholder', 3000); } },
+            sendRecoveryKeyViaWhatsApp:() => { if (app.state.currentRecoveryKey) { const text = encodeURIComponent(`My SecurePass v2.1 Recovery Key (handle with extreme care): ${app.state.currentRecoveryKey}`); const whatsappURL = `https://wa.me/?text=${text}`; window.open(whatsappURL, "_blank"); app.ui.showAlert("WhatsApp opening to share. Review before sending!", "warning", 'recoveryKeyModalAlertPlaceholder', 4000); } },
+            handleShowRecoveredMasterPassword: () => {
+                const recoveryKeyInput = document.getElementById('userProvidedRecoveryKey').value.trim(); if (!recoveryKeyInput) { app.ui.showAlert("Recovery Key is required.", "warning", 'enterRecoveryKeyModalAlertPlaceholder', 3000); return; }
+                const appData = app.storage.getAppData(); if (!appData || !appData.recoveryData || !appData.recoveryData.iv || !appData.recoveryData.ciphertext) { app.ui.showAlert("No recovery data found. Recovery not possible.", "danger", 'enterRecoveryKeyModalAlertPlaceholder', 5000); return; }
+                try { const recoveryEncryptionKey = CryptoJS.enc.Hex.parse(recoveryKeyInput); const decryptedMasterPassword = app.crypto.decrypt(appData.recoveryData, recoveryEncryptionKey); if (!decryptedMasterPassword) { app.ui.showAlert("Invalid Recovery Key or corrupted data.", "danger", 'enterRecoveryKeyModalAlertPlaceholder', 5000); return; } app.ui.hideModal('enterRecoveryKeyModal'); app.ui.displayRecoveredMasterPassword(decryptedMasterPassword); } catch (error) { console.error("Recovery process error:", error); app.ui.showAlert("Error during recovery: " + (error.message || "Unknown error"), "danger", 'enterRecoveryKeyModalAlertPlaceholder', 5000); }
+            },
+            clearAllData: () => { localStorage.removeItem(app.config.storageKeys.appData); localStorage.removeItem(app.config.storageKeys.passwords); app.state.masterKeySalt = null; app.state.derivedEncryptionKey = null; app.state.isAuthenticated = false; app.state.passwords = []; if (app.state.sessionTimeoutId) clearTimeout(app.state.sessionTimeoutId); app.state.sessionTimeoutId = null; app.ui.showAlert("All data cleared. Application reset.", "success", 'globalAlertPlaceholder'); app.ui.navigateToView('setupView'); app.ui.elements.sessionTimerDisplay.textContent = '--:--'; app.ui.elements.sessionTimerDisplay.style.display = 'none'; app.ui.elements.logoutButton.style.display = 'none'; app.ui.updateMasterKeyStatus("Setup Required", "status-setup"); app.ui.resetSaveForm(); app.ui.renderPasswordList(); }
+        };
+        app.passwords = { /* ... (generatePasswordEntryId, checkPasswordStrength, generateStrongPassword, handleSavePassword, populateEditForm, confirmDeletePassword, deletePassword, exportPasswords, handleImportFile same as before) ... */
+            generatePasswordEntryId: () => 'pid_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9),
+            checkPasswordStrength: (password, meterId, textId) => { const meterElement = document.getElementById(meterId)?.firstElementChild; const textElement = document.getElementById(textId); if (!meterElement || !textElement) return; let strength = 0; if (password.length >= 8) strength++; if (password.length >= 12) strength++; if (/[A-Z]/.test(password)) strength++; if (/[a-z]/.test(password)) strength++; if (/[0-9]/.test(password)) strength++; if (/[^A-Za-z0-9]/.test(password)) strength++; let className = ''; let strengthText = ''; if (strength < 3) { className = 'strength-weak'; strengthText = 'Weak'; } else if (strength < 5) { className = 'strength-medium'; strengthText = 'Medium'; } else { className = 'strength-strong'; strengthText = 'Strong'; } if (!password) { className = ''; strengthText = ''; meterElement.style.width = '0%'; } else { meterElement.className = className; } textElement.textContent = strengthText; textElement.className = `form-text ${className.replace('strength-','')}`; },
+            generateStrongPassword: (fieldId) => { const length = app.config.strongPasswordLength; const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:',.<>/?"; let newPassword = ""; const randomValues = new Uint32Array(length); crypto.getRandomValues(randomValues); for (let i = 0; i < length; i++) { newPassword += charset[randomValues[i] % charset.length]; } const passField = document.getElementById(fieldId); passField.value = newPassword; passField.dispatchEvent(new Event('input')); app.ui.showAlert("Strong password generated.", "success", 'globalAlertPlaceholder', 2000); },
+            handleSavePassword: () => { if (!app.state.isAuthenticated || !app.state.derivedEncryptionKey) { app.ui.showAlert("Authentication error. Please login again.", "danger", 'globalAlertPlaceholder'); app.session.logout(); return; } const id = app.ui.elements.editingPasswordIdField.value || app.passwords.generatePasswordEntryId(); const website = app.ui.elements.websiteField.value.trim(); const username = app.ui.elements.usernameField.value.trim(); const password = app.ui.elements.passwordField.value; if (!website || !username || !password) { app.ui.showAlert("Website, Username, and Password are required.", "warning", 'globalAlertPlaceholder'); return; } const encryptedPasswordData = app.crypto.encrypt(password, app.state.derivedEncryptionKey); if (!encryptedPasswordData) { app.ui.showAlert("Error encrypting password.", "danger", 'globalAlertPlaceholder'); return; } const newEntry = { id, website, username, encryptedPasswordData }; if (app.state.editingPasswordId) { const index = app.state.passwords.findIndex(p => p.id === app.state.editingPasswordId); if (index > -1) app.state.passwords[index] = newEntry; } else { app.state.passwords.push(newEntry); } app.storage.savePasswordsData(app.state.passwords); app.ui.showAlert(app.state.editingPasswordId ? "Credential updated!" : "Credential saved!", "success", 'globalAlertPlaceholder'); app.ui.resetSaveForm(); app.ui.renderPasswordList(); app.session.resetTimer(); },
+            populateEditForm: (id) => { const entry = app.state.passwords.find(p => p.id === id); if (!entry) return; const decryptedPassword = app.crypto.decrypt(entry.encryptedPasswordData, app.state.derivedEncryptionKey); if (decryptedPassword === null) { app.ui.showAlert("Error decrypting password for editing. Session might be invalid.", "danger", 'globalAlertPlaceholder'); app.session.logout(); return; } app.state.editingPasswordId = id; app.ui.elements.saveUpdateFormTitle.textContent = "Update Credential"; app.ui.elements.editingPasswordIdField.value = id; app.ui.elements.websiteField.value = entry.website; app.ui.elements.usernameField.value = entry.username; app.ui.elements.passwordField.value = decryptedPassword; app.ui.elements.passwordField.dispatchEvent(new Event('input')); app.ui.elements.savePasswordButton.textContent = 'Update Credential'; app.ui.elements.savePasswordButton.classList.remove('btn-success'); app.ui.elements.savePasswordButton.classList.add('btn-warning'); app.ui.elements.cancelEditButton.style.display = 'inline-block'; app.ui.elements.websiteField.focus(); app.session.resetTimer(); },
+            confirmDeletePassword: (id) => { const entry = app.state.passwords.find(p => p.id === id); if(!entry) return; app.ui.confirm(`Are you sure you want to delete the credential for "${entry.website}" (${entry.username})?`, () => { app.passwords.deletePassword(id); }); },
+            deletePassword: (id) => { app.state.passwords = app.state.passwords.filter(p => p.id !== id); app.storage.savePasswordsData(app.state.passwords); app.ui.showAlert("Credential deleted.", "info", 'globalAlertPlaceholder'); if (app.state.editingPasswordId === id) app.ui.resetSaveForm(); app.ui.renderPasswordList(); app.session.resetTimer(); },
+            exportPasswords: () => { if (!app.state.isAuthenticated) { app.ui.showAlert("Please login to export data.", "warning", 'globalAlertPlaceholder'); return; } const appDataToExport = app.storage.getAppData(); const passwordsToExport = app.storage.getPasswordsData(); if (!appDataToExport || !passwordsToExport) { app.ui.showAlert("No data found to export.", "info", 'globalAlertPlaceholder'); return; } const exportData = { appContext: "SecurePassV2EncryptedExport", timestamp: new Date().toISOString(), appData: appDataToExport, passwords: passwordsToExport }; const dataStr = JSON.stringify(exportData, null, 2); const blob = new Blob([dataStr], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `SecurePassV2_Backup_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); app.ui.showAlert("Encrypted data export initiated.", "success", 'globalAlertPlaceholder'); app.session.resetTimer(); },
+            handleImportFile: (event) => { const file = event.target.files[0]; if (!file) { event.target.value = null; return; } const existingAppData = app.storage.getAppData(); if (!app.state.isAuthenticated && existingAppData?.masterKeySalt) { app.ui.showAlert("Please login to your current vault before importing.", "warning", 'globalAlertPlaceholder'); event.target.value = null; return; } const reader = new FileReader(); reader.onload = (e) => { try { const importedData = JSON.parse(e.target.result); if (importedData.appContext !== "SecurePassV2EncryptedExport" || !importedData.appData || !importedData.passwords) { throw new Error("Invalid or corrupted backup file format."); } const importAction = () => { app.storage.saveAppData(importedData.appData); app.storage.savePasswordsData(importedData.passwords); app.ui.showAlert("Data imported. Please re-login with the master password from the imported vault.", "success", 'globalAlertPlaceholder'); if (app.state.isAuthenticated) app.session.logout(); else app.init(); event.target.value = null; }; if (app.state.isAuthenticated || existingAppData?.masterKeySalt) { app.ui.confirm("Importing will OVERWRITE current data (including Master Key setup from file). Are you sure?", () => { importAction(); }, () => { event.target.value = null; }); } else { importAction(); } } catch (err) { console.error("Import error:", err); app.ui.showAlert("Failed to import data: " + err.message, "danger", 'globalAlertPlaceholder'); event.target.value = null; } }; reader.readAsText(file); },
+
+            // NEW/MODIFIED functions for actions modal
+            revealPasswordInModal: () => {
+                const entryId = app.state.currentActionEntryId;
+                if (!entryId) return;
+                const passField = app.ui.elements.actionModalPasswordDisplay;
+                const icon = app.ui.elements.actionModalRevealBtnIcon;
+
+                if (passField.type === 'password') {
+                    const entry = app.state.passwords.find(p => p.id === entryId);
+                    if (entry) {
+                        const decrypted = app.crypto.decrypt(entry.encryptedPasswordData, app.state.derivedEncryptionKey);
+                        if (decrypted === null) {
+                            app.ui.showAlert("Decryption failed.", "danger", 'passwordActionModalAlertPlaceholder', 3000);
+                            return;
+                        }
+                        passField.value = decrypted;
+                        passField.type = 'text';
+                        icon.classList.remove('bi-eye-fill');
+                        icon.classList.add('bi-eye-slash-fill');
+                    }
+                } else {
+                    passField.value = '************';
+                    passField.type = 'password';
+                    icon.classList.remove('bi-eye-slash-fill');
+                    icon.classList.add('bi-eye-fill');
+                }
+                app.session.resetTimer();
+            },
+            copyPasswordFromModal: () => {
+                const entryId = app.state.currentActionEntryId;
+                if (!entryId) return;
+                const entry = app.state.passwords.find(p => p.id === entryId);
+                if (entry) {
+                    const decrypted = app.crypto.decrypt(entry.encryptedPasswordData, app.state.derivedEncryptionKey);
+                    if (decrypted === null) {
+                        app.ui.showAlert("Decryption failed for copy.", "danger", 'passwordActionModalAlertPlaceholder', 3000);
+                        return;
+                    }
+                    navigator.clipboard.writeText(decrypted)
+                        .then(() => app.ui.showAlert("Password copied!", "success", 'passwordActionModalAlertPlaceholder', 2000))
+                        .catch(err => app.ui.showAlert("Failed to copy: " + err, "danger", 'passwordActionModalAlertPlaceholder', 3000));
+                    app.session.resetTimer();
+                }
+            },
+            editPasswordFromModal: () => {
+                const entryId = app.state.currentActionEntryId;
+                if (!entryId) return;
+                app.ui.hideModal('passwordActionModal');
+                app.passwords.populateEditForm(entryId); // Reuses existing logic
+                app.session.resetTimer();
+            },
+            deletePasswordFromModal: () => {
+                const entryId = app.state.currentActionEntryId;
+                if (!entryId) return;
+                const entry = app.state.passwords.find(p => p.id === entryId);
+                if(!entry) return;
+
+                app.ui.hideModal('passwordActionModal'); // Hide this modal first
+                 app.ui.confirm(`Are you sure you want to delete the credential for "${entry.website}" (${entry.username})?`, () => {
+                    app.passwords.deletePassword(entryId); // Reuses existing logic
+                    app.state.currentActionEntryId = null; // Clear after delete
+                 });
+                app.session.resetTimer();
+            }
+        };
+        app.session = { /* ... (start, resetTimer, logout, updateTimerDisplay, _countdownInterval same as before) ... */
+            start: () => { if (app.state.sessionTimeoutId) clearTimeout(app.state.sessionTimeoutId); app.state.sessionTimeoutId = setTimeout(app.session.logout, app.config.sessionTimeoutDuration); app.session.updateTimerDisplay(); app.ui.elements.sessionTimerDisplay.style.display = 'inline-block'; app.ui.elements.logoutButton.style.display = 'inline-block'; },
+            resetTimer: () => { if(app.state.isAuthenticated) { app.session.start(); } },
+            logout: (isManualLogout = true) => { app.state.derivedEncryptionKey = null; app.state.isAuthenticated = false; if (app.state.sessionTimeoutId) clearTimeout(app.state.sessionTimeoutId); if (app.session._countdownInterval) clearInterval(app.session._countdownInterval); app.state.sessionTimeoutId = null; app.session._countdownInterval = null; app.ui.resetSaveForm(); if(app.ui.elements.passwordChipContainer) app.ui.elements.passwordChipContainer.innerHTML = ''; if(app.ui.elements.noPasswordsMessage) app.ui.elements.noPasswordsMessage.style.display = 'block'; if (isManualLogout) app.ui.showAlert("You have been logged out.", "info", 'globalAlertPlaceholder'); else app.ui.showAlert("Session timed out. Please login again.", "warning", 'globalAlertPlaceholder'); app.ui.navigateToView('loginView'); app.ui.elements.sessionTimerDisplay.textContent = '00:00'; app.ui.elements.logoutButton.style.display = 'none'; document.getElementById('loginMasterPassword').value = ''; },
+            updateTimerDisplay: () => { if (!app.state.isAuthenticated || !app.state.sessionTimeoutId) { app.ui.elements.sessionTimerDisplay.textContent = app.state.isAuthenticated ? '00:00' : '--:--'; if (app.session._countdownInterval) clearInterval(app.session._countdownInterval); app.session._countdownInterval = null; return; } if (app.session._countdownInterval) clearInterval(app.session._countdownInterval); let timeLeft = app.config.sessionTimeoutDuration; app.session._countdownInterval = setInterval(() => { if (!app.state.isAuthenticated) { clearInterval(app.session._countdownInterval); app.session._countdownInterval = null; app.ui.elements.sessionTimerDisplay.textContent = '--:--'; return; } timeLeft -= 1000; const minutes = Math.floor((timeLeft / (1000 * 60)) % 60); const seconds = Math.floor((timeLeft / 1000) % 60); app.ui.elements.sessionTimerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`; if (timeLeft <= 0) { clearInterval(app.session._countdownInterval); app.session._countdownInterval = null; } }, 1000); },
+            _countdownInterval: null
+        };
+
+        app.init = () => {
+            app.ui.initModals();
+            const appData = app.storage.getAppData();
+            if (appData && appData.masterKeySalt) {
+                app.state.masterKeySalt = appData.masterKeySalt;
+                app.ui.navigateToView('loginView');
+            } else {
+                app.ui.navigateToView('setupView');
+            }
+        };
+        document.addEventListener('DOMContentLoaded', app.init);
+    </script>
+</body>
+</html>
