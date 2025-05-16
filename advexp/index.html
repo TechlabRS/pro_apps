@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Money Tracker - advexpv3.10</title>
+    <title>Money Tracker - Advanced Expenses Tracker v 3.10</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
@@ -23,11 +23,15 @@
             overscroll-behavior-y: contain;
         }
         .app-header {
-            background-color: #007bff; color: white; padding: 1rem 0;
+            background-color: #1acfcf; color: white; padding: 1rem 0;
             text-align: center; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             position: sticky; top: 0; z-index: 1030;
         }
         .app-header h1 { margin-bottom: 0; font-weight: 500; font-size: 1.5rem; }
+        .rtitle {
+            background: linear-gradient(135deg, #bbff00 0%, #007ab3 100%);
+            color: white; text-align: center;
+        }
         .view-container { padding: 0 15px; }
         .view { display: none; }
         .view.active { display: block; animation: fadeIn 0.3s ease-in-out; }
@@ -44,10 +48,6 @@
         .card-body { padding: 1rem; }
         .total-balance-card {
             background: linear-gradient(135deg, #0fb7d4 0%, #bbff00  100%);
-            color: white; text-align: center;
-        }
-        .rtitle {
-            background: linear-gradient(135deg, #bbff00 0%, #007ab3 100%);
             color: white; text-align: center;
         }
         .total-balance-card h2 { font-size: 1.1rem; margin-bottom: 0.3rem; opacity: 0.9; }
@@ -177,6 +177,27 @@
             flex-grow: 0;
         }
 
+        /* Filtered Totals Styling */
+        #filteredTotalsContainer {
+            display: flex;
+            justify-content: space-around;
+            padding: 0.5rem 0;
+            margin-bottom: 1rem;
+            background-color: #e9ecef;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+        }
+        .filtered-total-item {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            color: white;
+            font-weight: 500;
+        }
+        .filtered-total-income { background-color: #28a745; }
+        .filtered-total-spend { background-color: #dc3545; }
+        .filtered-total-transfer { background-color: #17a2b8; }
+        .filtered-total-net { background-color: #6c757d; }
+
 
         .bottom-nav {
             position: fixed; bottom: 0; left: 0; right: 0;
@@ -257,6 +278,8 @@
                             <button class="btn btn-sm btn-secondary" id="txClearFiltersBtn"><i class="fas fa-times"></i> Clear</button>
                         </div>
                     </div>
+                     <div id="filteredTotalsContainer" style="display: none;">
+                        </div>
                     <ul class="list-group list-group-flush transaction-list" id="transactionList">
                         <li class="list-group-item text-center text-muted" id="noTransactionsMessage">No transactions yet.</li>
                     </ul>
@@ -319,8 +342,8 @@
              <div class="card mt-3">
                 <div class="card-header">App Info</div>
                 <div class="card-body">
-                    <p class="text-muted text-center" id="appVersionInfo">Money Tracker - advexpv3.10</p>
-                    <p class="text-muted text-center">&copy; 2024-2025. Your Awesome App.</p>
+                    <p class="text-muted text-center" id="appVersionInfo">Money Tracker - Adavanced Expenses Tracker v 3.10</p>
+                    <p class="text-muted text-center">&copy; 2024-2025. RaGhaS AET </p>
                 </div>
             </div>
         </div>
@@ -441,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportDataBtn = document.getElementById('exportDataBtn');
     const importFileEl = document.getElementById('importFile');
     const importDataTriggerBtn = document.getElementById('importDataTriggerBtn');
-    const resetDataBtn = document.getElementById('resetDataBtn'); // Reset Data Button
+    const resetDataBtn = document.getElementById('resetDataBtn');
     const transactionForm = document.getElementById('transactionForm');
     const transactionListEl = document.getElementById('transactionList');
     const totalBalanceEl = document.getElementById('totalBalance');
@@ -471,6 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const txYearFilterEl = document.getElementById('txYearFilter');
     const txTypeFilterEl = document.getElementById('txTypeFilter');
     const txClearFiltersBtnEl = document.getElementById('txClearFiltersBtn');
+    const filteredTotalsContainerEl = document.getElementById('filteredTotalsContainer'); // For filtered totals
 
     const fabOpenTransactionModal = document.getElementById('openTransactionModalFab');
     const transactionModalTitleEl = document.getElementById('transactionModalTitle');
@@ -493,8 +517,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- App State & Config ---
     const APP_VERSION = "advexpv3.10";
-    const LOCAL_STORAGE_TRANSACTIONS_KEY = `transactions_adv_${APP_VERSION}_filters_v3`; // Incremented for reset feature
-    const LOCAL_STORAGE_INVESTMENTS_KEY = `investments_adv_${APP_VERSION}_filters_v3`;
+    const LOCAL_STORAGE_TRANSACTIONS_KEY = `transactions_adv_${APP_VERSION}_filters_v4`; // Incremented for new features
+    const LOCAL_STORAGE_INVESTMENTS_KEY = `investments_adv_${APP_VERSION}_filters_v4`;
 
     const accountNames = { cash: 'Cash', sbi: 'SBI', hdfc: 'HDFC', icici: 'ICICI' };
     const accountKeys = Object.keys(accountNames);
@@ -642,7 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Data Management Functions (Export, Import, Reset) ---
     function exportData() {
-        const dataToExport = { transactions, investments, appVersion: `money_tracker_${APP_VERSION}_export_v1.4`, exportDate: new Date().toISOString() }; // Incremented export version
+        const dataToExport = { transactions, investments, appVersion: `money_tracker_${APP_VERSION}_export_v1.5`, exportDate: new Date().toISOString() }; // Incremented export version
         const jsonData = JSON.stringify(dataToExport, null, 2);
         const blob = new Blob([jsonData], { type: 'application/json' });
         const url = URL.createObjectURL(blob); const a = document.createElement('a');
@@ -660,15 +684,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 const importedData = JSON.parse(e.target.result);
                 const isValidTransaction = (tr) => typeof tr.id === 'number' && typeof tr.type === 'string' && typeof tr.amount === 'number';
                 const isValidInvestment = (inv) => typeof inv.id === 'number' && typeof inv.description === 'string' && typeof inv.amount === 'number';
+
                 if (importedData && Array.isArray(importedData.transactions) && importedData.transactions.every(isValidTransaction) &&
                     Array.isArray(importedData.investments) && importedData.investments.every(isValidInvestment)) {
-                    if (confirm('This will replace ALL current data with the content of this file. Are you sure?')) {
-                        transactions = importedData.transactions.map(t => ({...t, amount: parseFloat(t.amount) }));
-                        investments = importedData.investments.map(inv => ({ ...inv, amount: parseFloat(inv.amount), currentValue: inv.currentValue ? parseFloat(inv.currentValue) : null, redeemedAmount: inv.redeemedAmount ? parseFloat(inv.redeemedAmount) : null, profitOrLoss: inv.profitOrLoss ? parseFloat(inv.profitOrLoss) : null, status: inv.status || 'active' }));
-                        saveTransactions(); saveInvestments(); renderAllContent(); populateFilters(); showView('homeView', 'Dashboard'); alert('Data imported successfully!');
+                    
+                    if (confirm('This will merge the imported data with your current data. New items will be added. Items with existing IDs will be skipped. Continue?')) {
+                        let newTransactionsAdded = 0;
+                        let skippedTransactions = 0;
+                        let newInvestmentsAdded = 0;
+                        let skippedInvestments = 0;
+
+                        const existingTransactionIds = new Set(transactions.map(t => t.id));
+                        importedData.transactions.forEach(importedTx => {
+                            if (!existingTransactionIds.has(importedTx.id)) {
+                                transactions.push({...importedTx, amount: parseFloat(importedTx.amount)});
+                                newTransactionsAdded++;
+                            } else {
+                                skippedTransactions++;
+                            }
+                        });
+
+                        const existingInvestmentIds = new Set(investments.map(inv => inv.id));
+                        importedData.investments.forEach(importedInv => {
+                            if (!existingInvestmentIds.has(importedInv.id)) {
+                                investments.push({
+                                    ...importedInv,
+                                    amount: parseFloat(importedInv.amount),
+                                    currentValue: importedInv.currentValue ? parseFloat(importedInv.currentValue) : null,
+                                    redeemedAmount: importedInv.redeemedAmount ? parseFloat(importedInv.redeemedAmount) : null,
+                                    profitOrLoss: importedInv.profitOrLoss ? parseFloat(importedInv.profitOrLoss) : null,
+                                    status: importedInv.status || 'active'
+                                });
+                                newInvestmentsAdded++;
+                            } else {
+                                skippedInvestments++;
+                            }
+                        });
+
+                        saveTransactions();
+                        saveInvestments();
+                        renderAllContent();
+                        populateFilters();
+                        showView('homeView', 'Dashboard');
+                        alert(`Data merged successfully!\nNew Transactions: ${newTransactionsAdded} (Skipped: ${skippedTransactions})\nNew Investments: ${newInvestmentsAdded} (Skipped: ${skippedInvestments})`);
                     }
-                } else { alert('Invalid data structure in imported file.'); }
-            } catch (error) { console.error("Import Error:", error); alert('Error importing data.'); }
+                } else { alert('Invalid data structure in imported file. Please check the file format.'); }
+            } catch (error) { console.error("Import Error:", error); alert('Error importing data. The file might be corrupted or not in the correct JSON format.'); }
             finally { importFileEl.value = ''; }
         };
         reader.readAsText(file);
@@ -681,10 +742,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 investments = [];
                 saveTransactions();
                 saveInvestments();
-                renderAllContent(); // This will update all views and charts
-                populateFilters();  // Reset filter dropdowns
+                renderAllContent();
+                populateFilters(); 
                 alert('All application data has been reset.');
-                showView('homeView', 'Dashboard'); // Go to home after reset
+                showView('homeView', 'Dashboard');
             }
         }
     }
@@ -820,12 +881,38 @@ document.addEventListener('DOMContentLoaded', () => {
         return filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
     }
     
-    // --- Transaction Rendering (Full List with Edit/Delete) ---
+    // --- Transaction Rendering (Full List with Edit/Delete & Filtered Totals) ---
     function renderFullTransactionList() {
         if(!transactionListEl) return;
         populateFilters();
         const transactionsToRender = filterAndSearchTransactions();
         transactionListEl.innerHTML = '';
+
+        // Calculate and display filtered totals
+        let filteredIncome = 0;
+        let filteredSpend = 0;
+        let filteredTransfer = 0;
+
+        transactionsToRender.forEach(t => {
+            if (t.type === 'income') filteredIncome += t.amount;
+            else if (t.type === 'spend') filteredSpend += t.amount;
+            else if (t.type === 'transfer') filteredTransfer += t.amount; // Assuming transfers are neutral for net, but sum them up
+        });
+
+        if (filteredTotalsContainerEl) {
+            if (transactionsToRender.length > 0 && transactions.length > 0) { // Only show if there are transactions to show and some filters might be active
+                filteredTotalsContainerEl.innerHTML = `
+                    <span class="filtered-total-item filtered-total-income">Income: ${formatCurrency(filteredIncome)}</span>
+                    <span class="filtered-total-item filtered-total-spend">Spend: ${formatCurrency(filteredSpend)}</span>
+                    <span class="filtered-total-item filtered-total-transfer">Transfers: ${formatCurrency(filteredTransfer)}</span>
+                    <span class="filtered-total-item filtered-total-net">Net (Income-Spend): ${formatCurrency(filteredIncome - filteredSpend)}</span>
+                `;
+                filteredTotalsContainerEl.style.display = 'flex';
+            } else {
+                filteredTotalsContainerEl.style.display = 'none';
+            }
+        }
+
 
         if (transactionsToRender.length === 0) {
             if (noTransactionsMessageEl) {
@@ -1039,7 +1126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.getElementById('transactionsView').classList.contains('active')) {
             renderFullTransactionList();
         } else {
-             populateFilters();
+             populateFilters(); // Still populate filters so year/month options are available if user navigates back
         }
         if (document.getElementById('investmentsView').classList.contains('active')) renderInvestmentList();
         if(document.getElementById('chartsView').classList.contains('active')) {
