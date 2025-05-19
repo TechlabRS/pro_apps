@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LearnMate Kids - Full Alphabet & Features</title>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Guntur:wght@400;700&family=Poppins:wght@400;700&family=Arial&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', 'Hind Guntur', sans-serif;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            color: #333;
+        }
+        .app-header {
+            background-color: #ff8c42; color: white; padding: 1rem; font-size: 2rem; font-weight: 700;
+            border-radius: 10px; margin-bottom: 20px; width: 100%; max-width: 600px; text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .app-container {
+            background-color: #fff; padding: 25px; border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); width: 100%; max-width: 500px; text-align: center;
+        }
+        .mode-selection-area { margin-bottom: 15px; padding: 10px; background-color: #fff3e0; border-radius: 10px; }
+        .mode-selection-area h3 { margin-top: 0; margin-bottom: 10px; color: #ff8c42; }
+        .mode-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 10px; }
+        .mode-buttons button, .utility-controls button {
+            padding: 10px 12px; font-size: 0.9rem; font-weight: 600; border-radius: 10px; border: none;
+            background-color: #ffcc00; color: #4A4A4A; cursor: pointer; transition: background-color 0.3s, transform 0.2s;
+        }
+        .mode-buttons button:hover:not(.active), .utility-controls button:hover:not(.active) { background-color: #fdd835; transform: translateY(-1px); }
+        .mode-buttons button.active, .utility-controls button.active { background-color: #ff8c42; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        .utility-controls { margin-bottom: 15px; padding-top: 5px; display: flex; justify-content: center; gap: 10px; }
+        .utility-controls button { width: auto; padding: 10px 15px; }
+
+        #mcq-score-display {
+            font-size: 0.9em; font-weight: bold; color: #4a148c; margin-bottom: 10px;
+            padding: 8px; background-color: #f3e5f5; border-radius: 8px;
+        }
+
+        .learning-card { background-color: #f9f9f9; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
+        .big-char-display {
+            font-family: 'Arial', sans-serif; font-size: 8rem; font-weight: bold; color: #4a148c; margin: 0.5rem 0;
+            min-height: 120px; display: flex; align-items: center; justify-content: center;
+            background-color: #ede7f6; border-radius: 10px; padding: 10px;
+        }
+        .word-display p { font-size: 1.05em; margin: 4px 0; color: #555; min-height: 1.2em; }
+        .word-display .word-label { font-weight: normal; color: #777; font-size: 0.75em; }
+        .word-display .word-content { font-weight: 700; color: #FF758C; font-size: 1.15em; }
+        .controls, .interaction-zone, .navigation-controls { margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .control-btn {
+            padding: 10px 15px; font-size: 0.95em; font-weight: 700; border: none; border-radius: 18px;
+            cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;
+            gap: 8px; box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        }
+        .control-btn:disabled { background-color: #ccc; cursor: not-allowed; opacity: 0.7; }
+        .control-btn .icon { width: 16px; height: 16px; fill: currentColor; }
+        .hear-btn { background-color: #6DD5FA; color: white; }
+        .hear-btn:hover:not(:disabled) { background-color: #57c4e8; transform: translateY(-2px); }
+        .speak-btn { background-color: #FF758C; color: white; }
+        .speak-btn:hover:not(:disabled) { background-color: #f06278; transform: translateY(-2px); }
+        #instruction-text { font-size: 1em; color: #4A4A4A; margin-bottom: 8px; font-weight: bold; min-height: 1.4em; }
+        .status-text { font-size: 0.85em; color: #007BFF; min-height: 1em; margin-top: 4px; }
+        .feedback { margin-bottom: 12px; padding: 8px; border-radius: 8px; min-height: 35px; display: flex; justify-content: center; align-items: center; }
+        .feedback p { margin: 0; font-size: 1.1em; font-weight: bold; }
+        .feedback.correct { background-color: #D4EDDA; color: #155724; }
+        .feedback.incorrect { background-color: #F8D7DA; color: #721C24; }
+        .nav-btn { background-color: #FFAA7B; color: white; width: 48%; }
+        .nav-btn:hover:not(:disabled) { background-color: #ff9a63; transform: translateY(-2px); }
+        .navigation-controls { flex-direction: row; justify-content: space-between; }
+        .progress-display { font-size: 1rem; font-weight: bold; color: #4a148c; margin-top: 8px; margin-bottom: 8px; padding: 8px; background-color: #e8eaf6; border-radius: 8px; }
+        
+        #mcq-options-area {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
+        .mcq-option-btn {
+            padding: 12px 18px; font-size: 1.5rem; font-weight: bold; border: 2px solid #ffcc00;
+            border-radius: 10px; background-color: #fff; color: #4a148c; cursor: pointer;
+            min-width: 60px; text-align: center; transition: background-color 0.3s, border-color 0.3s;
+        }
+        .mcq-option-btn:hover { background-color: #fff9e6; border-color: #ff8c42; }
+
+        footer p { font-size: 0.9em; color: #777; margin-top: 20px; }
+        @media (min-width: 400px) {
+            .controls { flex-direction: row; justify-content: space-around; }
+            .mode-buttons button { padding: 10px 15px; font-size: 0.95rem;}
+            .big-char-display { font-size: 9rem; min-height: 130px;}
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">LearnMate Kids</header>
+
+    <div class="app-container">
+        <div class="mode-selection-area">
+            <h3>Choose Category:</h3>
+            <div class="mode-buttons" id="category-buttons">
+                <button data-category="english_letter">English Letters (A-Z)</button>
+                <button data-category="telugu_letter">Telugu Letters (అ-ఱ)</button>
+                <button data-category="number">Numbers (1-10)</button>
+            </div>
+            <h3>Choose Mode:</h3>
+            <div class="mode-buttons" id="mode-buttons">
+                <button data-mode="order">Orderly</button>
+                <button data-mode="random">Random</button>
+                <button data-mode="mcq">Identify (MCQ)</button>
+            </div>
+        </div>
+        
+        <div class="utility-controls">
+            <button id="auto-play-btn">Auto Play: Off</button>
+            <button id="speech-toggle-btn">Speech: On</button>
+        </div>
+        <div id="mcq-score-display" style="display: none;">MCQ Score: 0/0 (0%)</div>
+
+        <div class="progress-display" id="progress-indicator">Progress: 0 / 0</div>
+
+        <main class="learning-card">
+            <div id="big-char-display" class="big-char-display">A</div>
+
+            <div class="word-display">
+                <p data-lang-para="en"><span class="word-label">English:</span> <span id="word-en" class="word-content"></span></p>
+                <p data-lang-para="te"><span class="word-label">తెలుగు (Telugu):</span> <span id="word-te" class="word-content"></span></p>
+            </div>
+
+            <div class="controls">
+                <button id="hear-en-btn" class="control-btn hear-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                    Hear English
+                </button>
+                <button id="hear-te-btn" class="control-btn hear-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                    Hear Telugu
+                </button>
+            </div>
+
+            <div class="interaction-zone">
+                <p id="instruction-text">Select a category to start!</p>
+                <button id="speak-answer-btn" class="control-btn speak-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+                    Speak Answer
+                </button>
+                <div id="recognition-status" class="status-text"></div>
+            </div>
+            
+            <div id="mcq-options-area"></div>
+
+            <div id="feedback-area" class="feedback">
+                <p id="feedback-text"></p>
+            </div>
+
+            <div class="navigation-controls">
+                <button id="prev-item-btn" class="control-btn nav-btn">Previous</button>
+                <button id="next-item-btn" class="control-btn nav-btn">Next</button>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 LearnMate Kids</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const allLearningItems = [
+                // English Alphabet (A-Z) - IDs 1-26
+                { id: 1, type: 'english_letter', display_en: 'A', speak_en: 'A', recognize_en_options: ['a', 'ay'] },
+                { id: 2, type: 'english_letter', display_en: 'B', speak_en: 'B', recognize_en_options: ['b', 'bee'] },
+                { id: 3, type: 'english_letter', display_en: 'C', speak_en: 'C', recognize_en_options: ['c', 'see', 'cee'] },
+                { id: 4, type: 'english_letter', display_en: 'D', speak_en: 'D', recognize_en_options: ['d', 'dee'] },
+                { id: 5, type: 'english_letter', display_en: 'E', speak_en: 'E', recognize_en_options: ['e', 'ee'] },
+                { id: 6, type: 'english_letter', display_en: 'F', speak_en: 'F', recognize_en_options: ['f', 'ef'] },
+                { id: 7, type: 'english_letter', display_en: 'G', speak_en: 'G', recognize_en_options: ['g', 'gee', 'jee'] },
+                { id: 8, type: 'english_letter', display_en: 'H', speak_en: 'H', recognize_en_options: ['h', 'aitch', 'haitch'] },
+                { id: 9, type: 'english_letter', display_en: 'I', speak_en: 'I', recognize_en_options: ['i', 'eye'] },
+                { id: 10, type: 'english_letter', display_en: 'J', speak_en: 'J', recognize_en_options: ['j', 'jay', 'jey'] },
+                { id: 11, type: 'english_letter', display_en: 'K', speak_en: 'K', recognize_en_options: ['k', 'kay'] },
+                { id: 12, type: 'english_letter', display_en: 'L', speak_en: 'L', recognize_en_options: ['l', 'el'] },
+                { id: 13, type: 'english_letter', display_en: 'M', speak_en: 'M', recognize_en_options: ['m', 'em'] },
+                { id: 14, type: 'english_letter', display_en: 'N', speak_en: 'N', recognize_en_options: ['n', 'en'] },
+                { id: 15, type: 'english_letter', display_en: 'O', speak_en: 'O', recognize_en_options: ['o', 'oh'] },
+                { id: 16, type: 'english_letter', display_en: 'P', speak_en: 'P', recognize_en_options: ['p', 'pee'] },
+                { id: 17, type: 'english_letter', display_en: 'Q', speak_en: 'Q', recognize_en_options: ['q', 'cue'] },
+                { id: 18, type: 'english_letter', display_en: 'R', speak_en: 'R', recognize_en_options: ['r', 'are', 'arr'] },
+                { id: 19, type: 'english_letter', display_en: 'S', speak_en: 'S', recognize_en_options: ['s', 'ess'] },
+                { id: 20, type: 'english_letter', display_en: 'T', speak_en: 'T', recognize_en_options: ['t', 'tee'] },
+                { id: 21, type: 'english_letter', display_en: 'U', speak_en: 'U', recognize_en_options: ['u', 'you'] },
+                { id: 22, type: 'english_letter', display_en: 'V', speak_en: 'V', recognize_en_options: ['v', 'vee'] },
+                { id: 23, type: 'english_letter', display_en: 'W', speak_en: 'W', recognize_en_options: ['w', 'double u', 'double you'] },
+                { id: 24, type: 'english_letter', display_en: 'X', speak_en: 'X', recognize_en_options: ['x', 'ex', 'ecks'] },
+                { id: 25, type: 'english_letter', display_en: 'Y', speak_en: 'Y', recognize_en_options: ['y', 'why', 'wye'] },
+                { id: 26, type: 'english_letter', display_en: 'Z', speak_en: 'Z', recognize_en_options: ['z', 'zed', 'zee'] },
+
+                // Numbers (1-10) - IDs 27-36
+                { id: 27, type: 'number', display_en: '1 (One)', display_te: '౧ (ఒకటి)', speak_en: 'One', speak_te: 'ఒకటి', recognize_en_options: ['one', '1'], recognize_te_options: ['ఒకటి', 'okati', '1', '౧'] },
+                { id: 28, type: 'number', display_en: '2 (Two)', display_te: '౨ (రెండు)', speak_en: 'Two', speak_te: 'రెండు', recognize_en_options: ['two', '2', 'too'], recognize_te_options: ['రెండు', 'rendu', '2', '౨'] },
+                { id: 29, type: 'number', display_en: '3 (Three)', display_te: '౩ (మూడు)', speak_en: 'Three', speak_te: 'మూడు', recognize_en_options: ['three', '3', 'tree'], recognize_te_options: ['మూడు', 'moodu', '3', '౩'] },
+                { id: 30, type: 'number', display_en: '4 (Four)', display_te: '౪ (నాలుగు)', speak_en: 'Four', speak_te: 'నాలుగు', recognize_en_options: ['four', '4', 'for'], recognize_te_options: ['నాలుగు', 'nalugu', '4', '౪'] },
+                { id: 31, type: 'number', display_en: '5 (Five)', display_te: '౫ (ఐదు)', speak_en: 'Five', speak_te: 'ఐదు', recognize_en_options: ['five', '5', 'fiev'], recognize_te_options: ['ఐదు', 'aidu', 'idu', '5', '౫'] },
+                { id: 32, type: 'number', display_en: '6 (Six)', display_te: '౬ (ఆరు)', speak_en: 'Six', speak_te: 'ఆరు', recognize_en_options: ['six', '6', 'sex'], recognize_te_options: ['ఆరు', 'aaru', '6', '౬'] },
+                { id: 33, type: 'number', display_en: '7 (Seven)', display_te: '౭ (ఏడు)', speak_en: 'Seven', speak_te: 'ఏడు', recognize_en_options: ['seven', '7'], recognize_te_options: ['ఏడు', 'yedu', 'edu', '7', '౭'] },
+                { id: 34, type: 'number', display_en: '8 (Eight)', display_te: '౮ (ఎనిమిది)', speak_en: 'Eight', speak_te: 'ఎనిమిది', recognize_en_options: ['eight', '8', 'ate'], recognize_te_options: ['ఎనిమిది', 'enimidi', 'yenimidi', '8', '౮'] },
+                { id: 35, type: 'number', display_en: '9 (Nine)', display_te: '౯ (తొమ్మిది)', speak_en: 'Nine', speak_te: 'తొమ్మిది', recognize_en_options: ['nine', '9', 'nien'], recognize_te_options: ['తొమ్మిది', 'tommidi', 'thommidi', '9', '౯'] },
+                { id: 36, type: 'number', display_en: '10 (Ten)', display_te: '౧౦ (పది)', speak_en: 'Ten', speak_te: 'పది', recognize_en_options: ['ten', '10'], recognize_te_options: ['పది', 'padi', 'padhi', '10', '౧౦'] },
+
+                // Telugu Vowels (అచ్చులు) - IDs 37-51 (15 vowels)
+                { id: 37, type: 'telugu_letter', display_te: 'అ', speak_te: 'అ', recognize_te_options: ['అ', 'a'] },
+                { id: 38, type: 'telugu_letter', display_te: 'ఆ', speak_te: 'ఆ', recognize_te_options: ['ఆ', 'aa'] },
+                { id: 39, type: 'telugu_letter', display_te: 'ఇ', speak_te: 'ఇ', recognize_te_options: ['ఇ', 'i'] },
+                { id: 40, type: 'telugu_letter', display_te: 'ఈ', speak_te: 'ఈ', recognize_te_options: ['ఈ', 'ee', 'e'] },
+                { id: 41, type: 'telugu_letter', display_te: 'ఉ', speak_te: 'ఉ', recognize_te_options: ['ఉ', 'u'] },
+                { id: 42, type: 'telugu_letter', display_te: 'ఊ', speak_te: 'ఊ', recognize_te_options: ['ఊ', 'oo'] },
+                { id: 43, type: 'telugu_letter', display_te: 'ఋ', speak_te: 'ఋ', recognize_te_options: ['ఋ', 'ru'] },
+                { id: 44, type: 'telugu_letter', display_te: 'ఎ', speak_te: 'ఎ', recognize_te_options: ['ఎ', 'e', 'ye'] },
+                { id: 45, type: 'telugu_letter', display_te: 'ఏ', speak_te: 'ఏ', recognize_te_options: ['ఏ', 'E', 'yea'] },
+                { id: 46, type: 'telugu_letter', display_te: 'ఐ', speak_te: 'ఐ', recognize_te_options: ['ఐ', 'ai', 'i'] },
+                { id: 47, type: 'telugu_letter', display_te: 'ఒ', speak_te: 'ఒ', recognize_te_options: ['ఒ', 'o'] },
+                { id: 48, type: 'telugu_letter', display_te: 'ఓ', speak_te: 'ఓ', recognize_te_options: ['ఓ', 'O', 'oo'] },
+                { id: 49, type: 'telugu_letter', display_te: 'ఔ', speak_te: 'ఔ', recognize_te_options: ['ఔ', 'au', 'ow'] },
+                { id: 50, type: 'telugu_letter', display_te: 'అం', speak_te: 'అం', recognize_te_options: ['అం', 'am', 'um'] },
+                { id: 51, type: 'telugu_letter', display_te: 'అః', speak_te: 'అః', recognize_te_options: ['అః', 'aha'] },
+                
+                // Telugu Consonants (హల్లులు) - IDs 52-87 (36 consonants)
+                // క वर्ग (ka vargam)
+                { id: 52, type: 'telugu_letter', display_te: 'క', speak_te: 'క', recognize_te_options: ['క', 'ka'] },
+                { id: 53, type: 'telugu_letter', display_te: 'ఖ', speak_te: 'ఖ', recognize_te_options: ['ఖ', 'kha'] },
+                { id: 54, type: 'telugu_letter', display_te: 'గ', speak_te: 'గ', recognize_te_options: ['గ', 'ga'] },
+                { id: 55, type: 'telugu_letter', display_te: 'ఘ', speak_te: 'ఘ', recognize_te_options: ['ఘ', 'gha'] },
+                { id: 56, type: 'telugu_letter', display_te: 'ఙ', speak_te: 'ఙ', recognize_te_options: ['ఙ', 'inya', 'gna'] },
+                // చ वर्ग (cha vargam)
+                { id: 57, type: 'telugu_letter', display_te: 'చ', speak_te: 'చ', recognize_te_options: ['చ', 'cha'] },
+                { id: 58, type: 'telugu_letter', display_te: 'ఛ', speak_te: 'ఛ', recognize_te_options: ['ఛ', 'chha'] },
+                { id: 59, type: 'telugu_letter', display_te: 'జ', speak_te: 'జ', recognize_te_options: ['జ', 'ja', 'za'] },
+                { id: 60, type: 'telugu_letter', display_te: 'ఝ', speak_te: 'ఝ', recognize_te_options: ['ఝ', 'jha'] },
+                { id: 61, type: 'telugu_letter', display_te: 'ఞ', speak_te: 'ఞ', recognize_te_options: ['ఞ', 'ini', 'nya'] },
+                // ట वर्ग (Ta vargam)
+                { id: 62, type: 'telugu_letter', display_te: 'ట', speak_te: 'ట', recognize_te_options: ['ట', 'ta', 'tta'] },
+                { id: 63, type: 'telugu_letter', display_te: 'ఠ', speak_te: 'ఠ', recognize_te_options: ['ఠ', 'tha', 'ttha'] },
+                { id: 64, type: 'telugu_letter', display_te: 'డ', speak_te: 'డ', recognize_te_options: ['డ', 'da', 'dda'] },
+                { id: 65, type: 'telugu_letter', display_te: 'ఢ', speak_te: 'ఢ', recognize_te_options: ['ఢ', 'dha', 'ddha'] },
+                { id: 66, type: 'telugu_letter', display_te: 'ణ', speak_te: 'ణ', recognize_te_options: ['ణ', 'na', 'ana'] },
+                // త वर्ग (tha vargam - dental)
+                { id: 67, type: 'telugu_letter', display_te: 'త', speak_te: 'త', recognize_te_options: ['త', 'ta', 'tha_soft'] },
+                { id: 68, type: 'telugu_letter', display_te: 'థ', speak_te: 'థ', recognize_te_options: ['థ', 'tha', 'thha_soft'] },
+                { id: 69, type: 'telugu_letter', display_te: 'ద', speak_te: 'ద', recognize_te_options: ['ద', 'da', 'dha_soft'] },
+                { id: 70, type: 'telugu_letter', display_te: 'ధ', speak_te: 'ధ', recognize_te_options: ['ధ', 'dha', 'dhha_soft'] },
+                { id: 71, type: 'telugu_letter', display_te: 'న', speak_te: 'న', recognize_te_options: ['న', 'na'] },
+                // ప वर्ग (pa vargam)
+                { id: 72, type: 'telugu_letter', display_te: 'ప', speak_te: 'ప', recognize_te_options: ['ప', 'pa'] },
+                { id: 73, type: 'telugu_letter', display_te: 'ఫ', speak_te: 'ఫ', recognize_te_options: ['ఫ', 'pha', 'fa'] },
+                { id: 74, type: 'telugu_letter', display_te: 'బ', speak_te: 'బ', recognize_te_options: ['బ', 'ba'] },
+                { id: 75, type: 'telugu_letter', display_te: 'భ', speak_te: 'భ', recognize_te_options: ['భ', 'bha'] },
+                { id: 76, type: 'telugu_letter', display_te: 'మ', speak_te: 'మ', recognize_te_options: ['మ', 'ma'] },
+                // Antasthalu (Semi-vowels)
+                { id: 77, type: 'telugu_letter', display_te: 'య', speak_te: 'య', recognize_te_options: ['య', 'ya'] },
+                { id: 78, type: 'telugu_letter', display_te: 'ర', speak_te: 'ర', recognize_te_options: ['ర', 'ra'] },
+                { id: 79, type: 'telugu_letter', display_te: 'ల', speak_te: 'ల', recognize_te_options: ['ల', 'la'] },
+                { id: 80, type: 'telugu_letter', display_te: 'వ', speak_te: 'వ', recognize_te_options: ['వ', 'va', 'wa'] },
+                // Ooshmalu (Fricatives/Sibilants)
+                { id: 81, type: 'telugu_letter', display_te: 'శ', speak_te: 'శ', recognize_te_options: ['శ', 'sha', 'sa_palatal'] },
+                { id: 82, type: 'telugu_letter', display_te: 'ష', speak_te: 'ష', recognize_te_options: ['ష', 'sha', 'ssa_retroflex'] },
+                { id: 83, type: 'telugu_letter', display_te: 'స', speak_te: 'స', recognize_te_options: ['స', 'sa'] },
+                { id: 84, type: 'telugu_letter', display_te: 'హ', speak_te: 'హ', recognize_te_options: ['హ', 'ha'] },
+                // Others
+                { id: 85, type: 'telugu_letter', display_te: 'ళ', speak_te: 'ళ', recognize_te_options: ['ళ', 'la', 'ala'] },
+                { id: 86, type: 'telugu_letter', display_te: 'క్ష', speak_te: 'క్ష', recognize_te_options: ['క్ష', 'ksha'] },
+                { id: 87, type: 'telugu_letter', display_te: 'ఱ', speak_te: 'ఱ', recognize_te_options: ['ఱ', 'ra', 'bandi ra', 'rra'] },
+            ];
+            // Ensure each item has all necessary fields, even if empty, for consistency
+            allLearningItems.forEach(item => {
+                item.display_en = item.display_en || '';
+                item.display_te = item.display_te || '';
+                item.speak_en = item.speak_en || '';
+                item.speak_te = item.speak_te || '';
+                item.recognize_en_options = item.recognize_en_options || [];
+                item.recognize_te_options = item.recognize_te_options || [];
+            });
+
+
+            let currentCategory = null; 
+            let currentMode = 'order'; 
+            let filteredItems = [];
+            let currentIndexInCategory = 0;
+            let targetLanguage = 'te-IN'; 
+
+            let isAutoPlayOn = false;
+            let autoPlayIntervalId = null;
+            const AUTO_PLAY_DELAY = 7000;
+
+            let isSpeechGloballyOn = true; 
+            let mcqCorrectAnswers = 0;
+            let mcqTotalAttempts = 0;
+
+
+            const bigCharDisplayEl = document.getElementById('big-char-display');
+            const wordEnEl = document.getElementById('word-en');
+            const wordTeEl = document.getElementById('word-te');
+            const enParaEl = document.querySelector('p[data-lang-para="en"]');
+            const teParaEl = document.querySelector('p[data-lang-para="te"]');
+            const progressIndicatorEl = document.getElementById('progress-indicator');
+            const mcqOptionsAreaEl = document.getElementById('mcq-options-area');
+            const mcqScoreDisplayEl = document.getElementById('mcq-score-display');
+
+            const hearEnBtn = document.getElementById('hear-en-btn');
+            const hearTeBtn = document.getElementById('hear-te-btn');
+            const instructionTextEl = document.getElementById('instruction-text');
+            const speakAnswerBtn = document.getElementById('speak-answer-btn');
+            const recognitionStatusEl = document.getElementById('recognition-status');
+            const feedbackAreaEl = document.getElementById('feedback-area');
+            const feedbackTextEl = document.getElementById('feedback-text');
+            
+            const prevItemBtn = document.getElementById('prev-item-btn');
+            const nextItemBtn = document.getElementById('next-item-btn');
+            const autoPlayBtn = document.getElementById('auto-play-btn');
+            const speechToggleBtn = document.getElementById('speech-toggle-btn');
+
+            const categoryButtonsContainer = document.getElementById('category-buttons');
+            const modeButtonsContainer = document.getElementById('mode-buttons');
+
+            const synth = window.speechSynthesis;
+            let voices = [];
+            function populateVoiceList() { voices = synth.getVoices(); }
+            if (synth) {
+                populateVoiceList();
+                if (synth.onvoiceschanged !== undefined) { synth.onvoiceschanged = populateVoiceList; }
+            }
+
+
+            function speak(text, lang) {
+                if (!isSpeechGloballyOn || !text || text.trim() === '' || !synth) return;
+                if (synth.speaking) { synth.cancel(); }
+                
+                const utterThis = new SpeechSynthesisUtterance(text);
+                utterThis.onerror = (event) => { console.error('TTS Error', event); recognitionStatusEl.textContent = `TTS Error: ${event.error}`; };
+                const voice = voices.find(v => v.lang === lang && v.localService) || voices.find(v => v.lang === lang);
+                if (voice) { utterThis.voice = voice; } else { utterThis.lang = lang; }
+                utterThis.pitch = 1; utterThis.rate = (lang === 'te-IN' || lang.startsWith('en-')) ? 0.9 : 1.0;
+                synth.speak(utterThis);
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            let recognition;
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition();
+                recognition.continuous = false; recognition.interimResults = false;
+                recognition.onstart = () => { recognitionStatusEl.textContent = 'Listening...'; speakAnswerBtn.disabled = true; speakAnswerBtn.style.opacity = '0.7'; };
+                recognition.onend = () => { speakAnswerBtn.disabled = false; speakAnswerBtn.style.opacity = '1'; if (!recognitionStatusEl.textContent.startsWith("Heard:")) recognitionStatusEl.textContent = '';};
+                recognition.onerror = (event) => {
+                    let msg = `Error: ${event.error}`;
+                    if (event.error === 'no-speech') msg = "Didn't hear anything. Try louder!";
+                    else if (event.error === 'audio-capture') msg = "Mic problem. Check permissions.";
+                    else if (event.error === 'not-allowed') msg = "Mic access denied. Please allow.";
+                    recognitionStatusEl.textContent = msg; console.error('SR Error:', event);
+                };
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript.trim().toLowerCase();
+                    recognitionStatusEl.textContent = `Heard: ${transcript}`; checkAnswer(transcript);
+                };
+            } else {
+                speakAnswerBtn.disabled = true; 
+                 instructionTextEl.textContent = "Browser doesn't support speech recognition.";
+            }
+
+            function updateActiveButtons() {
+                categoryButtonsContainer.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.category === currentCategory));
+                modeButtonsContainer.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === currentMode));
+                autoPlayBtn.textContent = `Auto Play: ${isAutoPlayOn ? 'On' : 'Off'}`;
+                autoPlayBtn.classList.toggle('active', isAutoPlayOn);
+                speechToggleBtn.textContent = `Speech: ${isSpeechGloballyOn ? 'On' : 'Off'}`;
+                speechToggleBtn.classList.toggle('active', isSpeechGloballyOn);
+            }
+            
+            function stopAutoPlay() {
+                if (isAutoPlayOn) {
+                    clearInterval(autoPlayIntervalId);
+                    autoPlayIntervalId = null;
+                    isAutoPlayOn = false;
+                    updateActiveButtons();
+                }
+            }
+            
+            function updateMCQScoreDisplay() {
+                if (currentMode === 'mcq') {
+                    mcqScoreDisplayEl.style.display = 'block';
+                    let percentage = mcqTotalAttempts > 0 ? Math.round((mcqCorrectAnswers / mcqTotalAttempts) * 100) : 0;
+                    mcqScoreDisplayEl.textContent = `MCQ Score: ${mcqCorrectAnswers}/${mcqTotalAttempts} (${percentage}%)`;
+                } else {
+                    mcqScoreDisplayEl.style.display = 'none';
+                }
+            }
+
+            function setAppCategory(categoryName) {
+                stopAutoPlay();
+                currentCategory = categoryName;
+                filteredItems = allLearningItems.filter(item => item.type === currentCategory);
+                currentIndexInCategory = 0;
+                if (currentMode === 'random' && filteredItems.length > 0) {
+                    currentIndexInCategory = Math.floor(Math.random() * filteredItems.length);
+                }
+                if (currentMode === 'mcq') { // Reset score on category change in MCQ
+                    mcqCorrectAnswers = 0;
+                    mcqTotalAttempts = 0;
+                    updateMCQScoreDisplay();
+                }
+                updateActiveButtons();
+                updateDisplayAndControls();
+            }
+
+            function setAppMode(modeName) {
+                stopAutoPlay();
+                currentMode = modeName;
+                if (filteredItems.length > 0) { 
+                    if (currentMode === 'random') {
+                        currentIndexInCategory = Math.floor(Math.random() * filteredItems.length);
+                    } else { // order or mcq
+                        currentIndexInCategory = 0;
+                    }
+                }
+                if (currentMode === 'mcq') {
+                    mcqCorrectAnswers = 0;
+                    mcqTotalAttempts = 0;
+                }
+                updateMCQScoreDisplay(); // Show/hide and update score based on new mode
+                updateActiveButtons();
+                updateDisplayAndControls();
+            }
+
+            function getPrimaryChar(item) {
+                if (!item) return '?';
+                if (item.type === 'english_letter') return item.display_en || '?';
+                if (item.type === 'telugu_letter') return item.display_te || '?';
+                if (item.type === 'number') {
+                     // For numbers, primary char might be the numeral from display_te or display_en
+                    if (item.display_te) { const match_te = item.display_te.match(/^([౦-౯]+)/); if (match_te) return match_te[0]; }
+                    if (item.display_en) { const match_en = item.display_en.match(/^(\d+)/); if (match_en) return match_en[0]; }
+                    return item.display_te ? item.display_te.split(' ')[0] : (item.display_en ? item.display_en.split(' ')[0] : '?');
+                }
+                return '?';
+            }
+
+            function autoSpeakCurrentItem() {
+                if (filteredItems.length === 0 || !isSpeechGloballyOn) return;
+                const item = filteredItems[currentIndexInCategory];
+                if (!item) return;
+
+                if (item.type === 'english_letter' && item.speak_en) {
+                    speak(item.speak_en, 'en-US');
+                } else if (item.type === 'telugu_letter' && item.speak_te) {
+                    speak(item.speak_te, 'te-IN');
+                } else if (item.type === 'number') {
+                    if (targetLanguage === 'en-US' && item.speak_en) { speak(item.speak_en, 'en-US'); } 
+                    else if (targetLanguage === 'te-IN' && item.speak_te) { speak(item.speak_te, 'te-IN'); } 
+                    else if (item.speak_en) { speak(item.speak_en, 'en-US'); } 
+                    else if (item.speak_te) { speak(item.speak_te, 'te-IN'); }
+                }
+            }
+            
+            function displayMCQOptions(correctItem) {
+                mcqOptionsAreaEl.innerHTML = ''; 
+                if (!correctItem || filteredItems.length < 1) return;
+
+                let options = [correctItem];
+                let distractors = filteredItems.filter(item => item.id !== correctItem.id);
+                
+                distractors.sort(() => 0.5 - Math.random());
+                const numDistractorsNeeded = Math.min(3, distractors.length); // Aim for up to 3 distractors (total 4 options)
+
+                for (let i = 0; i < numDistractorsNeeded; i++) {
+                    options.push(distractors[i]);
+                }
+                
+                options.sort(() => 0.5 - Math.random());
+
+                options.forEach(optionItem => {
+                    const btn = document.createElement('button');
+                    btn.className = 'mcq-option-btn';
+                    btn.textContent = getPrimaryChar(optionItem);
+                    btn.addEventListener('click', () => {
+                        feedbackAreaEl.className = 'feedback'; 
+                        mcqTotalAttempts++;
+                        if (optionItem.id === correctItem.id) {
+                            mcqCorrectAnswers++;
+                            feedbackTextEl.textContent = 'Correct!';
+                            feedbackAreaEl.classList.add('correct');
+                            speak('Correct!', 'en-US');
+                        } else {
+                            feedbackTextEl.textContent = `Try Again! You chose ${getPrimaryChar(optionItem)}.`;
+                            feedbackAreaEl.classList.add('incorrect');
+                             speak('Try again.', 'en-US');
+                        }
+                        updateMCQScoreDisplay();
+                    });
+                    mcqOptionsAreaEl.appendChild(btn);
+                });
+            }
+
+
+            function loadCurrentItem() {
+                mcqOptionsAreaEl.innerHTML = ''; 
+                speakAnswerBtn.style.display = 'flex'; 
+                recognitionStatusEl.style.display = 'block';
+
+                if (filteredItems.length === 0 || currentIndexInCategory < 0 || currentIndexInCategory >= filteredItems.length) {
+                    bigCharDisplayEl.textContent = currentCategory ? '-' : '?';
+                    wordEnEl.textContent = ''; enParaEl.style.display = "none";
+                    wordTeEl.textContent = ''; teParaEl.style.display = "none";
+                    instructionTextEl.textContent = currentCategory ? "No items in this category." : "Select a category to start!";
+                    [hearEnBtn, hearTeBtn, speakAnswerBtn, prevItemBtn, nextItemBtn].forEach(btn => btn.disabled = true);
+                    progressIndicatorEl.textContent = "Progress: 0 / 0";
+                    return;
+                }
+
+                const item = filteredItems[currentIndexInCategory];
+                bigCharDisplayEl.textContent = getPrimaryChar(item);
+
+                if (item.display_en) { wordEnEl.textContent = item.display_en; enParaEl.style.display = ""; } 
+                else { wordEnEl.textContent = ""; enParaEl.style.display = "none"; }
+                if (item.display_te) { wordTeEl.textContent = item.display_te; teParaEl.style.display = ""; } 
+                else { wordTeEl.textContent = ""; teParaEl.style.display = "none"; }
+                
+                feedbackAreaEl.className = 'feedback'; feedbackTextEl.textContent = '';
+                recognitionStatusEl.textContent = '';
+
+                hearEnBtn.disabled = !(item.speak_en);
+                hearTeBtn.disabled = !(item.speak_te);
+                speakAnswerBtn.disabled = !SpeechRecognition || currentMode === 'mcq';
+
+
+                if (currentMode === 'mcq') {
+                    speakAnswerBtn.style.display = 'none';
+                    recognitionStatusEl.style.display = 'none';
+                    instructionTextEl.textContent = `Click the correct option for: ${getPrimaryChar(item)}`;
+                    displayMCQOptions(item);
+                } else { 
+                    if (item.type === 'telugu_letter') {
+                        targetLanguage = 'te-IN';
+                        instructionTextEl.textContent = `చెప్పండి (Say): ${getPrimaryChar(item)}`;
+                    } else if (item.type === 'english_letter') {
+                        targetLanguage = 'en-US';
+                        instructionTextEl.textContent = `Say: ${getPrimaryChar(item)}`;
+                    } else if (item.type === 'number') {
+                        if (Math.random() < 0.5 && item.speak_en) { 
+                            targetLanguage = 'en-US';
+                            instructionTextEl.textContent = `Say in English: ${getPrimaryChar(item)}`;
+                        } else if (item.speak_te) { 
+                            targetLanguage = 'te-IN';
+                            instructionTextEl.textContent = `తెలుగులో చెప్పండి: ${getPrimaryChar(item)}`;
+                        } else { 
+                            targetLanguage = item.speak_en ? 'en-US' : 'te-IN'; 
+                            instructionTextEl.textContent = `Say: ${getPrimaryChar(item)}`;
+                        }
+                    }
+                }
+            }
+
+            function updateDisplayAndControls() {
+                if (filteredItems.length > 0) {
+                    loadCurrentItem();
+                    progressIndicatorEl.textContent = `Item ${currentIndexInCategory + 1} / ${filteredItems.length}`;
+                    prevItemBtn.disabled = (currentMode === 'random') || (currentIndexInCategory === 0);
+                    nextItemBtn.disabled = false; 
+                } else {
+                    bigCharDisplayEl.textContent = '?';
+                    loadCurrentItem(); 
+                    prevItemBtn.disabled = true; nextItemBtn.disabled = true;
+                }
+                updateMCQScoreDisplay(); // Ensure score display is correct based on mode/state
+            }
+            
+            function navigateItem(direction) { 
+                if (filteredItems.length === 0) return;
+                
+                if (direction !== 'auto' && isAutoPlayOn) stopAutoPlay();
+
+                if (direction === 'next' || direction === 'auto') {
+                    if (currentMode === 'order' || currentMode === 'mcq') { 
+                        currentIndexInCategory = (currentIndexInCategory + 1) % filteredItems.length;
+                    } else { 
+                        let newIndex;
+                        if (filteredItems.length > 1) {
+                            do { newIndex = Math.floor(Math.random() * filteredItems.length); } while (newIndex === currentIndexInCategory);
+                            currentIndexInCategory = newIndex;
+                        } else { currentIndexInCategory = 0; }
+                    }
+                } else if (direction === 'prev') {
+                    if (currentMode === 'order' || currentMode === 'mcq') {
+                        currentIndexInCategory = (currentIndexInCategory - 1 + filteredItems.length) % filteredItems.length;
+                    } // Prev disabled in random
+                }
+                updateDisplayAndControls();
+
+                if (direction === 'auto' && isAutoPlayOn) {
+                    autoSpeakCurrentItem(); 
+                }
+            }
+
+            function toggleAutoPlay() {
+                if (isAutoPlayOn) {
+                    stopAutoPlay();
+                } else {
+                    if (filteredItems.length === 0) {
+                        instructionTextEl.textContent = "Select a category first for Auto Play!";
+                        return;
+                    }
+                    isAutoPlayOn = true;
+                    updateActiveButtons();
+                    navigateItem('auto'); 
+                    autoPlayIntervalId = setInterval(() => navigateItem('auto'), AUTO_PLAY_DELAY);
+                }
+            }
+            
+            function toggleGlobalSpeech() {
+                isSpeechGloballyOn = !isSpeechGloballyOn;
+                updateActiveButtons();
+                if (!isSpeechGloballyOn && synth && synth.speaking) {
+                    synth.cancel(); // Stop any ongoing speech if turning off
+                }
+            }
+
+
+            function checkAnswer(transcript) { 
+                if (filteredItems.length === 0 || currentMode === 'mcq') return;
+                const item = filteredItems[currentIndexInCategory];
+                let isCorrect = false;
+                let expectedOptions = [];
+                let correctDisplayText = getPrimaryChar(item);
+
+                if (targetLanguage === 'te-IN' && item.recognize_te_options) {
+                    expectedOptions = item.recognize_te_options;
+                } else if (targetLanguage === 'en-US' && item.recognize_en_options) { 
+                    expectedOptions = item.recognize_en_options;
+                }
+                const normalizedTranscript = transcript.replace(/[.,!?;:]/g, '').toLowerCase();
+                for (const option of expectedOptions) {
+                    if (option && normalizedTranscript.includes(option.toLowerCase())) { isCorrect = true; break; }
+                }
+                
+                if (isCorrect) {
+                    feedbackTextEl.textContent = 'Great Job! Correct!';
+                    feedbackAreaEl.className = 'feedback correct'; speak('Correct!', 'en-US');
+                } else {
+                    feedbackTextEl.textContent = `You said: "${transcript}". Expected: "${correctDisplayText}". Try Next!`;
+                    feedbackAreaEl.className = 'feedback incorrect'; speak('Try again.', 'en-US');
+                }
+            }
+
+            // Event Listeners
+            categoryButtonsContainer.addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') setAppCategory(e.target.dataset.category); });
+            modeButtonsContainer.addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') setAppMode(e.target.dataset.mode); });
+            autoPlayBtn.addEventListener('click', toggleAutoPlay);
+            speechToggleBtn.addEventListener('click', toggleGlobalSpeech);
+
+            hearEnBtn.addEventListener('click', () => { if (filteredItems.length > 0) speak(filteredItems[currentIndexInCategory].speak_en, 'en-US'); });
+            hearTeBtn.addEventListener('click', () => { if (filteredItems.length > 0) speak(filteredItems[currentIndexInCategory].speak_te, 'te-IN'); });
+            
+            speakAnswerBtn.addEventListener('click', () => {
+                if (!recognition || filteredItems.length === 0 || currentMode === 'mcq') { return; }
+                stopAutoPlay(); 
+                feedbackAreaEl.className = 'feedback'; feedbackTextEl.textContent = '';
+                try { recognition.lang = targetLanguage; recognition.start(); } catch (err) {
+                    console.error("SR Start Error:", err); recognitionStatusEl.textContent = "Mic start error.";
+                    speakAnswerBtn.disabled = false; speakAnswerBtn.style.opacity = '1';
+                }
+            });
+            prevItemBtn.addEventListener('click', () => navigateItem('prev'));
+            nextItemBtn.addEventListener('click', () => navigateItem('next'));
+
+            // Initial Setup
+            updateActiveButtons(); 
+            setAppCategory('english_letter'); 
+            
+            if (!synth) { alert('Warning: Browser lacks text-to-speech support.'); }
+            if (!SpeechRecognition && instructionTextEl.textContent === "Select a category to start!") { 
+                instructionTextEl.textContent = "Speech recognition not supported by this browser.";
+            }
+        });
+    </script>
+</body>
+</html>
