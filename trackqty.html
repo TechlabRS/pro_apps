@@ -6,178 +6,527 @@
     <title>Milk Tracker</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; }
-        .container { max-width: 600px; margin-top: 20px; }
-        .card { padding: 20px; }
-        input { text-align: center; }
-        .month-header { background: #007bff; color: white; padding: 5px; font-weight: bold; margin-top: 10px; }
-        .month-total { text-align: right; font-weight: bold; margin-bottom: 10px; }
-        
-        /* Calendar Layout */
-        .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 10px; }
-        .day { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid #ccc; border-radius: 5px; }
-        .day.milk { background: #28a745; color: white; }
-        .day.missing { background: #ffcc00; }
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
+        .container { max-width: 700px; margin-top: 20px; margin-bottom: 50px; }
+        .card { padding: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        input[type="number"], input[type="date"], input[type="month"], select.form-select { text-align: left; }
+        .month-header { background: #007bff; color: white; padding: 8px 12px; font-weight: bold; margin-top: 15px; border-radius: 5px 5px 0 0; }
+        .month-total { text-align: right; font-weight: bold; margin-bottom: 10px; padding: 8px; background-color: #e9ecef; border-radius: 0 0 5px 5px;}
+        .summary-details div { padding: 2px 0; }
+
+        .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 5px; font-weight: bold; text-align: center; }
+        .calendar-header div { padding: 5px; background-color: #e9ecef; border-radius: 3px;}
+        .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 5px; }
+        .day {
+            min-height: 60px; display: flex; flex-direction: column;
+            align-items: center; justify-content: flex-start;
+            border: 1px solid #dee2e6; border-radius: 5px;
+            padding: 5px 2px; box-sizing: border-box; text-align: center;
+            overflow: hidden; transition: background-color 0.3s;
+        }
+        .day-number { font-size: 0.9em; display: block; margin-bottom: 3px; color: #495057; }
+        .day-quantity { font-size: 0.8em; font-weight: bold; display: block; word-break: break-all; }
+        .day.milk { background-color: #d4edda; /* Light green */ }
+        .day.milk .day-number { color: #155724; }
+        .day.milk .day-quantity { color: #007bff; }
+        .day.absent { background-color: #fff3cd; /* Bootstrap light yellow (warning alert bg) */ }
+        .day.absent .day-number { color: #664d03; /* Bootstrap warning alert text */ }
+        .day.no-data { background-color: #fff; }
+        .day.empty { background-color: transparent; border: none; }
+
+        #messageArea { margin-top: 15px; min-height: 60px; }
+        .group-quantity-row .col-auto.pt-3 { align-self: center; font-weight: bold; }
+
+        /* Toggle Switch Enhancement */
+        .mode-toggle-label { cursor: pointer; user-select: none; transition: color 0.15s ease-in-out, font-weight 0.15s ease-in-out; }
+        .form-switch .form-check-input.fs-4 { width: 3em; height: 1.5em; /* Custom size for fs-4 equivalent */ }
+        .mode-toggle-container { background-color: #ffffff; border: 1px solid #dee2e6; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 class="text-center">Daily Milk Tracker</h2>
+    <div class="text-center mb-4">
+        <h2 class="display-6">Daily Milk Tracker</h2>
+    </div>
 
-    <div class="card">
-        <div class="mb-3">
-            <label class="form-label">Select Month</label>
-            <select id="monthSelector" class="form-select" onchange="updateTable()"></select>
+    <div class="d-flex justify-content-center align-items-center mb-4 p-3 rounded shadow-sm mode-toggle-container">
+        <span id="normalModeText" class="mode-toggle-label fw-bold me-2">Daily Entry</span>
+        <div class="form-check form-switch mx-2">
+            <input class="form-check-input fs-4" type="checkbox" role="switch" id="entryModeToggle" title="Switch to Group Entry mode">
+            <label class="form-check-label visually-hidden" for="entryModeToggle">Toggle Entry Mode</label>
         </div>
+        <span id="groupModeText" class="mode-toggle-label ms-2 text-muted">Month Group Entry</span>
+    </div>
 
-        <div class="mb-3">
-            <label class="form-label">Price per Liter (₹)</label>
-            <input type="number" id="pricePerLiter" class="form-control" value="65" min="1">
+
+    <div id="normalEntrySection">
+        <div class="card">
+            <h5 class="card-title mb-3">Log New Daily Entry</h5>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="dateInput" class="form-label">Date</label>
+                    <input type="date" id="dateInput" class="form-control">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="pricePerLiter" class="form-label">Price per Liter (₹)</label>
+                    <input type="number" id="pricePerLiter" class="form-control" value="65" min="0.01" step="0.01" placeholder="e.g., 65">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="predefinedQuantity" class="form-label">Select Quantity</label>
+                    <select id="predefinedQuantity" class="form-select">
+                        <option value="">-- Common Quantities --</option>
+                        <option value="0.25">0.25 L</option><option value="0.5">0.5 L</option><option value="0.75">0.75 L</option>
+                        <option value="1">1 L</option><option value="1.25">1.25 L</option><option value="1.5">1.5 L</option>
+                        <option value="1.75">1.75 L</option><option value="2">2 L</option>
+                        <option value="custom">Custom Quantity</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="milkQuantity" class="form-label">Or Enter Custom Quantity (L)</label>
+                    <input type="number" id="milkQuantity" class="form-control" step="0.25" min="0" placeholder="e.g., 1.25">
+                </div>
+            </div>
+            <button class="btn btn-primary w-100" onclick="addEntry()">Add / Update Daily Entry</button>
         </div>
+    </div>
 
-        <div class="mb-3">
-            <label class="form-label">Date</label>
-            <input type="date" id="dateInput" class="form-control">
+    <div id="groupEntrySection" style="display:none;">
+        <div class="card">
+            <h5 class="card-title mb-3">Log New Month Group Entry</h5>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="groupMonthSelectorInput" class="form-label">Target Month</label>
+                    <input type="month" id="groupMonthSelectorInput" class="form-control">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="groupPricePerLiter" class="form-label">Price per Liter for this group (₹)</label>
+                    <input type="number" id="groupPricePerLiter" class="form-control" value="65" min="0.01" step="0.01" placeholder="e.g., 65">
+                </div>
+            </div>
+            <hr>
+            <h6>Define Quantities and Days:</h6>
+            <div id="groupQuantityDefinitionsContainer">
+                </div>
+            <button type="button" id="addGroupQuantityRowBtn" class="btn btn-outline-secondary btn-sm mt-2">Add Another Quantity Type</button>
+            <hr>
+            <button class="btn btn-success w-100 mt-2" onclick="processGroupEntry()">Submit Month Group Entry</button>
+            <p class="text-muted small mt-2">Note: Submitting a group entry will overwrite any existing daily entries for the selected month.</p>
         </div>
+    </div>
+    
+    <div id="messageArea" class="mt-3"></div>
 
-        <div class="mb-3">
-            <label class="form-label">Milk Quantity (Liters)</label>
-            <input type="number" id="milkQuantity" class="form-control" step="0.25" min="0">
-        </div>
-
-        <button class="btn btn-primary w-100" onclick="addEntry()">Add Entry</button>
-        <button class="btn btn-danger w-100 mt-2" onclick="clearAll()">Clear All Data</button>
+    <div class="mt-4">
+        <label for="monthSelector" class="form-label">View Records for Month</label>
+        <select id="monthSelector" class="form-select mb-3" onchange="updateTable()"></select>
     </div>
 
     <h4 class="mt-4">Calendar View</h4>
+    <div class="calendar-header"> <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div> </div>
     <div id="calendar" class="calendar"></div>
 
-    <h4 class="mt-4">Monthly Records</h4>
-    <div id="milkTable"></div>
-
-    <h5 class="text-end mt-3">Overall Total: ₹<span id="totalAmount">0</span></h5>
+    <div id="recordsSection">
+        <h4 class="mt-4">Monthly Records</h4>
+        <div id="milkTable"></div>
+        <h5 class="text-end mt-3">Overall Total for Selected Month: ₹<span id="totalAmountMonth">0.00</span></h5>
+    </div>
+    <button class="btn btn-danger w-100 mt-3" onclick="clearAll()">Clear All Data</button>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     let milkRecords = JSON.parse(localStorage.getItem("milkRecords")) || [];
 
-    function populateMonthSelector() {
-        let monthSelector = document.getElementById("monthSelector");
-        monthSelector.innerHTML = "";
-        let today = new Date();
+    // DOM Elements
+    const dateInputElement = document.getElementById("dateInput");
+    const pricePerLiterElement = document.getElementById("pricePerLiter");
+    const predefinedQuantitySelect = document.getElementById("predefinedQuantity");
+    const milkQuantityInputElement = document.getElementById("milkQuantity");
+    const monthSelectorElement = document.getElementById("monthSelector");
+    const calendarDivElement = document.getElementById("calendar");
+    const milkTableDivElement = document.getElementById("milkTable");
+    const totalAmountMonthElement = document.getElementById("totalAmountMonth");
+    const messageAreaElement = document.getElementById("messageArea");
 
-        for (let i = 0; i < 12; i++) {
-            let date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-            let monthValue = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            let monthText = date.toLocaleString("default", { month: "long", year: "numeric" });
-            let option = new Option(monthText, monthValue);
-            monthSelector.add(option);
+    const normalEntrySection = document.getElementById('normalEntrySection');
+    const groupEntrySection = document.getElementById('groupEntrySection');
+    
+    const groupMonthSelectorInput = document.getElementById('groupMonthSelectorInput');
+    const groupPricePerLiterElement = document.getElementById('groupPricePerLiter');
+    const groupQuantityDefinitionsContainer = document.getElementById('groupQuantityDefinitionsContainer');
+    const addGroupQuantityRowBtn = document.getElementById('addGroupQuantityRowBtn');
+
+    // Toggle Switch Elements & Logic
+    const entryModeToggle = document.getElementById('entryModeToggle');
+    const normalModeTextElement = document.getElementById('normalModeText');
+    const groupModeTextElement = document.getElementById('groupModeText');
+
+    function updateToggleLabels(isGroupMode) {
+        if (isGroupMode) {
+            normalModeTextElement.classList.add('text-muted');
+            normalModeTextElement.classList.remove('fw-bold');
+            groupModeTextElement.classList.remove('text-muted');
+            groupModeTextElement.classList.add('fw-bold');
+            entryModeToggle.title = "Switch to Daily Entry mode";
+        } else {
+            normalModeTextElement.classList.remove('text-muted');
+            normalModeTextElement.classList.add('fw-bold');
+            groupModeTextElement.classList.add('text-muted');
+            groupModeTextElement.classList.remove('fw-bold');
+            entryModeToggle.title = "Switch to Group Entry mode";
         }
-
-        monthSelector.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
     }
 
-    function addEntry() {
-        let date = document.getElementById("dateInput").value;
-        let quantity = parseFloat(document.getElementById("milkQuantity").value);
-        let pricePerLiter = parseFloat(document.getElementById("pricePerLiter").value);
+    function setEntryMode(isGroupMode) {
+        entryModeToggle.checked = isGroupMode;
+        entryModeToggle.dispatchEvent(new Event('change')); // Trigger change event to update UI
+    }
 
-        if (!date || isNaN(quantity) || quantity < 0) {
-            alert("Please enter valid details.");
+    normalModeTextElement.addEventListener('click', () => setEntryMode(false));
+    groupModeTextElement.addEventListener('click', () => setEntryMode(true));
+
+    entryModeToggle.addEventListener('change', function() {
+        clearMessage();
+        const isGroupMode = this.checked;
+        updateToggleLabels(isGroupMode);
+        if (isGroupMode) {
+            normalEntrySection.style.display = 'none';
+            groupEntrySection.style.display = 'block';
+            initializeGroupEntryForm();
+        } else {
+            normalEntrySection.style.display = 'block';
+            groupEntrySection.style.display = 'none';
+        }
+    });
+
+
+    // --- Utility Functions ---
+    function showMessage(message, type = 'success') {
+        messageAreaElement.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                                            ${message}
+                                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                        </div>`;
+        if (type !== 'danger') { // Auto-dismiss non-error messages
+            setTimeout(() => {
+                const alertNode = messageAreaElement.querySelector('.alert');
+                // Check if bootstrap object and Alert component are available
+                if(alertNode && typeof bootstrap !== 'undefined' && bootstrap.Alert) {
+                    const alertInstance = bootstrap.Alert.getOrCreateInstance(alertNode);
+                    if (alertInstance) {
+                        alertInstance.close();
+                    }
+                } else if (alertNode) {
+                    // Fallback: if bootstrap JS isn't loaded or Alert is missing, remove manually.
+                    // This shouldn't happen if the CDN link above is working.
+                    // console.warn("Bootstrap Alert component not found or bootstrap JS not loaded. Manually removing alert.");
+                    // alertNode.remove(); // A bit abrupt, but ensures the message disappears.
+                }
+            }, 5000);
+        }
+    }
+    function clearMessage() { messageAreaElement.innerHTML = ""; }
+
+    // --- Month Selector Population ---
+    function populateMonthSelector() {
+        monthSelectorElement.innerHTML = ""; 
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth(); 
+        const currentYearMonthString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+
+        if (milkRecords.length === 0) {
+            let date = new Date(currentYear, currentMonth, 1);
+            let monthText = date.toLocaleString("default", { month: "long", year: "numeric" });
+            monthSelectorElement.add(new Option(monthText, currentYearMonthString));
+            monthSelectorElement.value = currentYearMonthString;
             return;
         }
-
-        let amount = (quantity * pricePerLiter).toFixed(2);
-        let existingEntry = milkRecords.find(record => record.date === date);
-
-        if (existingEntry) {
-            existingEntry.quantity = quantity;
-            existingEntry.amount = amount;
-        } else {
-            milkRecords.push({ date, quantity, amount });
+        const uniqueYearMonths = new Set();
+        milkRecords.forEach(record => {
+            if (record.date && typeof record.date === 'string' && record.date.length >= 7) {
+                uniqueYearMonths.add(record.date.substring(0, 7));
+            }
+        });
+        if (uniqueYearMonths.size === 0) {
+            let date = new Date(currentYear, currentMonth, 1);
+            let monthText = date.toLocaleString("default", { month: "long", year: "numeric" });
+            monthSelectorElement.add(new Option(monthText, currentYearMonthString));
+            monthSelectorElement.value = currentYearMonthString;
+            return;
         }
+        const sortedYearMonths = Array.from(uniqueYearMonths).sort((a, b) => b.localeCompare(a));
+        let defaultSelectedMonthValue = sortedYearMonths[0];
+        sortedYearMonths.forEach(yearMonthValue => {
+            const [yearStr, monthStr] = yearMonthValue.split('-');
+            const dateForDisplay = new Date(parseInt(yearStr), parseInt(monthStr) - 1, 1);
+            const monthDisplayText = dateForDisplay.toLocaleString("default", { month: "long", year: "numeric" });
+            monthSelectorElement.add(new Option(monthDisplayText, yearMonthValue));
+        });
+        monthSelectorElement.value = uniqueYearMonths.has(currentYearMonthString) ? currentYearMonthString : defaultSelectedMonthValue;
+    }
 
+    // --- Normal Daily Entry Management ---
+    function addEntry() {
+        clearMessage();
+        const date = dateInputElement.value;
+        const quantityStr = milkQuantityInputElement.value;
+        const pricePerLiterStr = pricePerLiterElement.value;
+
+        if (!date || quantityStr === "" || pricePerLiterStr === "" ) {
+            showMessage("Daily Entry: Please enter a valid date, quantity, and price.", "danger"); return;
+        }
+        const quantity = parseFloat(quantityStr);
+        const pricePerLiter = parseFloat(pricePerLiterStr);
+
+        if (isNaN(quantity) || quantity < 0 || isNaN(pricePerLiter) || pricePerLiter <=0) {
+            showMessage("Daily Entry: Quantity must be 0 or more, and price must be greater than 0.", "danger"); return;
+        }
+        const amount = (quantity * pricePerLiter).toFixed(2);
+        const existingEntryIndex = milkRecords.findIndex(record => record.date === date);
+
+        if (existingEntryIndex > -1) {
+            milkRecords[existingEntryIndex].quantity = quantity;
+            milkRecords[existingEntryIndex].amount = amount;
+            milkRecords[existingEntryIndex].pricePerLiter = pricePerLiter;
+            showMessage("Daily entry updated successfully!", "success");
+        } else {
+            milkRecords.push({ date, quantity, amount, pricePerLiter });
+            showMessage("Daily entry added successfully!", "success");
+        }
         localStorage.setItem("milkRecords", JSON.stringify(milkRecords));
+        const entryYearMonth = date.substring(0,7);
+        if (!Array.from(monthSelectorElement.options).some(opt => opt.value === entryYearMonth)) {
+             populateMonthSelector();
+        }
+        monthSelectorElement.value = entryYearMonth;
         updateTable();
     }
 
-    function updateTable() {
-        let tableDiv = document.getElementById("milkTable");
-        tableDiv.innerHTML = "";
-        let totalAmount = 0, totalLiters = 0;
+    // --- Group Entry Management ---
+    function createGroupQuantityRowHTML(qty = '', days = '') {
+        return `
+            <div class="row group-quantity-row mb-2 align-items-center">
+                <div class="col">
+                    <label class="form-label visually-hidden">Quantity (L)</label>
+                    <input type="number" class="form-control group-qty-value" placeholder="e.g., 1.5" value="${qty}" step="0.25" min="0.01">
+                </div>
+                <div class="col-auto pt-3 text-muted">for</div>
+                <div class="col">
+                    <label class="form-label visually-hidden">Number of Days</label>
+                    <input type="number" class="form-control group-qty-count" placeholder="# of Days" value="${days}" min="0">
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeGroupQuantityRow(this)">Remove</button>
+                </div>
+            </div>`;
+    }
+    function addGroupQuantityRowToDOM(qty = '', days = '') {
+        groupQuantityDefinitionsContainer.insertAdjacentHTML('beforeend', createGroupQuantityRowHTML(qty, days));
+    }
+    function removeGroupQuantityRow(button) { button.closest('.group-quantity-row').remove(); }
+    function initializeGroupEntryForm() {
+        groupQuantityDefinitionsContainer.innerHTML = '';
+        addGroupQuantityRowToDOM(1.0, ''); addGroupQuantityRowToDOM(1.5, ''); addGroupQuantityRowToDOM(2.0, '');
+        if (!groupMonthSelectorInput.value) {
+            const today = new Date();
+            groupMonthSelectorInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+        }
+        if (!groupPricePerLiterElement.value) groupPricePerLiterElement.value = pricePerLiterElement.value || "65";
+    }
+    addGroupQuantityRowBtn.addEventListener('click', () => addGroupQuantityRowToDOM());
 
-        let selectedMonth = document.getElementById("monthSelector").value;
-        let selectedYear = selectedMonth.split("-")[0];
-        let selectedMonthIndex = parseInt(selectedMonth.split("-")[1]) - 1;
-
-        let groupedQuantities = {};
-        let daysInMonth = new Date(selectedYear, selectedMonthIndex + 1, 0).getDate();
-
-        let monthHeader = `<div class="month-header">${new Date(selectedYear, selectedMonthIndex).toLocaleString("default", { month: "long", year: "numeric" })}</div>`;
-        let table = `<table class="table table-bordered mt-2">
-            <thead class="table-dark">
-                <tr>
-                    <th>Date</th>
-                    <th>Quantity (L)</th>
-                    <th>Amount (₹)</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>`;
-
-        for (let day = 1; day <= daysInMonth; day++) {
-            let dateStr = `${selectedYear}-${String(selectedMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            let record = milkRecords.find(record => record.date === dateStr);
-
-            if (record) {
-                table += `<tr>
-                    <td>${record.date}</td>
-                    <td>${record.quantity} L</td>
-                    <td>₹${record.amount}</td>
-                    <td><button class="btn btn-danger btn-sm" onclick="removeEntry('${record.date}')">X</button></td>
-                </tr>`;
-
-                totalAmount += parseFloat(record.amount);
-                totalLiters += record.quantity;
-
-                groupedQuantities[record.quantity] = groupedQuantities[record.quantity] || { count: 0, amount: 0 };
-                groupedQuantities[record.quantity].count++;
-                groupedQuantities[record.quantity].amount += parseFloat(record.amount);
+    function processGroupEntry() {
+        clearMessage();
+        const targetMonthYear = groupMonthSelectorInput.value;
+        const groupPriceStr = groupPricePerLiterElement.value;
+        if (!targetMonthYear || !groupPriceStr) { showMessage("Group Entry: Please select a target month and enter a price per liter.", "danger"); return; }
+        const groupPrice = parseFloat(groupPriceStr);
+        if (isNaN(groupPrice) || groupPrice <= 0) { showMessage("Group Entry: Price per liter must be a positive number.", "danger"); return; }
+        const quantityRows = groupQuantityDefinitionsContainer.querySelectorAll('.group-quantity-row');
+        if (quantityRows.length === 0) { showMessage("Group Entry: Please define at least one quantity and day count.", "danger"); return; }
+        let definedQuantities = []; let totalDaysToFill = 0; let validDefinitions = true;
+        quantityRows.forEach(row => {
+            const qtyValStr = row.querySelector('.group-qty-value').value;
+            const qtyCountStr = row.querySelector('.group-qty-count').value;
+            if (!qtyValStr || !qtyCountStr) { validDefinitions = false; return; }
+            const qty = parseFloat(qtyValStr); const count = parseInt(qtyCountStr, 10);
+            if (isNaN(qty) || qty <= 0 || isNaN(count) || count < 0) { validDefinitions = false; return; }
+            if (count > 0) { definedQuantities.push({ quantity: qty, count: count }); totalDaysToFill += count; }
+        });
+        if (!validDefinitions) { showMessage("Group Entry: Ensure all quantity types have valid positive quantity and non-negative day counts.", "danger"); return; }
+        if (definedQuantities.length === 0) { showMessage("Group Entry: No valid quantity definitions to process (all counts might be zero).", "danger"); return; }
+        const [yearStr, monthStr] = targetMonthYear.split('-');
+        const year = parseInt(yearStr); const month = parseInt(monthStr); // 1-indexed month for Date functions
+        const daysInSelectedMonth = new Date(year, month, 0).getDate();
+        if (totalDaysToFill > daysInSelectedMonth) { showMessage(`Group Entry: Total days specified (${totalDaysToFill}) exceeds days in ${new Date(year, month-1).toLocaleString('default', {month:'long'})} (${daysInSelectedMonth}).`, "danger"); return; }
+        let confirmationMessage = `You are about to generate group entries for ${new Date(year, month-1).toLocaleString('default', {month:'long', year:'numeric'})} with price ₹${groupPrice.toFixed(2)}:\n`;
+        definedQuantities.forEach(dq => { confirmationMessage += `- ${dq.quantity.toFixed(2)}L for ${dq.count} day(s)\n`; });
+        confirmationMessage += `Total days to fill: ${totalDaysToFill} out of ${daysInSelectedMonth}.\nExisting entries for this month will be OVERWRITTEN. Proceed?`;
+        if (!confirm(confirmationMessage)) { showMessage("Group entry cancelled by user.", "info"); return; }
+        milkRecords = milkRecords.filter(record => !record.date.startsWith(targetMonthYear));
+        let currentDayOfMonth = 1;
+        definedQuantities.forEach(dq => {
+            for (let i = 0; i < dq.count; i++) {
+                if (currentDayOfMonth > daysInSelectedMonth) break;
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(currentDayOfMonth).padStart(2, '0')}`;
+                const amount = (dq.quantity * groupPrice).toFixed(2);
+                milkRecords.push({ date: dateStr, quantity: dq.quantity, amount: amount, pricePerLiter: groupPrice });
+                currentDayOfMonth++;
             }
+        });
+        milkRecords.sort((a,b) => a.date.localeCompare(b.date));
+        localStorage.setItem("milkRecords", JSON.stringify(milkRecords));
+        showMessage(`Group entries for ${new Date(year, month-1).toLocaleString('default', {month:'long', year:'numeric'})} created successfully.`, "success");
+        populateMonthSelector(); monthSelectorElement.value = targetMonthYear;
+        updateTable(); initializeGroupEntryForm();
+    }
+
+    // --- Shared Entry Management ---
+    function removeEntry(dateToRemove) {
+        clearMessage();
+        if (confirm(`Are you sure you want to remove the entry for ${dateToRemove}?`)) {
+            milkRecords = milkRecords.filter(record => record.date !== dateToRemove);
+            localStorage.setItem("milkRecords", JSON.stringify(milkRecords));
+            showMessage(`Entry for ${dateToRemove} removed.`, "info");
+            const currentSelectedMonth = monthSelectorElement.value;
+            const recordsInCurrentMonth = milkRecords.some(r => r.date.startsWith(currentSelectedMonth));
+            if (!recordsInCurrentMonth && milkRecords.length > 0) { populateMonthSelector(); } 
+            else if (milkRecords.length === 0) { populateMonthSelector(); }
+            updateTable();
+        }
+    }
+    function clearAll() {
+        clearMessage();
+        if (confirm("Are you sure you want to clear ALL milk records? This cannot be undone.")) {
+            localStorage.removeItem("milkRecords"); milkRecords = [];
+            populateMonthSelector(); updateTable();
+            showMessage("All milk records have been cleared.", "warning");
+        }
+    }
+
+    // --- UI Updates (Table and Calendar) ---
+    function updateTable() {
+        milkTableDivElement.innerHTML = "";
+        let overallTotalAmountMonth = 0, overallTotalLitersMonth = 0;
+        const selectedMonthYear = monthSelectorElement.value;
+        if (!selectedMonthYear) { totalAmountMonthElement.innerText = "0.00"; updateCalendar(null, null, 0); return; }
+        const [selectedYear, selectedMonthNumStr] = selectedMonthYear.split('-');
+        const selectedYearNum = parseInt(selectedYear), selectedMonthIndex = parseInt(selectedMonthNumStr) - 1; // 0-indexed month
+        const monthName = new Date(selectedYearNum, selectedMonthIndex).toLocaleString("default", { month: "long", year: "numeric" });
+        let monthHeaderHTML = `<div class="month-header">${monthName}</div>`;
+        let tableHTML = `<table class="table table-striped table-hover mt-0"><thead class="table-light"><tr><th>Date</th><th>Quantity (L)</th><th>Price/L (₹)</th><th>Amount (₹)</th><th>Action</th></tr></thead><tbody>`;
+        const recordsForSelectedMonth = milkRecords.filter(r => r.date.startsWith(selectedMonthYear)).sort((a,b) => a.date.localeCompare(b.date));
+        let groupedQuantities = {};
+        if (recordsForSelectedMonth.length === 0) {
+            tableHTML += `<tr><td colspan="5" class="text-center text-body-secondary">No records found for ${monthName}.</td></tr>`;
+        } else {
+            recordsForSelectedMonth.forEach(record => {
+                let priceForDisplay;
+                if (typeof record.pricePerLiter === 'number') priceForDisplay = record.pricePerLiter;
+                else { const currentPriceInputVal = parseFloat(pricePerLiterElement.value); priceForDisplay = !isNaN(currentPriceInputVal) ? currentPriceInputVal : 0;}
+                tableHTML += `<tr><td>${record.date}</td><td>${record.quantity.toFixed(2)} L</td><td>₹${priceForDisplay.toFixed(2)}</td><td>₹${parseFloat(record.amount).toFixed(2)}</td><td><button class="btn btn-outline-danger btn-sm" onclick="removeEntry('${record.date}')">✕</button></td></tr>`;
+                overallTotalAmountMonth += parseFloat(record.amount); overallTotalLitersMonth += record.quantity;
+                let qtyKey = record.quantity.toFixed(2) + "L";
+                groupedQuantities[qtyKey] = groupedQuantities[qtyKey] || { count: 0, totalAmount: 0 };
+                groupedQuantities[qtyKey].count++; groupedQuantities[qtyKey].totalAmount += parseFloat(record.amount);
+            });
+        }
+        tableHTML += `</tbody></table>`;
+        let summaryHTML = `<div class="summary-details mt-2 p-2 bg-light border rounded"><h6>Quick Summary for ${monthName}:</h6>`;
+        if (Object.keys(groupedQuantities).length > 0) { Object.entries(groupedQuantities).forEach(([key, val]) => summaryHTML += `<div class="text-body-secondary"><small>${key} appeared ${val.count} times, total: ₹${val.totalAmount.toFixed(2)}</small></div>`);}
+        else if (recordsForSelectedMonth.length > 0) { summaryHTML += `<div class="text-body-secondary"><small>No repeated quantities to summarize.</small></div>`;}
+        else { summaryHTML += `<div class="text-body-secondary"><small>No entries to summarize.</small></div>`;}
+        summaryHTML += `</div>`;
+        let monthTotalHTML = `<div class="month-total mt-2">Total for ${monthName}: ${overallTotalLitersMonth.toFixed(2)} L, Amount: ₹${overallTotalAmountMonth.toFixed(2)}</div>`;
+        milkTableDivElement.innerHTML = monthHeaderHTML + tableHTML + summaryHTML + monthTotalHTML;
+        totalAmountMonthElement.innerText = overallTotalAmountMonth.toFixed(2);
+        const daysInMonth = new Date(selectedYearNum, selectedMonthIndex + 1, 0).getDate();
+        updateCalendar(selectedYearNum, selectedMonthIndex, daysInMonth);
+    }
+
+    function updateCalendar(year, month, daysInMonth) { // month is 0-indexed
+        calendarDivElement.innerHTML = "";
+        if (year === null || month === null) return;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize today for comparison
+
+        const recordsForMonthMap = new Map();
+        const currentMonthPrefix = `${year}-${String(month + 1).padStart(2, '0')}-`;
+        milkRecords.forEach(record => {
+            if (record.date.startsWith(currentMonthPrefix)) {
+                 recordsForMonthMap.set(record.date, record.quantity);
+            }
+        });
+
+        const firstDayOfMonthStartOffset = new Date(year, month, 1).getDay();
+        for (let i = 0; i < firstDayOfMonthStartOffset; i++) {
+            calendarDivElement.innerHTML += `<div class="day empty"></div>`;
         }
 
-        table += `</tbody></table>`;
-        let summary = `<div class="month-total">Grouped Summary:</div>`;
+        for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+            // Create a Date object for the current day in the calendar to compare with 'today'
+            const dayDate = new Date(year, month, dayNum); 
+            // dayDate is already normalized (time part is 00:00:00) by constructor
+
+            const quantityForDay = recordsForMonthMap.get(dateStr);
+            let dayClass = "day";
+            const dayNumberHTML = `<span class="day-number">${dayNum}</span>`;
+            let quantityHTML = "";
+            let titleText = `Date: ${dateStr}`;
+
+            if (quantityForDay !== undefined) {
+                dayClass += " milk"; // Green for milk days
+                quantityHTML = `<span class="day-quantity">${quantityForDay.toFixed(2)}L</span>`;
+                titleText += `\nQuantity: ${quantityForDay.toFixed(2)}L`;
+            } else {
+                // No entry for this day
+                if (dayDate < today) { // Check if the day in the calendar is before today
+                    dayClass += " absent"; // Yellow for past days with no entry
+                    titleText += `\nNo Record (Past)`;
+                } else {
+                    dayClass += " no-data"; // Default/neutral for today or future days with no entry
+                    titleText += `\nNo Record`;
+                }
+            }
+            calendarDivElement.innerHTML += `<div class="${dayClass}" title="${titleText}">
+                                              ${dayNumberHTML}
+                                              ${quantityHTML}
+                                           </div>`;
+        }
+    }
+
+    // --- Event Listeners and Initial Setup ---
+    predefinedQuantitySelect.addEventListener('change', function() {
+        if (this.value && this.value !== "custom") milkQuantityInputElement.value = this.value;
+        else if (this.value === "custom") milkQuantityInputElement.focus();
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        dateInputElement.valueAsDate = new Date(); 
+        populateMonthSelector();
+        // updateTable will be called by populateMonthSelector if months exist or by itself if no records
+        // So initial updateTable here might be redundant if populateMonthSelector guarantees a call or sets up default month for it
+        // However, it's safer to ensure it's called once after setup.
+        updateTable(); 
         
-        for (let quantity in groupedQuantities) {
-            summary += `<div>${quantity} L appeared ${groupedQuantities[quantity].count} times, total amount ₹${groupedQuantities[quantity].amount.toFixed(2)}</div>`;
+        // Initialize toggle switch state and labels
+        updateToggleLabels(entryModeToggle.checked); 
+        // Set initial visibility of entry sections based on default toggle state
+        if (entryModeToggle.checked) { // Group mode
+            normalEntrySection.style.display = 'none';
+            groupEntrySection.style.display = 'block';
+            initializeGroupEntryForm();
+        } else { // Normal mode (default)
+            normalEntrySection.style.display = 'block';
+            groupEntrySection.style.display = 'none';
         }
-
-        let monthTotal = `<div class="month-total mt-2">Final Total: ${totalLiters} L, ₹${totalAmount.toFixed(2)}</div>`;
-
-        tableDiv.innerHTML = monthHeader + table + summary + monthTotal;
-        document.getElementById("totalAmount").innerText = totalAmount.toFixed(2);
-
-        updateCalendar(selectedYear, selectedMonthIndex, daysInMonth);
-    }
-
-    function updateCalendar(year, month, daysInMonth) {
-        let calendarDiv = document.getElementById("calendar");
-        calendarDiv.innerHTML = "";
-
-        let recordedDays = milkRecords.map(record => record.date);
-
-        for (let day = 1; day <= daysInMonth; day++) {
-            let dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            let dayClass = recordedDays.includes(dateStr) ? "milk" : "missing";
-            calendarDiv.innerHTML += `<div class="day ${dayClass}">${day}</div>`;
-        }
-    }
-
-    populateMonthSelector();
-    updateTable();
+    });
 </script>
-
 </body>
 </html>
