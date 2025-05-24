@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -13,11 +12,11 @@
             color: white;
         }
 
-        button {
-            padding: 0.5rem 1rem; /* Adjusted padding for better fit */
-            margin-right: 0.5rem; /* Adjusted margin */
-            font-size: 0.875rem; /* Slightly smaller font for more buttons */
-            border-radius: 0.375rem; /* Standard tailwind rounded-md */
+        button, .btn {
+            padding: 0.5rem 1rem;
+            margin-right: 0.5rem;
+            font-size: 0.875rem;
+            border-radius: 0.375rem;
         }
         #status {
             margin-top: 1rem;
@@ -79,12 +78,12 @@
             box-shadow: 0 0 8px #3b82f6;
         }
         .progress-step.hold {
-            background-color: #f59e0b; /* Amber 500 */
+            background-color: #f59e0b;
             border-color: #f59e0b;
             color: white;
         }
-        .progress-step.rejected {
-            background-color: #ef4444; /* Red 500 */
+        .progress-step.NotPositive {
+            background-color: #ef4444;
             border-color: #ef4444;
             color: white;
         }
@@ -94,7 +93,7 @@
             font-size: 10px;
             text-align: center;
             margin-top: 4px;
-            max-width: 60px; /* Ensure labels don't stretch too much */
+            max-width: 60px; 
             overflow-wrap: break-word;
         }
 
@@ -122,11 +121,11 @@
         }
 
         .offered-card {
-            border: 4px solid #48bb78; /* Green border for offers */
+            border: 4px solid #48bb78;
         }
 
         .offered-row {
-            background-color: #f0fff4; /* Light green background for offers */
+            background-color: #f0fff4;
         }
 
         .stage-date-tooltip {
@@ -137,7 +136,7 @@
             border-radius: 4px;
             font-size: 0.75rem;
             z-index: 10;
-            bottom: -28px; /* Adjusted for better visibility */
+            bottom: -28px;
             left: 50%;
             transform: translateX(-50%);
             white-space: nowrap;
@@ -163,9 +162,9 @@
             background-color: #45a049;
         }
 
-        @media (max-width: 768px) { /* Adjusted breakpoint */
+        @media (max-width: 768px) { 
             .progress-step {
-                width: 28px; /* Slightly larger for mobile */
+                width: 28px;
                 height: 28px;
                 font-size: 10px;
             }
@@ -175,15 +174,14 @@
             }
             .action-buttons-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); /* Responsive grid for buttons */
+                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); 
                 gap: 0.5rem;
             }
         }
-         /* Tailwind Custom Form Inputs (Optional, for better aesthetics) */
         .form-input {
             @apply w-full border p-2 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500;
         }
-        .btn {
+        .btn { 
             @apply px-4 py-2 rounded font-semibold shadow-md transition-colors duration-150;
         }
         .btn-primary {
@@ -210,10 +208,11 @@
 </head>
 
 <body class="bg-gray-100 p-4 min-h-screen relative">
-    <div class="max-w-5xl mx-auto space-y-4"> <h1 class="text-3xl font-bold text-center text-gray-700">📋 Job / Application Tracker</h1>
+    <div class="max-w-5xl mx-auto space-y-4">
+        <h1 class="text-3xl font-bold text-center text-gray-700">📋 Job / Application Tracker</h1>
 
         <div id="summary" class="bg-white p-4 rounded-lg shadow-md text-sm text-gray-600">
-            </div>
+        </div>
 
         <div class="flex flex-col sm:flex-row justify-between items-center mt-6 space-y-2 sm:space-y-0">
             <input type="text" id="search" placeholder="🔍 Search company, skill, or HR..." class="form-input w-full sm:w-1/2">
@@ -229,6 +228,18 @@
                 <button onclick="restoreFromFirebase()" class="btn btn-success">⬇️ Restore from Firebase</button>
             </div>
             <div id="status" class="mt-2 text-sm"></div>
+        </div>
+
+        <div class="my-4 p-3 bg-white rounded-lg shadow-md">
+            <h2 class="text-lg font-semibold text-gray-700 mb-2">💾 Local Data Management</h2>
+            <div class="flex flex-col sm:flex-row gap-2 mt-2">
+                <button onclick="exportData()" class="btn btn-info">📤 Export Data to File</button>
+                <div>
+                    <label for="importFile" class="btn btn-success cursor-pointer inline-block">📥 Import Data from File</label>
+                    <input type="file" id="importFile" accept=".json" class="hidden" onchange="importDataFromFile(event)">
+                </div>
+            </div>
+            <div id="importExportStatus" class="mt-2 text-sm"></div>
         </div>
 
         <div id="displayArea" class="space-y-4"></div>
@@ -257,17 +268,16 @@
     <script>
         const entryForm = document.getElementById('entryForm');
         const displayArea = document.getElementById('displayArea');
-        const searchInput = document.getElementById('search'); // Renamed for clarity
+        const searchInput = document.getElementById('search'); 
         const cardViewBtn = document.getElementById('cardViewBtn');
         const tableViewBtn = document.getElementById('tableViewBtn');
         const modal = document.getElementById('modal');
         const modalTitle = document.getElementById('modalTitle');
         const summaryDiv = document.getElementById('summary');
-
         const linearStages = ["Call Recvd", "Call Schedule", "L1 Clear", "L2 Clear", "Final Disc(HR)", "Offered"];
         let entries = JSON.parse(localStorage.getItem('entries') || '[]');
         let isCardView = true;
-        let currentlyEditingOriginalIndex = null; // To track editing
+        let currentlyEditingOriginalIndex = null; 
 
         function saveData() {
             localStorage.setItem('entries', JSON.stringify(entries));
@@ -276,14 +286,17 @@
         }
 
         function initializeNewStage() {
+            const now = new Date().toISOString();
             const initialStageDates = new Array(linearStages.length).fill(null);
-            initialStageDates[0] = new Date().toISOString(); // Date for "Call Recvd"
+            initialStageDates[0] = now;
             return {
                 lastLinearStageIndex: 0,
                 linearStageDates: initialStageDates,
-                currentOverallStatus: "Active", // "Active", "On Hold", "Rejected"
-                statusReason: "",
-                statusSetDate: null
+                currentOverallStatus: "Active", 
+                statusReason: "", 
+                statusSetDate: null,
+                createdAt: now,
+                updatedAt: now
             };
         }
 
@@ -302,12 +315,11 @@
 
                 if (linearStages[entry.stage.lastLinearStageIndex] === "Offered") {
                     alert(`🎉 Congratulations! You received an offer from ${entry.company}! 🎉`);
-                    // Optionally, set overall status to "Offered" or similar if desired
-                    // entry.stage.currentOverallStatus = "Offered";
                 }
             } else if (linearStages[entry.stage.lastLinearStageIndex] === "Offered") {
                  alert(`This application is already in the "Offered" stage.`);
             }
+            entry.stage.updatedAt = new Date().toISOString();
             saveData();
         }
 
@@ -316,19 +328,19 @@
             if (!entry) return;
 
             let reason = "";
-            if (newStatus === "On Hold" || newStatus === "Rejected") {
+            if (newStatus === "On Hold" || newStatus === "NotPositive") {
                 reason = prompt(`Reason for setting status to "${newStatus}" for ${entry.company} (Optional):`);
             }
 
             entry.stage.currentOverallStatus = newStatus;
             entry.stage.statusSetDate = new Date().toISOString();
-            entry.stage.statusReason = reason || ""; // Store empty string if no reason
+            entry.stage.statusReason = reason || "";
             
-            if (newStatus === "Active" && entry.stage.currentOverallStatus === "On Hold") { // Coming from Resume
+            if (newStatus === "Active" && entry.stage.currentOverallStatus === "On Hold") { 
                  entry.stage.statusSetDate = null;
                  entry.stage.statusReason = "";
             }
-
+            entry.stage.updatedAt = new Date().toISOString();
             saveData();
         }
         
@@ -338,43 +350,55 @@
                 alert("This application is not 'On Hold'.");
                 return;
             }
-            setOverallStatus(originalEntryIndex, "Active"); // This will clear reason and date via setOverallStatus logic
+            setOverallStatus(originalEntryIndex, "Active");
         }
 
 
         function render() {
-            const keyword = searchInput.value.toLowerCase();
-            // Filter entries and store original index
-            const filteredEntriesWithOriginalIndex = entries.map((entry, index) => ({ entry, originalIndex: index }))
-                .filter(({ entry }) =>
-                    entry.company.toLowerCase().includes(keyword) ||
-                    (entry.hr && entry.hr.toLowerCase().includes(keyword)) ||
-                    (entry.skill && entry.skill.toLowerCase().includes(keyword))
-                );
+            let entriesWithOriginalIndex = entries.map((entry, index) => ({ entry, originalIndex: index }));
 
+            entriesWithOriginalIndex.sort((a, b) => {
+                // Ensure stage and its timestamps exist for sorting, providing fallbacks.
+                const dateA = new Date((a.entry.stage && a.entry.stage.updatedAt) || (a.entry.stage && a.entry.stage.createdAt) || 0);
+                const dateB = new Date((b.entry.stage && b.entry.stage.updatedAt) || (b.entry.stage && b.entry.stage.createdAt) || 0);
+                return dateB - dateA;
+            });
+
+            const keyword = searchInput.value.toLowerCase();
+            const filteredAndSortedEntries = entriesWithOriginalIndex.filter(({ entry }) =>
+                entry.company.toLowerCase().includes(keyword) ||
+                (entry.hr && entry.hr.toLowerCase().includes(keyword)) ||
+                (entry.skill && entry.skill.toLowerCase().includes(keyword))
+            );
             displayArea.innerHTML = '';
 
-            if (filteredEntriesWithOriginalIndex.length === 0) {
+            if (filteredAndSortedEntries.length === 0) {
                 displayArea.innerHTML = `<p class="text-center text-gray-500">No applications found matching your criteria.</p>`;
                 return;
             }
             
             if (isCardView) {
-                filteredEntriesWithOriginalIndex.forEach(({ entry: e, originalIndex }) => {
-                    // Ensure stage object exists and is initialized
-                    if (!e.stage || !e.stage.linearStageDates) {
-                        e.stage = initializeNewStage();
+                filteredAndSortedEntries.forEach(({ entry: e, originalIndex }) => {
+                    if (!e.stage || !e.stage.linearStageDates || !e.stage.createdAt) {
+                        // This ensures older entries or entries with malformed stage get initialized.
+                        const defaultStage = initializeNewStage();
+                        e.stage = {
+                            ...defaultStage,
+                            ...(e.stage || {}), // Preserve any existing stage data if possible
+                            createdAt: (e.stage && e.stage.createdAt) || defaultStage.createdAt,
+                            updatedAt: (e.stage && e.stage.updatedAt) || defaultStage.updatedAt
+                        };
                     }
 
+
                     let progressPercent = 0;
-                    if (e.stage.currentOverallStatus !== "Rejected" && e.stage.lastLinearStageIndex >= 0) {
+                    if (e.stage.currentOverallStatus !== "NotPositive" && e.stage.lastLinearStageIndex >= 0) {
                          progressPercent = (e.stage.lastLinearStageIndex + 1) / linearStages.length * 100;
                          if (linearStages[e.stage.lastLinearStageIndex] === "Offered") progressPercent = 100;
                     }
 
-
-                    let cardClass = "bg-white p-4 rounded-lg shadow-md space-y-3";
-                    if (linearStages[e.stage.lastLinearStageIndex] === "Offered" && e.stage.currentOverallStatus !== "Rejected") {
+                    let cardClass = "bg-white p-4 rounded-lg shadow-md space-y-2";
+                    if (linearStages[e.stage.lastLinearStageIndex] === "Offered" && e.stage.currentOverallStatus !== "NotPositive") {
                         cardClass += " offered-card";
                     }
 
@@ -387,37 +411,33 @@
                         
                         let stepDotClass = 'progress-step';
                         if (idx <= e.stage.lastLinearStageIndex) {
-                            if (e.stage.currentOverallStatus === "Rejected") {
-                                // If rejected, active steps before rejection might be normal, or all grayed out
-                                // For now, let's make them look normal up to the point of rejection
-                                if (idx === e.stage.lastLinearStageIndex) stepDotClass += ' active'; // Keep last linear stage before rejection active-looking
+                            if (e.stage.currentOverallStatus === "NotPositive") {
+                                if (idx === e.stage.lastLinearStageIndex) stepDotClass += ' active';
                             } else if (e.stage.currentOverallStatus === "On Hold") {
-                                 if (idx === e.stage.lastLinearStageIndex) stepDotClass += ' active hold'; else if (idx < e.stage.lastLinearStageIndex) stepDotClass += ' active';
+                                 if (idx === e.stage.lastLinearStageIndex) stepDotClass += ' active hold';
+                                 else if (idx < e.stage.lastLinearStageIndex) stepDotClass += ' active';
                             }
                             else {
                                 stepDotClass += ' active';
                             }
                         }
 
-                        // Click handler for dots
                         let dotClickHandler = '';
                         if (e.stage.currentOverallStatus === 'Active') {
-                            // Allow clicking current or next uncompleted stage
                             if (idx === e.stage.lastLinearStageIndex || idx === e.stage.lastLinearStageIndex + 1 ) {
                                 dotClickHandler = `onclick="advanceStage(${originalIndex})"`;
                             } else {
-                                dotClickHandler = `style="cursor:not-allowed;"`; // Prevent jumping stages
+                                dotClickHandler = `style="cursor:not-allowed;"`;
                             }
                         } else if (e.stage.currentOverallStatus === 'On Hold' && idx === e.stage.lastLinearStageIndex +1){
                              dotClickHandler = `onclick="alert('Resume application first to advance.')" style="cursor:help;"`;
                         }
                         else {
-                            dotClickHandler = `style="cursor:not-allowed;"`; // Not active, or rejected
+                            dotClickHandler = `style="cursor:not-allowed;"`;
                         }
                          if (idx > e.stage.lastLinearStageIndex + 1 && e.stage.currentOverallStatus === 'Active') {
-                            dotClickHandler = `style="cursor:not-allowed;"`; // Don't allow jumping way ahead
+                            dotClickHandler = `style="cursor:not-allowed;"`;
                         }
-
 
                         return `
                             <div class="flex flex-col items-center">
@@ -429,34 +449,57 @@
                             </div>`;
                     }).join('');
                     
-                    const overallStatusColor = e.stage.currentOverallStatus === 'Rejected' ? 'text-red-600' :
+                    const overallStatusColor = e.stage.currentOverallStatus === 'NotPositive' ? 'text-red-600' :
                                            e.stage.currentOverallStatus === 'On Hold' ? 'text-yellow-600' :
                                            (linearStages[e.stage.lastLinearStageIndex] === "Offered" ? 'text-green-600' : 'text-blue-600');
-
+                    
+                    let stageDatesListHTML = linearStages.map((stageName, idx) => {
+                        const stageDate = e.stage.linearStageDates[idx];
+                        if (stageDate) {
+                            return `<div class="text-xs py-0.5"><strong>${stageName}:</strong> ${new Date(stageDate).toLocaleDateString()}</div>`;
+                        }
+                        return '';
+                    }).filter(Boolean).join('');
+                    if (!stageDatesListHTML) {
+                        stageDatesListHTML = '<div class="text-xs text-gray-400 py-0.5">No specific stage dates recorded.</div>';
+                    }
 
                     displayArea.innerHTML += `
                       <div class="${cardClass}">
                         <h2 class="font-bold ${overallStatusColor} text-xl">${e.company}</h2>
                         <div><strong>Status:</strong> <span class="font-semibold ${overallStatusColor}">${e.stage.currentOverallStatus}</span>
                             ${e.stage.statusReason ? ` <span class="text-sm text-gray-500">(${e.stage.statusReason})</span>` : ''}
-                            ${e.stage.statusSetDate && e.stage.currentOverallStatus !== 'Active' ? ` <span class="text-xs text-gray-400">- ${new Date(e.stage.statusSetDate).toLocaleDateString()}</span>` : ''}
+                            ${e.stage.statusSetDate && e.stage.currentOverallStatus !== 'Active' ?
+                              ` <span class="text-xs text-gray-400">- ${new Date(e.stage.statusSetDate).toLocaleDateString()}</span>` : ''}
                         </div>
-                        ${e.hr ? `<div>👤 <strong>HR:</strong> ${e.hr}</div>` : ''}
-                        ${e.mobile ? `<div>📱 <strong>Mobile:</strong> ${e.mobile} <button class="copy-btn" onclick="copyToClipboard('${e.mobile}')">Copy</button></div>` : ''}
-                        ${e.skill ? `<div>💡 <strong>Skill/Role:</strong> ${e.skill}</div>` : ''}
-                        ${e.np ? `<div>⏳ <strong>NP:</strong> ${e.np}</div>` : ''}
-                        ${e.notes ? `<div class="text-sm text-gray-600">📝 <strong>Notes:</strong> ${e.notes.replace(/\n/g, '<br>')}</div>` : ''}
+
+                        <div class="flex flex-col md:flex-row gap-x-4 gap-y-2 mt-2 text-sm">
+                            <div class="md:w-3/5 space-y-1"> 
+                                ${e.hr ? `<div>👤 <strong>HR:</strong> ${e.hr}</div>` : ''}
+                                ${e.skill ? `<div>💡 <strong>Skill/Role:</strong> ${e.skill}</div>` : ''}
+                                ${e.np ? `<div>⏳ <strong>NP:</strong> ${e.np}</div>` : ''}
+                                ${e.mobile ? `<div>📱 <strong>Mobile:</strong> ${e.mobile} <button class="copy-btn" onclick="copyToClipboard('${e.mobile}')">Copy</button></div>` : ''}
+                                ${e.notes ? `<div class="text-xs text-gray-600 mt-1">📝 <strong>Notes:</strong><br>${e.notes.replace(/\n/g, '<br>')}</div>` : ''}
+                            </div>
+                            <div class="md:w-2/5 space-y-1 md:border-l md:pl-3">
+                                <div> 
+                                    <strong class="text-xs text-gray-500 block mb-1">STAGE DATES:</strong>
+                                    ${stageDatesListHTML}
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="progress-container mt-3 mb-3">
                           <div class="progress-line"></div>
                           <div class="progress-fill" style="width:${progressPercent}%"></div>
-                          ${stageDotsHTML}
+                           ${stageDotsHTML}
                         </div>
 
                         <div class="action-buttons-grid mt-3 border-t pt-3">
                           <button onclick="setOverallStatus(${originalIndex}, 'On Hold')" class="btn btn-warning text-xs">Hold</button>
-                          <button onclick="setOverallStatus(${originalIndex}, 'Rejected')" class="btn btn-danger text-xs">Reject</button>
-                          ${e.stage.currentOverallStatus === 'On Hold' ? `<button onclick="resumeApplication(${originalIndex})" class="btn btn-success text-xs">Resume</button>` : ''}
+                          <button onclick="setOverallStatus(${originalIndex}, 'NotPositive')" class="btn btn-danger text-xs">Not Positive</button>
+                          ${e.stage.currentOverallStatus === 'On Hold' ?
+                            `<button onclick="resumeApplication(${originalIndex})" class="btn btn-success text-xs">Resume</button>` : ''}
                           <button onclick="editEntry(${originalIndex})" class="btn btn-info text-xs">Edit Details</button>
                           <button onclick="deleteEntry(${originalIndex})" class="btn btn-secondary text-xs">Delete Entry</button>
                         </div>
@@ -467,15 +510,21 @@
                     <thead class="bg-gray-200 text-gray-600 uppercase"><tr>
                       <th class="p-3 text-left">Company</th><th class="p-3 text-left">Overall Status</th><th class="p-3 text-left">Current Linear Stage</th><th class="p-3 text-left">HR</th><th class="p-3 text-left">Skill/Role</th><th class="p-3 text-left">Actions</th>
                     </tr></thead><tbody class="text-gray-700">`;
-                filteredEntriesWithOriginalIndex.forEach(({ entry: e, originalIndex }) => {
-                    if (!e.stage || !e.stage.linearStageDates) {
-                        e.stage = initializeNewStage();
+                filteredAndSortedEntries.forEach(({ entry: e, originalIndex }) => {
+                     if (!e.stage || !e.stage.linearStageDates || !e.stage.createdAt) {
+                        const defaultStage = initializeNewStage();
+                        e.stage = {
+                            ...defaultStage,
+                            ...(e.stage || {}),
+                            createdAt: (e.stage && e.stage.createdAt) || defaultStage.createdAt,
+                            updatedAt: (e.stage && e.stage.updatedAt) || defaultStage.updatedAt
+                        };
                     }
                     let rowClass = "border-t border-gray-200 hover:bg-gray-50";
-                    if (linearStages[e.stage.lastLinearStageIndex] === "Offered" && e.stage.currentOverallStatus !== "Rejected") {
+                    if (linearStages[e.stage.lastLinearStageIndex] === "Offered" && e.stage.currentOverallStatus !== "Reject") {
                         rowClass += " offered-row";
                     }
-                     const overallStatusColor = e.stage.currentOverallStatus === 'Rejected' ? 'text-red-600' :
+                     const overallStatusColor = e.stage.currentOverallStatus === 'NotPositive' ? 'text-red-600' :
                                            e.stage.currentOverallStatus === 'On Hold' ? 'text-yellow-600' :
                                            (linearStages[e.stage.lastLinearStageIndex] === "Offered" ? 'text-green-600' : 'text-blue-600');
 
@@ -485,14 +534,16 @@
 
                     table += `<tr class="${rowClass}">
                       <td class="p-3 font-semibold">${e.company}</td>
-                      <td class="p-3"><span class="font-semibold ${overallStatusColor}">${e.stage.currentOverallStatus}</span> ${e.stage.statusReason ? `<span class="text-xs text-gray-500">(${e.stage.statusReason})</span>`:""}</td>
+                      <td class="p-3"><span class="font-semibold ${overallStatusColor}">${e.stage.currentOverallStatus}</span> ${e.stage.statusReason ?
+                        `<span class="text-xs text-gray-500">(${e.stage.statusReason})</span>`:""}</td>
                       <td class="p-3">${currentLinearStageName} <span class="text-xs text-gray-400">(${linearStageDate})</span></td>
                       <td class="p-3">${e.hr || '-'}</td>
                       <td class="p-3">${e.skill || '-'}</td>
                       <td class="p-3 whitespace-nowrap action-buttons-grid">
                         <button onclick="setOverallStatus(${originalIndex}, 'On Hold')" class="btn btn-warning btn-xs">Hold</button>
-                        <button onclick="setOverallStatus(${originalIndex}, 'Rejected')" class="btn btn-danger btn-xs">Reject</button>
-                        ${e.stage.currentOverallStatus === 'On Hold' ? `<button onclick="resumeApplication(${originalIndex})" class="btn btn-success btn-xs">Resume</button>` : ''}
+                        <button onclick="setOverallStatus(${originalIndex}, 'NotPositive')" class="btn btn-danger btn-xs">Not Positive</button>
+                        ${e.stage.currentOverallStatus === 'On Hold' ?
+                          `<button onclick="resumeApplication(${originalIndex})" class="btn btn-success btn-xs">Resume</button>` : ''}
                         <button onclick="editEntry(${originalIndex})" class="btn btn-info btn-xs">Edit</button>
                         <button onclick="deleteEntry(${originalIndex})" class="btn btn-secondary btn-xs">Del</button>
                       </td></tr>`;
@@ -526,7 +577,7 @@
         }
 
         function openModal() {
-            if(currentlyEditingOriginalIndex === null) { // Only reset title if it's for a new entry
+            if(currentlyEditingOriginalIndex === null) { 
                  modalTitle.textContent = '➕ Add New Application';
             }
             modal.classList.remove('hidden');
@@ -535,8 +586,8 @@
         function closeModal() {
             modal.classList.add('hidden');
             entryForm.reset();
-            currentlyEditingOriginalIndex = null; // Reset editing state
-            modalTitle.textContent = '➕ Add New Application'; // Reset title
+            currentlyEditingOriginalIndex = null; 
+            modalTitle.textContent = '➕ Add New Application';
         }
 
         entryForm.addEventListener('submit', (event) => {
@@ -557,7 +608,12 @@
 
             if (currentlyEditingOriginalIndex !== null) {
                 const entryToUpdate = entries[currentlyEditingOriginalIndex];
-                Object.assign(entryToUpdate, formData); // Update fields, stage remains
+                Object.assign(entryToUpdate, formData); 
+                if (entryToUpdate.stage) {
+                    entryToUpdate.stage.updatedAt = new Date().toISOString();
+                } else { 
+                    entryToUpdate.stage = initializeNewStage(); 
+                }
             } else {
                 const newEntry = {
                     ...formData,
@@ -570,17 +626,15 @@
         });
 
         searchInput.addEventListener('input', render);
-
         cardViewBtn.addEventListener('click', () => {
             isCardView = true;
             render();
             cardViewBtn.classList.add('active-btn');
             tableViewBtn.classList.remove('active-btn');
-            cardViewBtn.classList.add('btn-primary'); // Ensure it keeps primary style
+            cardViewBtn.classList.add('btn-primary'); 
             tableViewBtn.classList.remove('btn-primary'); 
-            tableViewBtn.classList.add('btn-secondary'); // Make inactive button look secondary
+            tableViewBtn.classList.add('btn-secondary');
         });
-
         tableViewBtn.addEventListener('click', () => {
             isCardView = false;
             render();
@@ -590,21 +644,18 @@
             cardViewBtn.classList.remove('btn-primary');
             cardViewBtn.classList.add('btn-secondary');
         });
-        
         function updateSummary() {
             const totalApplications = entries.length;
-            const offeredCount = entries.filter(e => linearStages[e.stage.lastLinearStageIndex] === "Offered" && e.stage.currentOverallStatus !== "Rejected").length;
-            const onHoldCount = entries.filter(e => e.stage.currentOverallStatus === "On Hold").length;
-            const rejectedCount = entries.filter(e => e.stage.currentOverallStatus === "Rejected").length;
-            const activeCount = entries.filter(e => e.stage.currentOverallStatus === "Active" && linearStages[e.stage.lastLinearStageIndex] !== "Offered").length;
-
-
+            const offeredCount = entries.filter(e => e.stage && linearStages[e.stage.lastLinearStageIndex] === "Offered" && e.stage.currentOverallStatus !== "NotPositive").length;
+            const onHoldCount = entries.filter(e => e.stage && e.stage.currentOverallStatus === "On Hold").length;
+            const notPositiveCount = entries.filter(e => e.stage && e.stage.currentOverallStatus === "NotPositive").length;
+            const activeCount = entries.filter(e => e.stage && e.stage.currentOverallStatus === "Active" && linearStages[e.stage.lastLinearStageIndex] !== "Offered").length;
             summaryDiv.innerHTML = `
               <span class="mr-3"><strong>Total:</strong> ${totalApplications}</span>
               <span class="mr-3 text-blue-600"><strong>Active:</strong> ${activeCount}</span>
               <span class="mr-3 text-green-600"><strong>Offered:</strong> ${offeredCount}</span>
               <span class="mr-3 text-yellow-600"><strong>On Hold:</strong> ${onHoldCount}</span>
-              <span class="text-red-600"><strong>Rejected:</strong> ${rejectedCount}</span>
+              <span class="text-red-600"><strong>NotPositive:</strong> ${notPositiveCount}</span>
             `;
         }
         
@@ -614,6 +665,98 @@
                 .catch(err => console.error('Could not copy text: ', err));
         }
 
+        function exportData() {
+            const dataStr = JSON.stringify(entries, null, 2);
+            const dataBlob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement("a");
+            link.href = url;
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-').replace('T', '_');
+            link.download = `job_tracker_backup_${timestamp}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            const statusEl = document.getElementById("importExportStatus");
+            statusEl.textContent = "✅ Data exported successfully.";
+            statusEl.className = "mt-2 text-sm text-green-600";
+            setTimeout(() => { statusEl.textContent = ""; }, 3000);
+        }
+
+        function importDataFromFile(event) {
+            const file = event.target.files[0];
+            const statusEl = document.getElementById("importExportStatus");
+
+            if (!file) {
+                statusEl.textContent = "⚠️ No file selected.";
+                statusEl.className = "mt-2 text-sm text-yellow-600";
+                return;
+            }
+
+            if (file.type !== "application/json") {
+                statusEl.textContent = "⚠️ Invalid file type. Please select a .json file.";
+                statusEl.className = "mt-2 text-sm text-red-600";
+                event.target.value = null; 
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedEntries = JSON.parse(e.target.result);
+                    if (!Array.isArray(importedEntries)) {
+                        throw new Error("Imported data is not a valid array.");
+                    }
+
+                    if (confirm(`Are you sure you want to import ${importedEntries.length} entries? This will overwrite your current local data.`)) {
+                        entries = importedEntries.map(entry => {
+                            // Ensure each entry has a valid stage object with timestamps
+                            const defaultStage = initializeNewStage(); // Gets a fresh stage with current 'now' for createdAt/updatedAt
+                            const existingStage = entry.stage || {};
+                            
+                            // Preserve original timestamps if they exist, otherwise use new ones or fallback
+                            const createdAt = existingStage.createdAt || defaultStage.createdAt;
+                            const updatedAt = existingStage.updatedAt || createdAt; // Fallback to createdAt if updatedAt is missing
+
+
+                            entry.stage = {
+                                ...defaultStage, // Apply defaults first
+                                ...existingStage, // Then overwrite with any existing stage data
+                                createdAt: createdAt,
+                                updatedAt: updatedAt,
+                                // Ensure linearStageDates is an array of the correct length if missing/malformed
+                                linearStageDates: Array.isArray(existingStage.linearStageDates) && existingStage.linearStageDates.length === linearStages.length ? existingStage.linearStageDates : defaultStage.linearStageDates,
+                                lastLinearStageIndex: typeof existingStage.lastLinearStageIndex === 'number' ? existingStage.lastLinearStageIndex : defaultStage.lastLinearStageIndex,
+                                currentOverallStatus: existingStage.currentOverallStatus || defaultStage.currentOverallStatus
+                            };
+                            return entry;
+                        });
+                        saveData(); 
+                        statusEl.textContent = `✅ Successfully imported ${entries.length} entries.`;
+                        statusEl.className = "mt-2 text-sm text-green-600";
+                    } else {
+                        statusEl.textContent = "ℹ️ Import cancelled by user.";
+                        statusEl.className = "mt-2 text-sm text-blue-600";
+                    }
+                } catch (error) {
+                    console.error("Error importing data:", error);
+                    statusEl.textContent = "❌ Error importing data: " + error.message;
+                    statusEl.className = "mt-2 text-sm text-red-600";
+                } finally {
+                    event.target.value = null; 
+                    setTimeout(() => { statusEl.textContent = ""; }, 5000);
+                }
+            };
+            reader.onerror = function() {
+                statusEl.textContent = "❌ Error reading file.";
+                statusEl.className = "mt-2 text-sm text-red-600";
+                event.target.value = null;
+                setTimeout(() => { statusEl.textContent = ""; }, 3000);
+            };
+            reader.readAsText(file);
+        }
+
+
         // Initial setup
         if (isCardView) {
              cardViewBtn.classList.add('btn-primary');
@@ -622,15 +765,12 @@
             tableViewBtn.classList.add('btn-primary');
              cardViewBtn.classList.add('btn-secondary');
         }
-        render();
-        updateSummary();
-
-    // Firebase SDKs (ensure these are correctly placed and config is yours)
+        render(); 
+        updateSummary(); 
     </script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script>
-    // ✅ Your Firebase config — make sure to update this with your actual Firebase project config
     const firebaseConfig = {
       apiKey: "AIzaSyDGTNO6ygnAE8QG5Hs-rcPRX3TzqrKQa5w", // Replace with your actual API key
       authDomain: "rprofbdb.firebaseapp.com", // Replace with your actual auth domain
@@ -641,8 +781,6 @@
       appId: "1:452736310737:web:79c2ec79fda09bde7f14f0", // Replace with your actual App ID
       measurementId: "G-HKEZZQZDW2" // Optional: Replace with your actual Measurement ID
     };
-
-    // Initialize Firebase
     let db;
     try {
         firebase.initializeApp(firebaseConfig);
@@ -659,11 +797,9 @@
             document.getElementById("status").textContent = "⚠️ Firebase not initialized. Cannot sync.";
             return;
         }
-        // Ensure entries are up-to-date from localStorage before syncing
         const localEntries = JSON.parse(localStorage.getItem("entries") || "[]");
         if (!Array.isArray(localEntries) || localEntries.length === 0) {
             if (confirm("Local data is empty. Do you want to proceed and potentially clear Firebase data?")) {
-                 // Proceed to set empty array to Firebase
             } else {
                 document.getElementById("status").textContent = "⚠️ Sync cancelled by user due to empty local data.";
                 return;
@@ -689,11 +825,25 @@
             db.ref("entries").once("value")
             .then(snapshot => {
                 const data = snapshot.val() || [];
-                localStorage.setItem("entries", JSON.stringify(data));
-                entries = data; // Update the in-memory 'entries' array
-                saveData(); // This will re-render and update summary with restored data
-                document.getElementById("status").textContent = "✅ Entries restored from Firebase. Page reloaded.";
-                // location.reload(); // Optional: reload to reflect data, but saveData() should handle it.
+                 entries = data.map(entry => { 
+                    const defaultStage = initializeNewStage();
+                    const existingStage = entry.stage || {};
+                    const createdAt = existingStage.createdAt || defaultStage.createdAt;
+                    const updatedAt = existingStage.updatedAt || createdAt;
+
+                    entry.stage = {
+                        ...defaultStage,
+                        ...existingStage,
+                        createdAt: createdAt,
+                        updatedAt: updatedAt,
+                        linearStageDates: Array.isArray(existingStage.linearStageDates) && existingStage.linearStageDates.length === linearStages.length ? existingStage.linearStageDates : defaultStage.linearStageDates,
+                        lastLinearStageIndex: typeof existingStage.lastLinearStageIndex === 'number' ? existingStage.lastLinearStageIndex : defaultStage.lastLinearStageIndex,
+                        currentOverallStatus: existingStage.currentOverallStatus || defaultStage.currentOverallStatus
+                    };
+                    return entry;
+                });
+                saveData(); 
+                document.getElementById("status").textContent = "✅ Entries restored from Firebase.";
             })
             .catch(error => {
                 document.getElementById("status").textContent = "❌ Restore failed: " + error.message;
