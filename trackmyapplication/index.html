@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -83,8 +82,8 @@
             border-color: #f59e0b;
             color: white;
         }
-        .progress-step.failed {
-            background-color: #ef4444;
+        .progress-step.notcleared {
+            background-color: #ef4444; 
             border-color: #ef4444;
             color: white;
             transform: scale(1.1);
@@ -138,7 +137,7 @@
             border-radius: 4px;
             font-size: 0.75rem;
             z-index: 10;
-            bottom: -32px;
+            bottom: -32px; 
             left: 50%;
             transform: translateX(-50%);
             white-space: nowrap;
@@ -286,9 +285,9 @@
                     <label for="stageOutcomeInput" class="block text-sm font-medium text-gray-700">Outcome:</label>
                     <select name="stageOutcome" id="stageOutcomeInput" class="form-select mt-1">
                         <option value="">-- Select Outcome --</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Passed">Passed / Cleared / Shortlisted</option>
-                        <option value="Failed">Failed / Not Cleared / Not Shortlisted</option>
+                        <option value="OnGoing">OnGoing</option>
+                        <option value="Passed">Shortlisted</option>
+                        <option value="NotCleared">Not Shortlisted</option>
                     </select>
                 </div>
                 <div>
@@ -399,24 +398,26 @@
 
         function recalculateLastLinearStageIndex(entry) {
             let newLLS = -1;
-            if (entry.stage && entry.stage.linearStageDetails && entry.stage.currentOverallStatus === "Active") {
-                for (let i = 0; i < entry.stage.linearStageDetails.length; i++) {
-                    const stageDetail = entry.stage.linearStageDetails[i];
-                    if (stageDetail && stageDetail.outcome === "Passed") {
-                        newLLS = i;
-                    } else if (stageDetail && stageDetail.outcome === "Failed") {
-                        newLLS = i; 
-                        break; 
-                    } else if (!stageDetail || !stageDetail.date || !stageDetail.outcome ) { 
-                        break;
+            if (entry.stage && entry.stage.linearStageDetails) {
+                if (entry.stage.currentOverallStatus === "Active") {
+                    for (let i = 0; i < entry.stage.linearStageDetails.length; i++) {
+                        const stageDetail = entry.stage.linearStageDetails[i];
+                        if (stageDetail && stageDetail.outcome === "Passed") {
+                            newLLS = i;
+                        } else if (stageDetail && stageDetail.outcome === "Notcleared") {
+                            newLLS = i; 
+                            break; 
+                        } else if (!stageDetail || !stageDetail.date || (stageDetail.outcome !== "Passed" && stageDetail.outcome !== "Notcleared") ) { 
+                            break; 
+                        }
                     }
+                } else { 
+                     for (let i = 0; i < entry.stage.linearStageDetails.length; i++) {
+                        if (entry.stage.linearStageDetails[i] && (entry.stage.linearStageDetails[i].date || entry.stage.linearStageDetails[i].outcome)) {
+                            newLLS = i;
+                        }
+                     }
                 }
-            } else if (entry.stage && entry.stage.linearStageDetails) { 
-                 for (let i = 0; i < entry.stage.linearStageDetails.length; i++) {
-                    if (entry.stage.linearStageDetails[i] && entry.stage.linearStageDetails[i].date) {
-                        newLLS = i;
-                    }
-                 }
             }
             entry.stage.lastLinearStageIndex = newLLS;
         }
@@ -456,30 +457,43 @@
                         if(Array.isArray(e.stage.linearStageDetails)){
                             const firstDatedStage = e.stage.linearStageDetails.find(d => d && d.date);
                             if(firstDatedStage) firstDate = firstDatedStage.date;
+                        } else if (Array.isArray(e.stage.linearStageDates)) { // Legacy check for old data structure
+                             const firstDatedLegacyStage = e.stage.linearStageDates.find(d => d);
+                             if(firstDatedLegacyStage) firstDate = firstDatedLegacyStage;
                         }
                         e.stage.createdAt = firstDate || defaultS.createdAt;
                     }
                     if (typeof e.stage.updatedAt === 'undefined') {
                         e.stage.updatedAt = e.stage.createdAt;
                     }
-                    if (!Array.isArray(e.stage.linearStageDetails) || e.stage.linearStageDetails.length !== linearStages.length) {
+                    
+                    // Convert old linearStageDates (array of date strings) to new linearStageDetails (array of objects)
+                    if (Array.isArray(e.stage.linearStageDates) && (!Array.isArray(e.stage.linearStageDetails) || e.stage.linearStageDetails.every(sd => sd.date === null && sd.outcome === null && sd.feedback === null))) {
+                        e.stage.linearStageDetails = linearStages.map((_, idx) => {
+                            const oldDate = e.stage.linearStageDates[idx];
+                            return {
+                                date: oldDate || null,
+                                outcome: oldDate ? "Passed" : null, 
+                                feedback: null
+                            };
+                        });
+                        delete e.stage.linearStageDates; 
+                    } else if (!Array.isArray(e.stage.linearStageDetails) || e.stage.linearStageDetails.length !== linearStages.length) {
                         const currentDetails = Array.isArray(e.stage.linearStageDetails) ? e.stage.linearStageDetails : [];
                         const newDetails = linearStages.map((_,idx) => ({ 
                             date: null, outcome: null, feedback: null,
                             ...(defaultS.linearStageDetails[idx] || {}) 
                         })); 
                         for (let i = 0; i < Math.min(newDetails.length, currentDetails.length); i++) {
-                            if(currentDetails[i]) { 
+                            if(currentDetails[i] && typeof currentDetails[i] === 'object') { 
                                newDetails[i].date = currentDetails[i].date || newDetails[i].date;
                                newDetails[i].outcome = currentDetails[i].outcome || newDetails[i].outcome;
                                newDetails[i].feedback = currentDetails[i].feedback || newDetails[i].feedback;
                             }
                         }
                         e.stage.linearStageDetails = newDetails;
-                        if (e.stage.linearStageDetails[0].outcome === null && typeof e.stage.lastLinearStageIndex === 'number' && e.stage.lastLinearStageIndex === 0 && defaultS.linearStageDetails[0].outcome){
-                             e.stage.linearStageDetails[0] = {...defaultS.linearStageDetails[0], date: e.stage.createdAt};
-                        }
                     }
+                    
                     recalculateLastLinearStageIndex(e);
 
                     if (typeof e.stage.currentOverallStatus !== 'string' || !["Active", "On Hold", "Not Positive"].includes(e.stage.currentOverallStatus)) {
@@ -498,13 +512,15 @@
                          if (lastActiveStageDetail && lastActiveStageDetail.outcome === "Passed" && linearStages[e.stage.lastLinearStageIndex] === "Offered") {
                             progressPercent = 100;
                          }
-                         if(lastActiveStageDetail && lastActiveStageDetail.outcome === "Failed") {
+                         if(lastActiveStageDetail && lastActiveStageDetail.outcome === "Notcleared") {
                             progressPercent = (e.stage.lastLinearStageIndex +1) / linearStages.length * 100; 
                          }
                     }
 
                     let cardClass = "bg-white p-4 rounded-lg shadow-md space-y-2";
-                    const offeredStageDetail = e.stage.linearStageDetails[linearStages.indexOf("Offered")];
+                    const offeredStageIndex = linearStages.indexOf("Offered");
+                    const offeredStageDetail = e.stage.linearStageDetails && e.stage.linearStageDetails[offeredStageIndex] ? e.stage.linearStageDetails[offeredStageIndex] : null;
+
                     if (offeredStageDetail && offeredStageDetail.outcome === "Passed" && e.stage.currentOverallStatus !== "Not Positive") {
                         cardClass += " offered-card";
                     }
@@ -527,29 +543,27 @@
                         if (stageDetail) {
                             if (stageDetail.outcome === "Passed") {
                                 stepDotClass += ' active';
-                            } else if (stageDetail.outcome === "Failed") {
-                                stepDotClass += ' failed'; 
-                            } else if (stageDetail.date && (stageDetail.outcome === "Pending" || stageDetail.outcome === null)) { 
+                            } else if (stageDetail.outcome === "Notcleared") {
+                                stepDotClass += ' Notcleared'; 
+                            } else if (stageDetail.date && (stageDetail.outcome === "OnGoing" || stageDetail.outcome === null)) { 
                                 stepDotClass += ' active'; 
                             }
                         }
                         
                         if ((e.stage.currentOverallStatus === "Active" || e.stage.currentOverallStatus === "On Hold") && idx <= e.stage.lastLinearStageIndex) {
-                            if (!stepDotClass.includes(' active') && !stepDotClass.includes(' failed')) {
+                            if (!stepDotClass.includes(' active') && !stepDotClass.includes(' Notcleared')) {
                                 stepDotClass += ' active'; 
                             }
                         }
                         if (e.stage.currentOverallStatus === "On Hold" && idx === e.stage.lastLinearStageIndex && (stepDotClass.includes('active'))) {
                            stepDotClass += ' hold';
                         }
-                         if (e.stage.currentOverallStatus === "Not Positive" && (stepDotClass.includes('active') || stepDotClass.includes('hold'))) {
+                        if (e.stage.currentOverallStatus === "Not Positive" && (stepDotClass.includes('active') || stepDotClass.includes('hold'))) {
                             if (! (stageDetail && stageDetail.outcome === "Passed" && idx <= e.stage.lastLinearStageIndex) ) {
                                 stepDotClass = 'progress-step'; 
-                                if(stageDetail && stageDetail.outcome === "Failed") stepDotClass += ' failed';
+                                if(stageDetail && stageDetail.outcome === "Notcleared") stepDotClass += ' Notcleared';
                             }
                         }
-
-
                         return `
                             <div class="flex flex-col items-center">
                                 <div class="${stepDotClass}" onclick="openStageDetailModal(${originalIndex}, ${idx}, '${jsEscape(linearStages[idx])}')">
@@ -756,8 +770,8 @@
                  alert(`🎉 Congratulations! You received an offer from ${entry.company}! 🎉`);
             }
             
-            if (newOutcome === "Failed" && entry.stage.currentOverallStatus === "Active") {
-                if (confirm(`Stage "${linearStages[stageIdx]}" was marked as "Failed". Do you want to update the overall application status to "Not Positive"?`)) {
+            if (newOutcome === "Notcleared" && entry.stage.currentOverallStatus === "Active") {
+                if (confirm(`Stage "${linearStages[stageIdx]}" was marked as "Notcleared". Do you want to update the overall application status to "Not Positive"?`)) {
                     setOverallStatus(originalEntryIdx, "Not Positive"); 
                 } else {
                     saveData(); 
@@ -901,14 +915,41 @@
                             const createdAt = existingStage.createdAt || defaultStageFull.createdAt;
                             const updatedAt = existingStage.updatedAt || createdAt; 
 
+                            let processedLinearStageDetails = defaultStageFull.linearStageDetails.map(dsd => ({...dsd})); 
+
+                            if (Array.isArray(existingStage.linearStageDetails) && existingStage.linearStageDetails.length > 0) {
+                                processedLinearStageDetails = linearStages.map((stageName, idx) => {
+                                    const detailFromImport = existingStage.linearStageDetails[idx];
+                                    if (detailFromImport && typeof detailFromImport === 'object') {
+                                        return {
+                                            date: detailFromImport.date || null,
+                                            outcome: ["Passed", "Notcleared", "OnGoing"].includes(detailFromImport.outcome) ? detailFromImport.outcome : null,
+                                            feedback: detailFromImport.feedback || null
+                                        };
+                                    }
+                                    return { ...(defaultStageFull.linearStageDetails[idx] || { date: null, outcome: null, feedback: null }) };
+                                });
+                            } else if (Array.isArray(existingStage.linearStageDates) && existingStage.linearStageDates.length > 0) { // Legacy: convert from old linearStageDates
+                                processedLinearStageDetails = linearStages.map((stageName, idx) => {
+                                    const dateFromImport = existingStage.linearStageDates[idx];
+                                    if (dateFromImport) {
+                                        return {
+                                            date: dateFromImport,
+                                            outcome: "Passed", 
+                                            feedback: null
+                                        };
+                                    }
+                                    return { ...(defaultStageFull.linearStageDetails[idx] || { date: null, outcome: null, feedback: null }) };
+                                });
+                            }
+
+
                             const newStage = {
                                 ...defaultStageFull, 
                                 ...existingStage, 
                                 createdAt: createdAt,
                                 updatedAt: updatedAt,
-                                linearStageDetails: (Array.isArray(existingStage.linearStageDetails) && existingStage.linearStageDetails.length === linearStages.length) 
-                                    ? existingStage.linearStageDetails.map(sd => ({ date: sd.date || null, outcome: sd.outcome || null, feedback: sd.feedback || null })) 
-                                    : defaultStageFull.linearStageDetails.map(dsd => ({...dsd})),
+                                linearStageDetails: processedLinearStageDetails,
                                 lastLinearStageIndex: typeof existingStage.lastLinearStageIndex === 'number' && existingStage.lastLinearStageIndex >= -1 && existingStage.lastLinearStageIndex < linearStages.length ? existingStage.lastLinearStageIndex : defaultStageFull.lastLinearStageIndex,
                                 currentOverallStatus: ["Active", "On Hold", "Not Positive"].includes(existingStage.currentOverallStatus) ? existingStage.currentOverallStatus : defaultStageFull.currentOverallStatus,
                                 statusReason: typeof existingStage.statusReason === 'string' ? existingStage.statusReason : defaultStageFull.statusReason,
@@ -967,14 +1008,14 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script>
     const firebaseConfig = {
-      	apiKey: "AIzaSyDGTNO6ygnAE8QG5Hs-rcPRX3TzqrKQa5w",
-        authDomain: "rprofbdb.firebaseapp.com",
-        databaseURL: "https://rprofbdb-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "rprofbdb",
-        storageBucket: "rprofbdb.firebasestorage.app",
-        messagingSenderId: "452736310737",
-        appId: "1:452736310737:web:79c2ec79fda09bde7f14f0",
-        measurementId: "G-HKEZZQZDW2"
+      apiKey: "AIzaSyDGTNO6ygnAE8QG5Hs-rcPRX3TzqrKQa5w",
+      authDomain: "rprofbdb.firebaseapp.com", 
+      databaseURL: "https://rprofbdb-default-rtdb.asia-southeast1.firebasedatabase.app", 
+      projectId: "rprofbdb", // Replace with your actual project ID
+      storageBucket: "rprofbdb.appspot.com", 
+      messagingSenderId: "452736310737", 
+      appId: "1:452736310737:web:79c2ec79fda09bde7f14f0", 
+      measurementId: "G-HKEZZQZDW2"
     };
     let db;
     try {
@@ -1026,14 +1067,41 @@
                     const createdAt = existingStage.createdAt || defaultStageFull.createdAt;
                     const updatedAt = existingStage.updatedAt || createdAt;
 
+                    let processedLinearStageDetails = defaultStageFull.linearStageDetails.map(dsd => ({...dsd})); 
+
+                    if (Array.isArray(existingStage.linearStageDetails) && existingStage.linearStageDetails.length > 0) {
+                        processedLinearStageDetails = linearStages.map((stageName, idx) => {
+                            const detailFromFirebase = existingStage.linearStageDetails[idx];
+                            if (detailFromFirebase && typeof detailFromFirebase === 'object') {
+                                return {
+                                    date: detailFromFirebase.date || null,
+                                    outcome: ["Passed", "Notcleared", "OnGoing"].includes(detailFromFirebase.outcome) ? detailFromFirebase.outcome : null,
+                                    feedback: detailFromFirebase.feedback || null
+                                };
+                            }
+                            return { ...(defaultStageFull.linearStageDetails[idx] || { date: null, outcome: null, feedback: null }) };
+                        });
+                    } else if (Array.isArray(existingStage.linearStageDates) && existingStage.linearStageDates.length > 0) { 
+                        processedLinearStageDetails = linearStages.map((stageName, idx) => {
+                            const dateFromFirebase = existingStage.linearStageDates[idx];
+                            if (dateFromFirebase) {
+                                return {
+                                    date: dateFromFirebase,
+                                    outcome: "Passed", 
+                                    feedback: null
+                                };
+                            }
+                            return { ...(defaultStageFull.linearStageDetails[idx] || { date: null, outcome: null, feedback: null }) };
+                        });
+                    }
+
+
                     const newStage = {
                         ...defaultStageFull,
                         ...existingStage,
                         createdAt: createdAt,
                         updatedAt: updatedAt,
-                        linearStageDetails: (Array.isArray(existingStage.linearStageDetails) && existingStage.linearStageDetails.length === linearStages.length) 
-                            ? existingStage.linearStageDetails.map(sd => ({ date: sd.date || null, outcome: sd.outcome || null, feedback: sd.feedback || null })) 
-                            : defaultStageFull.linearStageDetails.map(dsd => ({...dsd})),
+                        linearStageDetails: processedLinearStageDetails,
                         lastLinearStageIndex: typeof existingStage.lastLinearStageIndex === 'number' && existingStage.lastLinearStageIndex >= -1 && existingStage.lastLinearStageIndex < linearStages.length ? existingStage.lastLinearStageIndex : defaultStageFull.lastLinearStageIndex,
                         currentOverallStatus: ["Active", "On Hold", "Not Positive"].includes(existingStage.currentOverallStatus) ? existingStage.currentOverallStatus : defaultStageFull.currentOverallStatus,
                         statusReason: typeof existingStage.statusReason === 'string' ? existingStage.statusReason : defaultStageFull.statusReason,
