@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -83,10 +82,11 @@
             border-color: #f59e0b;
             color: white;
         }
-        .progress-step.rejected { 
+        .progress-step.failed {
             background-color: #ef4444;
             border-color: #ef4444;
             color: white;
+            transform: scale(1.1);
         }
 
 
@@ -137,12 +137,15 @@
             border-radius: 4px;
             font-size: 0.75rem;
             z-index: 10;
-            bottom: -28px;
+            bottom: -32px;
             left: 50%;
             transform: translateX(-50%);
             white-space: nowrap;
             display: none;
+            text-align: left;
         }
+         .stage-date-tooltip div { margin-bottom: 2px; }
+
 
         .progress-step:hover .stage-date-tooltip {
             display: block;
@@ -183,9 +186,11 @@
                 padding-right: 0.5rem;
              }
         }
-        .form-input {
+        .form-input, .form-select, .form-textarea {
             @apply w-full border p-2 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500;
         }
+        .form-textarea { @apply h-24; }
+
         .btn { 
             @apply px-4 py-2 rounded font-semibold shadow-md transition-colors duration-150;
         }
@@ -259,7 +264,7 @@
                 <input name="mobile" placeholder="📱 Mobile (Optional)" class="form-input">
                 <input name="skill" placeholder="💡 Key Skill/Role" class="form-input">
                 <input name="np" placeholder="⏳ Notice Period (e.g., 30 days)" class="form-input">
-                <textarea name="notes" placeholder="📝 Additional Notes (Optional)" class="form-input h-24"></textarea>
+                <textarea name="notes" placeholder="📝 Additional Notes (Optional)" class="form-textarea"></textarea>
                 <div class="flex space-x-2">
                     <button type="submit" class="btn btn-primary w-full">Save</button>
                     <button type="button" onclick="closeModal()" class="btn btn-secondary w-full">Cancel</button>
@@ -268,24 +273,36 @@
         </div>
     </div>
 
-    <div id="dateModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl p-6 w-full max-w-sm space-y-4 shadow-xl">
-            <h2 id="dateModalTitle" class="text-xl font-bold text-blue-700">Set Date for Stage</h2>
-            <form id="dateForm" class="space-y-3">
+    <div id="stageDetailModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl p-6 w-full max-w-md space-y-4 shadow-xl">
+            <h2 id="stageDetailModalTitle" class="text-xl font-bold text-blue-700">Update Stage Details</h2>
+            <form id="stageDetailForm" class="space-y-4">
                 <div>
                     <label for="stageDateInput" class="block text-sm font-medium text-gray-700">Date:</label>
-                    <input type="date" required name="stageDate" id="stageDateInput" class="form-input mt-1">
+                    <input type="date" name="stageDate" id="stageDateInput" class="form-input mt-1">
                 </div>
-                <input type="hidden" id="dateModalOriginalEntryIndex">
-                <input type="hidden" id="dateModalStageIndex">
-                <div class="flex space-x-2">
-                    <button type="submit" class="btn btn-primary w-full">Save Date</button>
-                    <button type="button" onclick="closeDateModal()" class="btn btn-secondary w-full">Cancel</button>
+                <div>
+                    <label for="stageOutcomeInput" class="block text-sm font-medium text-gray-700">Outcome:</label>
+                    <select name="stageOutcome" id="stageOutcomeInput" class="form-select mt-1">
+                        <option value="">-- Select Outcome --</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Passed">Passed / Cleared / Shortlisted</option>
+                        <option value="Failed">Failed / Not Cleared / Not Shortlisted</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="stageFeedbackInput" class="block text-sm font-medium text-gray-700">Feedback:</label>
+                    <textarea name="stageFeedback" id="stageFeedbackInput" class="form-textarea mt-1" placeholder="Enter any feedback for this stage..."></textarea>
+                </div>
+                <input type="hidden" id="stageDetailOriginalEntryIndex">
+                <input type="hidden" id="stageDetailStageIndex">
+                <div class="flex space-x-2 pt-2">
+                    <button type="submit" class="btn btn-primary w-full">Save Stage Details</button>
+                    <button type="button" onclick="closeStageDetailModal()" class="btn btn-secondary w-full">Cancel</button>
                 </div>
             </form>
         </div>
     </div>
-
 
     <div class="add-btn" onclick="openModal()">+</div>
 
@@ -299,12 +316,15 @@
         const modalTitle = document.getElementById('modalTitle');
         const summaryDiv = document.getElementById('summary');
         
-        const dateModal = document.getElementById('dateModal');
-        const dateModalTitle = document.getElementById('dateModalTitle');
-        const dateForm = document.getElementById('dateForm');
+        const stageDetailModal = document.getElementById('stageDetailModal');
+        const stageDetailModalTitle = document.getElementById('stageDetailModalTitle');
+        const stageDetailForm = document.getElementById('stageDetailForm');
         const stageDateInput = document.getElementById('stageDateInput');
-        const dateModalOriginalEntryIndex = document.getElementById('dateModalOriginalEntryIndex');
-        const dateModalStageIndex = document.getElementById('dateModalStageIndex');
+        const stageOutcomeInput = document.getElementById('stageOutcomeInput');
+        const stageFeedbackInput = document.getElementById('stageFeedbackInput');
+        const stageDetailOriginalEntryIndex = document.getElementById('stageDetailOriginalEntryIndex');
+        const stageDetailStageIndex = document.getElementById('stageDetailStageIndex');
+
 
         const linearStages = ["Call Recvd", "Call Schedule", "L1 Clear", "L2 Clear", "Final Disc(HR)", "Offered"];
         let entries = JSON.parse(localStorage.getItem('entries') || '[]');
@@ -317,13 +337,17 @@
             updateSummary();
         }
 
-        function initializeNewStage() {
+        function initializeNewStageData() {
             const now = new Date().toISOString();
-            const initialStageDates = new Array(linearStages.length).fill(null);
-            initialStageDates[0] = now; 
+            const stageDetails = linearStages.map((name, index) => {
+                if (index === 0) { 
+                    return { date: now, outcome: "Passed", feedback: null };
+                }
+                return { date: null, outcome: null, feedback: null }; 
+            });
             return {
-                lastLinearStageIndex: 0,
-                linearStageDates: initialStageDates,
+                lastLinearStageIndex: 0, 
+                linearStageDetails: stageDetails, 
                 currentOverallStatus: "Active", 
                 statusReason: "", 
                 statusSetDate: null,
@@ -342,33 +366,21 @@
             const entry = entries[originalEntryIndex];
             if (!entry) return;
 
+            if (!entry.stage) { 
+                 entry.stage = initializeNewStageData(); 
+            }
+
             let reason = "";
             if (newStatus === "On Hold" || newStatus === "Not Positive") {
                 reason = prompt(`Reason for setting status to "${newStatus}" for ${entry.company} (Optional):`);
-            }
-
-            // Ensure stage object exists
-            if (!entry.stage) {
-                 entry.stage = initializeNewStage(); // Should not happen if render patches correctly
+                entry.stage.statusSetDate = new Date().toISOString();
+                entry.stage.statusReason = reason || "";
+            } else if (newStatus === "Active") {
+                entry.stage.statusSetDate = null;
+                entry.stage.statusReason = "";
             }
 
             entry.stage.currentOverallStatus = newStatus;
-            entry.stage.statusSetDate = new Date().toISOString();
-            entry.stage.statusReason = reason || "";
-            
-            if (newStatus === "Active" && entry.stage.currentOverallStatus === "Active") { // Check if we are setting to Active
-                 // If resuming from "On Hold", the old reason/date might be cleared.
-                 // This logic is better handled by ensuring statusSetDate is null only if truly active from start or resumed.
-                 // For now, let's simplify: if becoming Active, clear previous hold/not positive reason/date.
-                 // This might need refinement based on if the previous state was "On Hold".
-                 // A dedicated resumeApplication function handles this better by calling setOverallStatus('Active').
-                 // If setOverallStatus is called directly with 'Active', assume it's a reset or resume.
-                const oldStatus = entries[originalEntryIndex].stage.currentOverallStatus; // Check old status before it's overwritten
-                if (oldStatus === "On Hold") { // Only clear if coming from On Hold
-                    entry.stage.statusSetDate = null;
-                    entry.stage.statusReason = "";
-                }
-            }
             entry.stage.updatedAt = new Date().toISOString();
             saveData();
         }
@@ -379,10 +391,33 @@
                 alert("This application is not 'On Hold'.");
                 return;
             }
-            // Clear specific hold-related info before setting to active
             entry.stage.statusSetDate = null;
             entry.stage.statusReason = "";
             setOverallStatus(originalEntryIndex, "Active");
+        }
+
+        function recalculateLastLinearStageIndex(entry) {
+            let newLLS = -1;
+            if (entry.stage && entry.stage.linearStageDetails && entry.stage.currentOverallStatus === "Active") {
+                for (let i = 0; i < entry.stage.linearStageDetails.length; i++) {
+                    const stageDetail = entry.stage.linearStageDetails[i];
+                    if (stageDetail && stageDetail.outcome === "Passed") {
+                        newLLS = i;
+                    } else if (stageDetail && stageDetail.outcome === "Failed") {
+                        newLLS = i; 
+                        break; 
+                    } else if (!stageDetail || !stageDetail.date || !stageDetail.outcome ) { 
+                        break;
+                    }
+                }
+            } else if (entry.stage && entry.stage.linearStageDetails) { 
+                 for (let i = 0; i < entry.stage.linearStageDetails.length; i++) {
+                    if (entry.stage.linearStageDetails[i] && entry.stage.linearStageDetails[i].date) {
+                        newLLS = i;
+                    }
+                 }
+            }
+            entry.stage.lastLinearStageIndex = newLLS;
         }
 
 
@@ -411,42 +446,41 @@
             }
             
             filteredAndSortedEntries.forEach(({ entry: e, originalIndex }) => {
-                // Robust stage object initialization/patching
                 if (!e.stage) {
-                    e.stage = initializeNewStage();
+                    e.stage = initializeNewStageData();
                 } else {
-                    const defaultS = initializeNewStage(); // For default structures/values
+                    const defaultS = initializeNewStageData(); 
                     if (typeof e.stage.createdAt === 'undefined') {
-                        e.stage.createdAt = (Array.isArray(e.stage.linearStageDates) && e.stage.linearStageDates.find(d => d)) || defaultS.createdAt;
+                        let firstDate = null;
+                        if(Array.isArray(e.stage.linearStageDetails)){
+                            const firstDatedStage = e.stage.linearStageDetails.find(d => d && d.date);
+                            if(firstDatedStage) firstDate = firstDatedStage.date;
+                        }
+                        e.stage.createdAt = firstDate || defaultS.createdAt;
                     }
                     if (typeof e.stage.updatedAt === 'undefined') {
                         e.stage.updatedAt = e.stage.createdAt;
                     }
-                    if (!Array.isArray(e.stage.linearStageDates) || e.stage.linearStageDates.length !== linearStages.length) {
-                        const currentDates = Array.isArray(e.stage.linearStageDates) ? e.stage.linearStageDates : [];
-                        const newDates = new Array(linearStages.length).fill(null);
-                        for (let i = 0; i < Math.min(newDates.length, currentDates.length); i++) {
-                            newDates[i] = currentDates[i]; // Preserve what we can
+                    if (!Array.isArray(e.stage.linearStageDetails) || e.stage.linearStageDetails.length !== linearStages.length) {
+                        const currentDetails = Array.isArray(e.stage.linearStageDetails) ? e.stage.linearStageDetails : [];
+                        const newDetails = linearStages.map((_,idx) => ({ 
+                            date: null, outcome: null, feedback: null,
+                            ...(defaultS.linearStageDetails[idx] || {}) 
+                        })); 
+                        for (let i = 0; i < Math.min(newDetails.length, currentDetails.length); i++) {
+                            if(currentDetails[i]) { 
+                               newDetails[i].date = currentDetails[i].date || newDetails[i].date;
+                               newDetails[i].outcome = currentDetails[i].outcome || newDetails[i].outcome;
+                               newDetails[i].feedback = currentDetails[i].feedback || newDetails[i].feedback;
+                            }
                         }
-                        e.stage.linearStageDates = newDates;
-                        if (e.stage.linearStageDates[0] === null && typeof e.stage.lastLinearStageIndex === 'number' && e.stage.lastLinearStageIndex === 0){
-                             e.stage.linearStageDates[0] = e.stage.createdAt;
-                        }
-                    }
-                    if (typeof e.stage.lastLinearStageIndex !== 'number' || e.stage.lastLinearStageIndex < -1 || e.stage.lastLinearStageIndex >= linearStages.length) {
-                        let newLLS = -1;
-                        for (let i = 0; i < e.stage.linearStageDates.length; i++) {
-                            if (e.stage.linearStageDates[i]) newLLS = i; 
-                            // Find the highest index with a date, not necessarily consecutive for LLS visual
-                        }
-                        e.stage.lastLinearStageIndex = newLLS;
-                         if (newLLS === -1 && e.stage.linearStageDates[0] === null && initializeNewStage().lastLinearStageIndex === 0 && initializeNewStage().linearStageDates[0] !== null) {
-                            // This condition is for very old entries that might default to first stage if it's auto-dated by initializeNewStage
-                            // However, initializeNewStage() itself sets date[0] for LLS=0.
-                            // If LLS is truly undefined, and no dates, it should be -1. If dates[0] exists, it's 0.
-                             e.stage.lastLinearStageIndex = e.stage.linearStageDates[0] ? 0 : -1;
+                        e.stage.linearStageDetails = newDetails;
+                        if (e.stage.linearStageDetails[0].outcome === null && typeof e.stage.lastLinearStageIndex === 'number' && e.stage.lastLinearStageIndex === 0 && defaultS.linearStageDetails[0].outcome){
+                             e.stage.linearStageDetails[0] = {...defaultS.linearStageDetails[0], date: e.stage.createdAt};
                         }
                     }
+                    recalculateLastLinearStageIndex(e);
+
                     if (typeof e.stage.currentOverallStatus !== 'string' || !["Active", "On Hold", "Not Positive"].includes(e.stage.currentOverallStatus)) {
                         e.stage.currentOverallStatus = defaultS.currentOverallStatus; 
                     }
@@ -454,46 +488,70 @@
                     if (typeof e.stage.statusSetDate === 'undefined') e.stage.statusSetDate = defaultS.statusSetDate;
                 }
 
+
                 if (isCardView) {
                     let progressPercent = 0;
                     if (e.stage.currentOverallStatus !== "Not Positive" && e.stage.lastLinearStageIndex >= 0) {
                          progressPercent = (e.stage.lastLinearStageIndex + 1) / linearStages.length * 100;
-                         if (linearStages[e.stage.lastLinearStageIndex] === "Offered") progressPercent = 100;
+                         const lastActiveStageDetail = e.stage.linearStageDetails[e.stage.lastLinearStageIndex];
+                         if (lastActiveStageDetail && lastActiveStageDetail.outcome === "Passed" && linearStages[e.stage.lastLinearStageIndex] === "Offered") {
+                            progressPercent = 100;
+                         }
+                         if(lastActiveStageDetail && lastActiveStageDetail.outcome === "Failed") {
+                            progressPercent = (e.stage.lastLinearStageIndex +1) / linearStages.length * 100; 
+                         }
                     }
 
                     let cardClass = "bg-white p-4 rounded-lg shadow-md space-y-2";
-                    if (linearStages[e.stage.lastLinearStageIndex] === "Offered" && e.stage.currentOverallStatus !== "Not Positive") {
+                    const offeredStageDetail = e.stage.linearStageDetails[linearStages.indexOf("Offered")];
+                    if (offeredStageDetail && offeredStageDetail.outcome === "Passed" && e.stage.currentOverallStatus !== "Not Positive") {
                         cardClass += " offered-card";
                     }
 
                     let stageDotsHTML = linearStages.map((stageName, idx) => {
+                        const stageDetail = e.stage.linearStageDetails[idx];
                         let tooltipHTML = '';
-                        if (e.stage.linearStageDates[idx]) {
-                            const formattedDate = new Date(e.stage.linearStageDates[idx]).toLocaleDateString();
-                            tooltipHTML = `<div class="stage-date-tooltip">${formattedDate}</div>`;
+                        if (stageDetail && stageDetail.date) {
+                            const formattedDate = new Date(stageDetail.date).toLocaleDateString();
+                            tooltipHTML += `<div>Date: ${formattedDate}</div>`;
+                        }
+                        if (stageDetail && stageDetail.outcome) {
+                            tooltipHTML += `<div>Outcome: ${stageDetail.outcome}</div>`;
+                        }
+                        if(tooltipHTML) {
+                            tooltipHTML = `<div class="stage-date-tooltip">${tooltipHTML}</div>`;
                         }
                         
                         let stepDotClass = 'progress-step';
-                        // Simplified active logic: if a date exists for the step, it's active (unless "Not Positive" and beyond LLS)
-                        // And all steps up to lastLinearStageIndex are active if status is not "Not Positive"
-                        if (e.stage.linearStageDates[idx]) {
-                            if (!(e.stage.currentOverallStatus === "Not Positive" && idx > e.stage.lastLinearStageIndex)) {
+                        if (stageDetail) {
+                            if (stageDetail.outcome === "Passed") {
                                 stepDotClass += ' active';
+                            } else if (stageDetail.outcome === "Failed") {
+                                stepDotClass += ' failed'; 
+                            } else if (stageDetail.date && (stageDetail.outcome === "Pending" || stageDetail.outcome === null)) { 
+                                stepDotClass += ' active'; 
                             }
-                        } else if (idx <= e.stage.lastLinearStageIndex && e.stage.currentOverallStatus !== "Not Positive") {
-                            stepDotClass += ' active';
                         }
-
-                        if (e.stage.currentOverallStatus === "On Hold" && idx === e.stage.lastLinearStageIndex && e.stage.linearStageDates[idx]) {
-                            stepDotClass += ' hold'; // Keep hold style if it's the last active step with date
-                        } else if (e.stage.currentOverallStatus === "On Hold" && e.stage.linearStageDates[idx]) {
-                             stepDotClass = 'progress-step active'; // If on hold but a past step has a date, it's just active.
+                        
+                        if ((e.stage.currentOverallStatus === "Active" || e.stage.currentOverallStatus === "On Hold") && idx <= e.stage.lastLinearStageIndex) {
+                            if (!stepDotClass.includes(' active') && !stepDotClass.includes(' failed')) {
+                                stepDotClass += ' active'; 
+                            }
+                        }
+                        if (e.stage.currentOverallStatus === "On Hold" && idx === e.stage.lastLinearStageIndex && (stepDotClass.includes('active'))) {
+                           stepDotClass += ' hold';
+                        }
+                         if (e.stage.currentOverallStatus === "Not Positive" && (stepDotClass.includes('active') || stepDotClass.includes('hold'))) {
+                            if (! (stageDetail && stageDetail.outcome === "Passed" && idx <= e.stage.lastLinearStageIndex) ) {
+                                stepDotClass = 'progress-step'; 
+                                if(stageDetail && stageDetail.outcome === "Failed") stepDotClass += ' failed';
+                            }
                         }
 
 
                         return `
                             <div class="flex flex-col items-center">
-                                <div class="${stepDotClass}" onclick="openDateModal(${originalIndex}, ${idx}, '${jsEscape(linearStages[idx])}')">
+                                <div class="${stepDotClass}" onclick="openStageDetailModal(${originalIndex}, ${idx}, '${jsEscape(linearStages[idx])}')">
                                     ${idx + 1}
                                     ${tooltipHTML}
                                 </div>
@@ -503,24 +561,31 @@
                     
                     const overallStatusColor = e.stage.currentOverallStatus === 'Not Positive' ? 'text-red-600' :
                                            e.stage.currentOverallStatus === 'On Hold' ? 'text-yellow-600' :
-                                           (linearStages[e.stage.lastLinearStageIndex] === "Offered" && e.stage.currentOverallStatus !== "Not Positive" ? 'text-green-600' : 'text-blue-600');
+                                           (offeredStageDetail && offeredStageDetail.outcome === "Passed" && e.stage.currentOverallStatus !== "Not Positive" ? 'text-green-600' : 'text-blue-600');
                     
-                    let stageDatesListHTML = linearStages.map((stageName, idx) => {
-                        const stageDate = e.stage.linearStageDates[idx];
-                        if (stageDate) {
-                            return `<div class="text-xs py-0.5"><strong>${stageName}:</strong> ${new Date(stageDate).toLocaleDateString()}</div>`;
-                        }
-                        return '';
-                    }).filter(Boolean).join('');
-                    if (!stageDatesListHTML) {
-                        stageDatesListHTML = '<div class="text-xs text-gray-400 py-0.5">No specific stage dates recorded.</div>';
+                    let stageDetailsListHTML = "";
+                    if(e.stage.linearStageDetails) {
+                        stageDetailsListHTML = linearStages.map((stageName, idx) => {
+                            const stageDetail = e.stage.linearStageDetails[idx];
+                            if (stageDetail && (stageDetail.date || stageDetail.outcome || stageDetail.feedback)) {
+                                let detailString = `<strong>${stageName}:</strong>`;
+                                if (stageDetail.date) detailString += ` ${new Date(stageDetail.date).toLocaleDateString()}`;
+                                if (stageDetail.outcome) detailString += ` - ${stageDetail.outcome}`;
+                                if (stageDetail.feedback) detailString += ` <em class="text-gray-500 block pl-2">- "${jsEscape(stageDetail.feedback)}"</em>`;
+                                return `<div class="text-xs py-0.5">${detailString}</div>`;
+                            }
+                            return '';
+                        }).filter(Boolean).join('');
+                    }
+                    if (!stageDetailsListHTML) {
+                        stageDetailsListHTML = '<div class="text-xs text-gray-400 py-0.5">No specific stage details recorded.</div>';
                     }
 
                     displayArea.innerHTML += `
                       <div class="${cardClass}">
                         <h2 class="font-bold ${overallStatusColor} text-xl">${e.company}</h2>
                         <div><strong>Status:</strong> <span class="font-semibold ${overallStatusColor}">${e.stage.currentOverallStatus}</span>
-                            ${e.stage.statusReason ? ` <span class="text-sm text-gray-500">(${e.stage.statusReason})</span>` : ''}
+                            ${e.stage.statusReason ? ` <span class="text-sm text-gray-500">(${jsEscape(e.stage.statusReason)})</span>` : ''}
                             ${e.stage.statusSetDate && e.stage.currentOverallStatus !== 'Active' ?
                               ` <span class="text-xs text-gray-400">- ${new Date(e.stage.statusSetDate).toLocaleDateString()}</span>` : ''}
                         </div>
@@ -535,8 +600,8 @@
                             </div>
                             <div class="md:w-2/5 space-y-1 md:border-l md:pl-3"> 
                                 <div> 
-                                    <strong class="text-xs text-gray-500 block mb-1">STAGE DATES:</strong>
-                                    ${stageDatesListHTML}
+                                    <strong class="text-xs text-gray-500 block mb-1">STAGE DETAILS:</strong>
+                                    ${stageDetailsListHTML}
                                 </div>
                             </div>
                         </div>
@@ -556,29 +621,33 @@
                           <button onclick="deleteEntry(${originalIndex})" class="btn btn-secondary text-xs">Delete Entry</button>
                         </div>
                       </div>`;
-                } else { // Table View
+                } else { 
                     let table = `<div class="overflow-x-auto bg-white rounded-lg shadow-md"><table class="w-full text-sm">
                         <thead class="bg-gray-200 text-gray-600 uppercase"><tr>
                           <th class="p-3 text-left">Company</th><th class="p-3 text-left">Overall Status</th><th class="p-3 text-left">Current Linear Stage</th><th class="p-3 text-left">HR</th><th class="p-3 text-left">Skill/Role</th><th class="p-3 text-left">Actions</th>
                         </tr></thead><tbody class="text-gray-700">`;
                     filteredAndSortedEntries.forEach(({ entry: e, originalIndex }) => {
-                        // Stage patching logic is already done above for 'e'
                         let rowClass = "border-t border-gray-200 hover:bg-gray-50";
-                        if (e.stage && linearStages[e.stage.lastLinearStageIndex] === "Offered" && e.stage.currentOverallStatus !== "Not Positive") {
+                        const offeredStageDetailTable = e.stage && e.stage.linearStageDetails ? e.stage.linearStageDetails[linearStages.indexOf("Offered")] : null;
+                        if (offeredStageDetailTable && offeredStageDetailTable.outcome === "Passed" && e.stage.currentOverallStatus !== "Not Positive") {
                             rowClass += " offered-row";
                         }
-                         const overallStatusColor = e.stage.currentOverallStatus === 'Not Positive' ? 'text-red-600' :
+                         const overallStatusColorTable = e.stage.currentOverallStatus === 'Not Positive' ? 'text-red-600' :
                                                e.stage.currentOverallStatus === 'On Hold' ? 'text-yellow-600' :
-                                               (e.stage && linearStages[e.stage.lastLinearStageIndex] === "Offered" ? 'text-green-600' : 'text-blue-600');
+                                               (offeredStageDetailTable && offeredStageDetailTable.outcome === "Passed" ? 'text-green-600' : 'text-blue-600');
 
-                        const currentLinearStageName = (e.stage && typeof e.stage.lastLinearStageIndex === 'number' && e.stage.lastLinearStageIndex >=0) ? linearStages[e.stage.lastLinearStageIndex] : 'N/A';
-                        const linearStageDate = (e.stage && e.stage.linearStageDates && e.stage.lastLinearStageIndex >=0 && e.stage.linearStageDates[e.stage.lastLinearStageIndex]) ? new Date(e.stage.linearStageDates[e.stage.lastLinearStageIndex]).toLocaleDateString() : 'N/A';
+                        const currentLLS_Table = (e.stage && typeof e.stage.lastLinearStageIndex === 'number' && e.stage.lastLinearStageIndex >=0) ? e.stage.lastLinearStageIndex : -1;
+                        const currentLinearStageNameTable = currentLLS_Table !== -1 ? linearStages[currentLLS_Table] : 'N/A';
+                        const currentStageDetailTable = currentLLS_Table !== -1 && e.stage.linearStageDetails ? e.stage.linearStageDetails[currentLLS_Table] : null;
+                        const linearStageDateTable = (currentStageDetailTable && currentStageDetailTable.date) ? new Date(currentStageDetailTable.date).toLocaleDateString() : 'N/A';
+                        const linearStageOutcomeTable = (currentStageDetailTable && currentStageDetailTable.outcome) ? ` (${currentStageDetailTable.outcome})` : '';
+
 
                         table += `<tr class="${rowClass}">
                           <td class="p-3 font-semibold">${e.company}</td>
-                          <td class="p-3"><span class="font-semibold ${overallStatusColor}">${e.stage.currentOverallStatus}</span> ${e.stage.statusReason ?
-                            `<span class="text-xs text-gray-500">(${e.stage.statusReason})</span>`:""}</td>
-                          <td class="p-3">${currentLinearStageName} <span class="text-xs text-gray-400">(${linearStageDate})</span></td>
+                          <td class="p-3"><span class="font-semibold ${overallStatusColorTable}">${e.stage.currentOverallStatus}</span> ${e.stage.statusReason ?
+                            `<span class="text-xs text-gray-500">(${jsEscape(e.stage.statusReason)})</span>`:""}</td>
+                          <td class="p-3">${currentLinearStageNameTable} <span class="text-xs text-gray-400">(${linearStageDateTable})${linearStageOutcomeTable}</span></td>
                           <td class="p-3">${e.hr || '-'}</td>
                           <td class="p-3">${e.skill || '-'}</td>
                           <td class="p-3 whitespace-nowrap action-buttons-grid">
@@ -593,8 +662,8 @@
                     table += '</tbody></table></div>';
                     displayArea.innerHTML = table;
                 }
-            }); // End of forEach loop for filteredAndSortedEntries
-        } // End of render function
+            }); 
+        } 
 
 
         function editEntry(originalIndex) {
@@ -623,6 +692,7 @@
         function openModal() {
             if(currentlyEditingOriginalIndex === null) { 
                  modalTitle.textContent = '➕ Add New Application';
+                 entryForm.reset(); 
             }
             modal.classList.remove('hidden');
         }
@@ -634,64 +704,67 @@
             modalTitle.textContent = '➕ Add New Application';
         }
 
-        function openDateModal(entryIndex, stageIdx, stageName) {
-            dateModalOriginalEntryIndex.value = entryIndex;
-            dateModalStageIndex.value = stageIdx;
-            dateModalTitle.textContent = `Set Date for: ${stageName}`;
+        function openStageDetailModal(entryIndex, stageIdx, stageName) {
+            stageDetailOriginalEntryIndex.value = entryIndex;
+            stageDetailStageIndex.value = stageIdx;
+            stageDetailModalTitle.textContent = `Update Stage: ${jsEscape(stageName)}`;
             
-            const existingDate = entries[entryIndex].stage.linearStageDates[stageIdx];
-            if (existingDate) {
-                stageDateInput.value = new Date(existingDate).toISOString().split('T')[0];
-            } else {
-                stageDateInput.value = ''; 
-            }
-            dateModal.classList.remove('hidden');
+            const entry = entries[entryIndex];
+            const stageDetail = (entry && entry.stage && entry.stage.linearStageDetails) ? entry.stage.linearStageDetails[stageIdx] : {date: null, outcome: null, feedback: null};
+
+            stageDateInput.value = stageDetail.date ? new Date(stageDetail.date).toISOString().split('T')[0] : '';
+            stageOutcomeInput.value = stageDetail.outcome || "";
+            stageFeedbackInput.value = stageDetail.feedback || "";
+            
+            stageDetailModal.classList.remove('hidden');
         }
 
-        function closeDateModal() {
-            dateModal.classList.add('hidden');
-            dateForm.reset(); 
-            dateModalOriginalEntryIndex.value = '';
-            dateModalStageIndex.value = '';
-            stageDateInput.value = '';
+        function closeStageDetailModal() {
+            stageDetailModal.classList.add('hidden');
+            stageDetailForm.reset(); 
         }
         
-        dateForm.addEventListener('submit', (event) => {
+        stageDetailForm.addEventListener('submit', (event) => {
             event.preventDefault();
-            const originalEntryIdx = parseInt(dateModalOriginalEntryIndex.value);
-            const stageIdx = parseInt(dateModalStageIndex.value);
+            const originalEntryIdx = parseInt(stageDetailOriginalEntryIndex.value);
+            const stageIdx = parseInt(stageDetailStageIndex.value);
             const newDateValue = stageDateInput.value;
+            const newOutcome = stageOutcomeInput.value === "" ? null : stageOutcomeInput.value;
+            const newFeedback = stageFeedbackInput.value.trim() === "" ? null : stageFeedbackInput.value.trim();
 
-            if (isNaN(originalEntryIdx) || isNaN(stageIdx) || !newDateValue) {
-                alert("Error: Could not save date. Please ensure a valid date is selected.");
+
+            if (isNaN(originalEntryIdx) || isNaN(stageIdx)) {
+                alert("Error: Could not save stage details.");
                 return;
             }
 
             const entry = entries[originalEntryIdx];
-            if (!entry || !entry.stage) return;
+            if (!entry || !entry.stage || !entry.stage.linearStageDetails) return;
 
-            entry.stage.linearStageDates[stageIdx] = new Date(newDateValue + "T12:00:00Z").toISOString();
+            entry.stage.linearStageDetails[stageIdx] = {
+                date: newDateValue ? new Date(newDateValue + "T12:00:00Z").toISOString() : null,
+                outcome: newOutcome,
+                feedback: newFeedback
+            };
             entry.stage.updatedAt = new Date().toISOString();
 
-            // --- MODIFIED LOGIC for lastLinearStageIndex ---
-            if (entry.stage.currentOverallStatus === "Active") {
-                if (stageIdx >= entry.stage.lastLinearStageIndex) { 
-                    // Only advance lastLinearStageIndex if the current stage is a forward step
-                    // or the same as the current furthest point.
-                    entry.stage.lastLinearStageIndex = stageIdx;
-                }
-                // If an earlier stage's date is set/updated, lastLinearStageIndex does not go backward.
-                // The visual progress bar will still show the furthest point reached.
-                // The individual dot for the updated earlier stage will become active if it wasn't.
-            }
-            // --- END OF MODIFIED LOGIC ---
+            recalculateLastLinearStageIndex(entry); 
 
-            if (linearStages[stageIdx] === "Offered" && entry.stage.currentOverallStatus !== "Not Positive") {
+            const currentStageDetail = entry.stage.linearStageDetails[stageIdx];
+            if (currentStageDetail.outcome === "Passed" && linearStages[stageIdx] === "Offered" && entry.stage.currentOverallStatus !== "Not Positive") {
                  alert(`🎉 Congratulations! You received an offer from ${entry.company}! 🎉`);
             }
-
-            saveData();
-            closeDateModal();
+            
+            if (newOutcome === "Failed" && entry.stage.currentOverallStatus === "Active") {
+                if (confirm(`Stage "${linearStages[stageIdx]}" was marked as "Failed". Do you want to update the overall application status to "Not Positive"?`)) {
+                    setOverallStatus(originalEntryIdx, "Not Positive"); 
+                } else {
+                    saveData(); 
+                }
+            } else {
+                 saveData();
+            }
+            closeStageDetailModal();
         });
 
 
@@ -714,12 +787,12 @@
             if (currentlyEditingOriginalIndex !== null) {
                 const entryToUpdate = entries[currentlyEditingOriginalIndex];
                 Object.assign(entryToUpdate, formData); 
-                if (!entryToUpdate.stage) entryToUpdate.stage = initializeNewStage(); // Should exist due to render patching
+                if (!entryToUpdate.stage) entryToUpdate.stage = initializeNewStageData(); 
                 entryToUpdate.stage.updatedAt = new Date().toISOString();
             } else {
                 const newEntry = {
                     ...formData,
-                    stage: initializeNewStage()
+                    stage: initializeNewStageData()
                 };
                 entries.push(newEntry);
             }
@@ -748,10 +821,19 @@
         });
         function updateSummary() {
             const totalApplications = entries.length;
-            const offeredCount = entries.filter(e => e.stage && linearStages[e.stage.lastLinearStageIndex] === "Offered" && e.stage.currentOverallStatus !== "Not Positive").length;
+            let offeredCount = 0;
+            entries.forEach(e => {
+                if (e.stage && e.stage.linearStageDetails) {
+                    const offeredStage = e.stage.linearStageDetails[linearStages.indexOf("Offered")];
+                    if (offeredStage && offeredStage.outcome === "Passed" && e.stage.currentOverallStatus !== "Not Positive") {
+                        offeredCount++;
+                    }
+                }
+            });
             const onHoldCount = entries.filter(e => e.stage && e.stage.currentOverallStatus === "On Hold").length;
             const notPositiveCount = entries.filter(e => e.stage && e.stage.currentOverallStatus === "Not Positive").length;
-            const activeCount = entries.filter(e => e.stage && e.stage.currentOverallStatus === "Active" && !(linearStages[e.stage.lastLinearStageIndex] === "Offered")).length;
+            const activeCount = entries.filter(e => e.stage && e.stage.currentOverallStatus === "Active" && !(e.stage.linearStageDetails && e.stage.linearStageDetails[linearStages.indexOf("Offered")] && e.stage.linearStageDetails[linearStages.indexOf("Offered")].outcome === "Passed")).length;
+            
             summaryDiv.innerHTML = `
               <span class="mr-3"><strong>Total:</strong> ${totalApplications}</span>
               <span class="mr-3 text-blue-600"><strong>Active:</strong> ${activeCount}</span>
@@ -812,7 +894,7 @@
 
                     if (confirm(`Are you sure you want to import ${importedEntries.length} entries? This will overwrite your current local data.`)) {
                         entries = importedEntries.map(entry => {
-                            const defaultStageFull = initializeNewStage(); 
+                            const defaultStageFull = initializeNewStageData(); 
                             const existingStage = entry.stage || {};
                             
                             const createdAt = existingStage.createdAt || defaultStageFull.createdAt;
@@ -823,21 +905,22 @@
                                 ...existingStage, 
                                 createdAt: createdAt,
                                 updatedAt: updatedAt,
-                                linearStageDates: Array.isArray(existingStage.linearStageDates) && existingStage.linearStageDates.length === linearStages.length ? existingStage.linearStageDates : [...defaultStageFull.linearStageDates],
+                                linearStageDetails: (Array.isArray(existingStage.linearStageDetails) && existingStage.linearStageDetails.length === linearStages.length) 
+                                    ? existingStage.linearStageDetails.map(sd => ({ date: sd.date || null, outcome: sd.outcome || null, feedback: sd.feedback || null })) 
+                                    : defaultStageFull.linearStageDetails.map(dsd => ({...dsd})),
                                 lastLinearStageIndex: typeof existingStage.lastLinearStageIndex === 'number' && existingStage.lastLinearStageIndex >= -1 && existingStage.lastLinearStageIndex < linearStages.length ? existingStage.lastLinearStageIndex : defaultStageFull.lastLinearStageIndex,
                                 currentOverallStatus: ["Active", "On Hold", "Not Positive"].includes(existingStage.currentOverallStatus) ? existingStage.currentOverallStatus : defaultStageFull.currentOverallStatus,
                                 statusReason: typeof existingStage.statusReason === 'string' ? existingStage.statusReason : defaultStageFull.statusReason,
-                                statusSetDate: existingStage.statusSetDate || defaultStageFull.statusSetDate // Keep null if it was null
+                                statusSetDate: existingStage.statusSetDate 
                             };
-                            if(newStage.currentOverallStatus !== "Active" && newStage.currentOverallStatus !== "On Hold" && newStage.statusSetDate === defaultStageFull.statusSetDate && defaultStageFull.statusSetDate === null){
-                                // If status is Not Positive and statusSetDate was never set (or from a fresh defaultStage), set it.
+                            if(newStage.currentOverallStatus !== "Active" && newStage.currentOverallStatus !== "On Hold" && !newStage.statusSetDate){
                                 newStage.statusSetDate = newStage.updatedAt;
                             }
-                            if(newStage.currentOverallStatus === "Active"){ // Ensure reason and date are null for active.
+                            if(newStage.currentOverallStatus === "Active"){ 
                                 newStage.statusReason = "";
                                 newStage.statusSetDate = null;
                             }
-
+                            recalculateLastLinearStageIndex({stage: newStage}); 
 
                             entry.stage = newStage;
                             return entry;
@@ -883,14 +966,14 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyDGTNO6ygnAE8QG5Hs-rcPRX3TzqrKQa5w", // Replace with your actual API key
-      authDomain: "rprofbdb.firebaseapp.com", // Replace with your actual auth domain
-      databaseURL: "https://rprofbdb-default-rtdb.asia-southeast1.firebasedatabase.app", // Replace with your actual database URL
-      projectId: "rprofbdb", // Replace with your actual project ID
-      storageBucket: "rprofbdb.appspot.com", // Corrected: usually ends with .appspot.com
-      messagingSenderId: "452736310737", // Replace with your actual sender ID
-      appId: "1:452736310737:web:79c2ec79fda09bde7f14f0", // Replace with your actual App ID
-      measurementId: "G-HKEZZQZDW2" // Optional: Replace with your actual Measurement ID
+      apiKey: "AIzaSyDGffdfafsdafdTNO6ygnAE8QG5Hs-rcPRX3TzqrKQa5w", 
+      authDomain: "dfdfafa.firebaseapp.com", 
+      databaseURL: "https://rprofbdb-default-rtdb.asia-southeast1.firebasedatabase.app", 
+      projectId: "rprofbdb",
+      storageBucket: "rprofbdb.appspot.com", 
+      messagingSenderId: "4454546", 
+      appId: "1:4546464646:web:79c2ec79fda09bde7f14f0", 
+      measurementId: "G-FADFDAFADF" 
     };
     let db;
     try {
@@ -937,7 +1020,7 @@
             .then(snapshot => {
                 const data = snapshot.val() || [];
                  entries = data.map(entry => { 
-                    const defaultStageFull = initializeNewStage();
+                    const defaultStageFull = initializeNewStageData();
                     const existingStage = entry.stage || {};
                     const createdAt = existingStage.createdAt || defaultStageFull.createdAt;
                     const updatedAt = existingStage.updatedAt || createdAt;
@@ -947,19 +1030,22 @@
                         ...existingStage,
                         createdAt: createdAt,
                         updatedAt: updatedAt,
-                        linearStageDates: Array.isArray(existingStage.linearStageDates) && existingStage.linearStageDates.length === linearStages.length ? existingStage.linearStageDates : [...defaultStageFull.linearStageDates],
+                        linearStageDetails: (Array.isArray(existingStage.linearStageDetails) && existingStage.linearStageDetails.length === linearStages.length) 
+                            ? existingStage.linearStageDetails.map(sd => ({ date: sd.date || null, outcome: sd.outcome || null, feedback: sd.feedback || null })) 
+                            : defaultStageFull.linearStageDetails.map(dsd => ({...dsd})),
                         lastLinearStageIndex: typeof existingStage.lastLinearStageIndex === 'number' && existingStage.lastLinearStageIndex >= -1 && existingStage.lastLinearStageIndex < linearStages.length ? existingStage.lastLinearStageIndex : defaultStageFull.lastLinearStageIndex,
                         currentOverallStatus: ["Active", "On Hold", "Not Positive"].includes(existingStage.currentOverallStatus) ? existingStage.currentOverallStatus : defaultStageFull.currentOverallStatus,
                         statusReason: typeof existingStage.statusReason === 'string' ? existingStage.statusReason : defaultStageFull.statusReason,
-                        statusSetDate: existingStage.statusSetDate || defaultStageFull.statusSetDate
+                        statusSetDate: existingStage.statusSetDate
                     };
-                     if(newStage.currentOverallStatus !== "Active" && newStage.currentOverallStatus !== "On Hold" && newStage.statusSetDate === defaultStageFull.statusSetDate && defaultStageFull.statusSetDate === null){
+                     if(newStage.currentOverallStatus !== "Active" && newStage.currentOverallStatus !== "On Hold" && !newStage.statusSetDate){
                         newStage.statusSetDate = newStage.updatedAt;
                     }
                     if(newStage.currentOverallStatus === "Active"){ 
                         newStage.statusReason = "";
                         newStage.statusSetDate = null;
                     }
+                    recalculateLastLinearStageIndex({stage: newStage});
 
                     entry.stage = newStage;
                     return entry;
