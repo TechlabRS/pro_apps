@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -672,20 +673,18 @@
             entry.stage.linearStageDates[stageIdx] = new Date(newDateValue + "T12:00:00Z").toISOString();
             entry.stage.updatedAt = new Date().toISOString();
 
+            // --- MODIFIED LOGIC for lastLinearStageIndex ---
             if (entry.stage.currentOverallStatus === "Active") {
-                // Update lastLinearStageIndex to be the highest index that has a date.
-                // This ensures that if a user backfills an earlier date, LLS doesn't regress,
-                // but if they set a future date, LLS advances to that point if it's the furthest.
-                let newLLS = -1;
-                for(let i=0; i < entry.stage.linearStageDates.length; i++){
-                    if(entry.stage.linearStageDates[i]) {
-                        newLLS = i;
-                    }
+                if (stageIdx >= entry.stage.lastLinearStageIndex) { 
+                    // Only advance lastLinearStageIndex if the current stage is a forward step
+                    // or the same as the current furthest point.
+                    entry.stage.lastLinearStageIndex = stageIdx;
                 }
-                entry.stage.lastLinearStageIndex = newLLS;
-                // Simpler: if (stageIdx > entry.stage.lastLinearStageIndex) entry.stage.lastLinearStageIndex = stageIdx;
+                // If an earlier stage's date is set/updated, lastLinearStageIndex does not go backward.
+                // The visual progress bar will still show the furthest point reached.
+                // The individual dot for the updated earlier stage will become active if it wasn't.
             }
-
+            // --- END OF MODIFIED LOGIC ---
 
             if (linearStages[stageIdx] === "Offered" && entry.stage.currentOverallStatus !== "Not Positive") {
                  alert(`🎉 Congratulations! You received an offer from ${entry.company}! 🎉`);
