@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Gen Str Billing System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background-color: #007bff; /* Primary blue */
+        }
+        .navbar-brand, .nav-link {
+            color: #ffffff !important;
+        }
+        .navbar-nav .nav-link.active,
+        .navbar-nav .nav-link:hover {
+            color: #e2e6ea !important;
+        }
+        .card-header {
+            background-color: #e9ecef;
+        }
+        .form-control:focus {
+            box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+        }
+        .list-group-item-action:hover {
+            background-color: #f1f1f1;
+        }
+        .bill-item-qty, .bill-item-price {
+            max-width: 80px;
+            text-align: center;
+            padding: .25rem;
+        }
+        .receipt-modal .modal-content {
+            background-color: #fff;
+            border-radius: 0;
+        }
+        .receipt-content {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            padding: 10px;
+        }
+        .receipt-content .header, .receipt-content .footer {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .receipt-content .item-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .receipt-content .item-table th, .receipt-content .item-table td {
+            border-bottom: 1px dashed #ccc;
+            padding: 5px 0;
+            text-align: left;
+        }
+        .receipt-content .item-table th:nth-child(2), .receipt-content .item-table td:nth-child(2) { text-align: center; }
+        .receipt-content .item-table th:nth-child(3), .receipt-content .item-table td:nth-child(3) { text-align: right; }
+        .receipt-content .item-table th:nth-child(4), .receipt-content .item-table td:nth-child(4) { text-align: right; }
+        .receipt-content .total-section {
+            text-align: right;
+            margin-top: 10px;
+        }
+        .receipt-content .total-section div {
+            margin-bottom: 5px;
+        }
+        .receipt-content .thank-you {
+            text-align: center;
+            margin-top: 20px;
+            font-style: italic;
+        }
+        .report-content {
+            max-height: 500px; /* Adjust as needed */
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            border-radius: .25rem;
+            background-color: #fff;
+        }
+        /* Make btn-close white for dark backgrounds */
+        .btn-close-white {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+        /* Ensure modal titles are visible on primary background */
+        .modal-header .modal-title {
+            color: #ffffff;
+        }
+        /* New styles for WhatsApp button */
+        .btn-whatsapp {
+            background-color: #25D366;
+            color: white;
+            border-color: #25D366;
+        }
+        .btn-whatsapp:hover {
+            background-color: #1DA851;
+            color: white;
+            border-color: #1DA851;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Smart Gen.Str </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="#">Billing</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#productManagementModal">Manage Products</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#customerManagementModal">Manage Customers</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#reportsModal">Reports</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="logoutBtn">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header">
+                        <h5>Customer Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="customerSearch" class="form-label">Search Customer</label>
+                            <input type="text" class="form-control" id="customerSearch" placeholder="Name or Phone">
+                            <div id="customerList" class="list-group mt-2">
+                                </div>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Selected Customer:</strong>
+                            <span id="selectedCustomerDisplay" class="badge bg-secondary ms-2 p-2">No customer selected</span>
+                            <button class="btn btn-outline-danger btn-sm ms-2" id="clearCustomerBtn">Clear</button>
+                        </div>
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCustomerModal">Add New Customer</button>
+                        <hr>
+                        <h6>Customer's Past Bills:</h6>
+                        <div id="customerBillHistory" class="p-2 border rounded" style="max-height: 250px; overflow-y: auto;">
+                            <p class="text-muted text-center">Select a customer to view their past bills.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header">
+                        <h5>Add Products to Bill</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="productSearch" class="form-label">Search Product</label>
+                                <input type="text" class="form-control" id="productSearch" placeholder="Product Name">
+                                <div id="productList" class="list-group mt-2">
+                                    </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="productQuantity" class="form-label">Quantity</label>
+                                <input type="number" class="form-control" id="productQuantity" value="1" min="1">
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button class="btn btn-success w-100" id="addProductToBillBtn">Add to Bill</button>
+                            </div>
+                        </div>
+
+                        <h5 class="mt-4">Current Bill</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped mt-3">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Quantity</th>
+                                        <th>Price</th>
+                                        <th>Total</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="billItemsTableBody">
+                                    <tr><td colspan="5" class="text-muted text-center">No items in the bill.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-3">
+                            <h4>Total: <span id="billTotal">₹ 0.00</span></h4>
+                        </div>
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+                            <button class="btn btn-warning" id="clearBillBtn">Clear Bill</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5>Payment Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="paymentAmount" class="form-label">Amount Received (₹)</label>
+                            <input type="number" class="form-control" id="paymentAmount" value="0.00" step="0.01" min="0">
+                            <div class="invalid-feedback">
+                                Payment received is less than total amount.
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <strong>Amount Due:</strong> <span id="amountDue" class="text-danger">₹ 0.00</span>
+                            </div>
+                            <div class="col-md-6 text-md-end">
+                                <strong>Change:</strong> <span id="changeAmount" class="text-success">₹ 0.00</span>
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" id="generateBillBtn">Generate & Print Bill</button>
+                            <button class="btn btn-secondary" id="saveBillBtn">Save Bill (No Print)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addCustomerModal" tabindex="-1" aria-labelledby="addCustomerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="addCustomerModalLabel">Add New Customer</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="addCustomerForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="customerName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="customerName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customerPhone" class="form-label">Phone</label>
+                            <input type="tel" class="form-control" id="customerPhone" pattern="[0-9]{10}" placeholder="e.g., 9876543210" required>
+                            <small class="form-text text-muted">10-digit phone number</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customerAddress" class="form-label">Address (Optional)</label>
+                            <textarea class="form-control" id="customerAddress" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Add Customer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="billReceiptModal" tabindex="-1" aria-labelledby="billReceiptModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content receipt-modal">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="billReceiptModalLabel">Bill Receipt</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="receiptContent" class="receipt-content">
+                        </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="printReceiptBtn">Print</button>
+                    <button type="button" class="btn btn-whatsapp" id="sendBillViaWhatsAppBtn"><i class="fab fa-whatsapp"></i> Send via WhatsApp</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="productManagementModal" tabindex="-1" aria-labelledby="productManagementModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="productManagementModalLabel">Manage Products</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#addProductModal">Add New Product</button>
+                    <div id="productListManagement" class="list-group">
+                        </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="addProductModalLabel">Add New Product</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="addProductFormManagement">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="productNameManagement" class="form-label">Product Name</label>
+                            <input type="text" class="form-control" id="productNameManagement" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="productPriceManagement" class="form-label">Price (₹)</label>
+                            <input type="number" class="form-control" id="productPriceManagement" step="0.01" min="0.01" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-success">Add Product</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editProductModalLabel">Edit Product</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editProductForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="editProductName" class="form-label">Product Name</label>
+                            <input type="text" class="form-control" id="editProductName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editProductPrice" class="form-label">Price (₹)</label>
+                            <input type="number" class="form-control" id="editProductPrice" step="0.01" min="0.01" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="customerManagementModal" tabindex="-1" aria-labelledby="customerManagementModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="customerManagementModalLabel">Manage Customers</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#addCustomerModal">Add New Customer</button>
+                    <div id="customerListManagement" class="list-group">
+                        </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editCustomerModal" tabindex="-1" aria-labelledby="editCustomerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editCustomerModalLabel">Edit Customer</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editCustomerForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="editCustomerName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="editCustomerName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editCustomerPhone" class="form-label">Phone</label>
+                            <input type="tel" class="form-control" id="editCustomerPhone" pattern="[0-9]{10}" placeholder="e.g., 9876543210" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editCustomerAddress" class="form-label">Address (Optional)</label>
+                            <textarea class="form-control" id="editCustomerAddress" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="reportsModal" tabindex="-1" aria-labelledby="reportsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="reportsModalLabel">Sales Reports</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs mb-3" id="reportsTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="daily-sales-tab" data-bs-toggle="tab" data-bs-target="#daily-sales" type="button" role="tab" aria-controls="daily-sales" aria-selected="true">Daily/Date Range Sales</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="product-sales-tab" data-bs-toggle="tab" data-bs-target="#product-sales" type="button" role="tab" aria-controls="product-sales" aria-selected="false">Product Sales</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="customer-history-tab" data-bs-toggle="tab" data-bs-target="#customer-history" type="button" role="tab" aria-controls="customer-history" aria-selected="false">Customer History</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="reportsTabContent">
+                        <div class="tab-pane fade show active" id="daily-sales" role="tabpanel" aria-labelledby="daily-sales-tab">
+                            <h6 class="mb-3">Daily/Date Range Sales Report</h6>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label for="startDate" class="form-label">Start Date:</label>
+                                    <input type="date" class="form-control" id="startDate">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="endDate" class="form-label">End Date:</label>
+                                    <input type="date" class="form-control" id="endDate">
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end justify-content-between">
+                                    <button class="btn btn-primary w-50 me-2" id="generateDailySalesReportBtn">Generate Report</button>
+                                    <button class="btn btn-whatsapp w-50" id="sendDailyReportViaWhatsAppBtn"><i class="fab fa-whatsapp"></i> Send Report</button>
+                                </div>
+                            </div>
+                            <div id="dailySalesReportContent" class="report-content">
+                                <p class="text-muted text-center">Select a date range and click "Generate Report".</p>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="product-sales" role="tabpanel" aria-labelledby="product-sales-tab">
+                            <h6 class="mb-3">Product Sales Report</h6>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label for="productSalesReportStartDate" class="form-label">Start Date (Optional):</label>
+                                    <input type="date" class="form-control" id="productSalesReportStartDate">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="productSalesReportEndDate" class="form-label">End Date (Optional):</label>
+                                    <input type="date" class="form-control" id="productSalesReportEndDate">
+                                </div>
+                                <div class="col-12 mt-3 d-flex justify-content-end">
+                                    <button class="btn btn-primary me-2" id="generateProductSalesReportBtn">Generate Report</button>
+                                    <button class="btn btn-whatsapp" id="sendProductReportViaWhatsAppBtn"><i class="fab fa-whatsapp"></i> Send Report</button>
+                                </div>
+                            </div>
+                            <div id="productSalesReportContent" class="report-content">
+                                <p class="text-muted text-center">Click "Generate Report" to see all product sales, or select a date range.</p>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="customer-history" role="tabpanel" aria-labelledby="customer-history-tab">
+                            <h6 class="mb-3">Customer Purchase History Report</h6>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label for="customerHistoryStartDate" class="form-label">Start Date (Optional):</label>
+                                    <input type="date" class="form-control" id="customerHistoryStartDate">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="customerHistoryEndDate" class="form-label">End Date (Optional):</label>
+                                    <input type="date" class="form-control" id="customerHistoryEndDate">
+                                </div>
+                                <div class="col-12 mt-3 d-flex justify-content-end">
+                                    <button class="btn btn-primary me-2" id="generateCustomerHistoryReportBtn">Generate Report</button>
+                                    <button class="btn btn-whatsapp" id="sendCustomerHistoryReportViaWhatsAppBtn"><i class="fab fa-whatsapp"></i> Send Report</button>
+                                </div>
+                            </div>
+                            <div id="customerHistoryReportContent" class="report-content">
+                                <p class="text-muted text-center">Click "Generate Report" to see all customer purchase summaries, or select a date range.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // --- PSEUDO-AUTHENTICATION CHECK ---
+    const AUTH_TOKEN_KEY = 'kiranaAuthToken';
+    const requiredToken = 'superSecretDemoToken123';
+
+    if (localStorage.getItem(AUTH_TOKEN_KEY) !== requiredToken) {
+        window.location.href = 'login.html';
+        return;
+    }
+    // --- END PSEUDO-AUTHENTICATION CHECK ---
+
+
+    // --- Data Storage Utility Functions ---
+    const saveCustomers = (data) => localStorage.setItem('kiranaCustomers', JSON.stringify(data));
+    const saveProducts = (data) => localStorage.setItem('kiranaProducts', JSON.stringify(data));
+    const saveCustomerBills = (data) => localStorage.setItem('kiranaCustomerBills', JSON.stringify(data));
+    const saveNextBillId = (id) => localStorage.setItem('kiranaNextBillId', JSON.stringify(id));
+
+    // --- Data Initialization (Dynamic) ---
+
+    // Initialize Customers: Check localStorage first. If empty, load defaults and save them.
+    let customers = JSON.parse(localStorage.getItem('kiranaCustomers'));
+    if (!customers || customers.length === 0) {
+        customers = [
+            { id: 'C001', name: 'John Doe', phone: '9876543210', address: '123 Main St' },
+            { id: 'C002', name: 'Jane Smith', phone: '8765432109', address: '456 Oak Ave' },
+            { id: 'C003', name: 'Alice Johnson', phone: '7654321098', address: '789 Pine Ln' }
+        ];
+        saveCustomers(customers); // Save defaults to localStorage for the very first run
+    }
+
+    // Initialize Products: Check localStorage first. If empty, load defaults and save them.
+    let products = JSON.parse(localStorage.getItem('kiranaProducts'));
+    if (!products || products.length === 0) {
+        products = [
+            { id: 'P001', name: 'Rice (1kg)', price: 60.00 },
+            { id: 'P002', name: 'Wheat Flour (5kg)', price: 180.00 },
+            { id: 'P003', name: 'Sugar (1kg)', price: 45.00 },
+            { id: 'P004', name: 'Toor Dal (500g)', price: 75.00 },
+            { id: 'P005', name: 'Cooking Oil (1L)', price: 150.00 },
+            { id: 'P011', name: 'Cooking Oil (500ml)', price: 75.00 }, // New variant
+            { id: 'P012', name: 'Cooking Oil (2L)', price: 290.00 },   // New variant
+            { id: 'P006', name: 'Salt (1kg)', price: 20.00 },
+            { id: 'P007', name: 'Tea Powder (250g)', price: 120.00 },
+            { id: 'P008', name: 'Coffee (100g)', price: 90.00 },
+            { id: 'P009', name: 'Milk (500ml)', price: 30.00 },
+            { id: 'P010', name: 'Eggs (Dozen)', price: 70.00 }
+        ];
+        saveProducts(products); // Save defaults to localStorage for the very first run
+    }
+
+
+    
+
+    let currentBill = [];
+    let selectedCustomer = null;
+
+    let nextCustomerId = customers.length > 0 ? Math.max(...customers.map(c => parseInt(c.id.replace('C', '')))) + 1 : 1;
+    let nextProductId = products.length > 0 ? Math.max(...products.map(p => parseInt(p.id.replace('P', '')))) + 1 : 1;
+    let nextBillId = JSON.parse(localStorage.getItem('kiranaNextBillId')) || 1001;
+
+    let customerBills = JSON.parse(localStorage.getItem('kiranaCustomerBills')) || {};
+
+    let selectedProductForAdding = null; // Track currently selected product from search for adding to bill
+
+    // --- Global variables for WhatsApp integration ---
+    let lastGeneratedBill = null;
+    let lastGeneratedDailyReport = '';
+    let lastGeneratedProductReport = '';
+    let lastGeneratedCustomerHistoryReport = '';
+
+
+    // --- DOM Elements ---
+    const customerSearchInput = document.getElementById('customerSearch');
+    const customerListDiv = document.getElementById('customerList');
+    const selectedCustomerDisplay = document.getElementById('selectedCustomerDisplay');
+    const clearCustomerBtn = document.getElementById('clearCustomerBtn');
+    const customerBillHistoryDiv = document.getElementById('customerBillHistory');
+
+    const productSearchInput = document.getElementById('productSearch');
+    const productListDiv = document.getElementById('productList');
+    const productQuantityInput = document.getElementById('productQuantity');
+    const addProductToBillBtn = document.getElementById('addProductToBillBtn');
+    const billItemsTableBody = document.getElementById('billItemsTableBody');
+    const billTotalSpan = document.getElementById('billTotal');
+    const clearBillBtn = document.getElementById('clearBillBtn');
+
+    const paymentAmountInput = document.getElementById('paymentAmount');
+    const amountDueSpan = document.getElementById('amountDue');
+    const changeAmountSpan = document.getElementById('changeAmount');
+    const generateBillBtn = document.getElementById('generateBillBtn');
+    const saveBillBtn = document.getElementById('saveBillBtn');
+
+    const billReceiptModal = new bootstrap.Modal(document.getElementById('billReceiptModal'));
+    const receiptContentDiv = document.getElementById('receiptContent');
+    const printReceiptBtn = document.getElementById('printReceiptBtn');
+    const sendBillViaWhatsAppBtn = document.getElementById('sendBillViaWhatsAppBtn'); // New WhatsApp button
+
+    const productManagementModal = new bootstrap.Modal(document.getElementById('productManagementModal'));
+    const customerManagementModal = new bootstrap.Modal(document.getElementById('customerManagementModal'));
+    const addProductModal = new bootstrap.Modal(document.getElementById('addProductModal'));
+    const addCustomerModal = new bootstrap.Modal(document.getElementById('addCustomerModal'));
+    const editProductModal = new bootstrap.Modal(document.getElementById('editProductModal'));
+    const editCustomerModal = new bootstrap.Modal(document.getElementById('editCustomerModal'));
+
+    const addCustomerForm = document.getElementById('addCustomerForm');
+    const customerNameInput = document.getElementById('customerName');
+    const customerPhoneInput = document.getElementById('customerPhone');
+    const customerAddressInput = document.getElementById('customerAddress');
+
+    const productListManagementDiv = document.getElementById('productListManagement');
+
+    const addProductFormManagement = document.getElementById('addProductFormManagement');
+    const productNameInputManagement = document.getElementById('productNameManagement');
+    const productPriceInputManagement = document.getElementById('productPriceManagement');
+
+    const customerListManagementDiv = document.getElementById('customerListManagement');
+
+    const editProductNameInput = document.getElementById('editProductName');
+    const editProductPriceInput = document.getElementById('editProductPrice');
+    const editProductForm = document.getElementById('editProductForm');
+    let currentEditProductId = null;
+
+    const editCustomerNameInput = document.getElementById('editCustomerName');
+    const editCustomerPhoneInput = document.getElementById('editCustomerPhone');
+    const editCustomerAddressInput = document.getElementById('editCustomerAddress');
+    const editCustomerForm = document.getElementById('editCustomerForm');
+    let currentEditCustomerId = null;
+
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    // Reports Modal Elements
+    const reportsModal = new bootstrap.Modal(document.getElementById('reportsModal'));
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const generateDailySalesReportBtn = document.getElementById('generateDailySalesReportBtn');
+    const dailySalesReportContent = document.getElementById('dailySalesReportContent');
+    const sendDailyReportViaWhatsAppBtn = document.getElementById('sendDailyReportViaWhatsAppBtn'); // New WhatsApp button
+
+    const productSalesReportStartDate = document.getElementById('productSalesReportStartDate');
+    const productSalesReportEndDate = document.getElementById('productSalesReportEndDate');
+    const generateProductSalesReportBtn = document.getElementById('generateProductSalesReportBtn');
+    const productSalesReportContent = document.getElementById('productSalesReportContent');
+    const sendProductReportViaWhatsAppBtn = document.getElementById('sendProductReportViaWhatsAppBtn'); // New WhatsApp button
+
+    const customerHistoryStartDate = document.getElementById('customerHistoryStartDate');
+    const customerHistoryEndDate = document.getElementById('customerHistoryEndDate');
+    const generateCustomerHistoryReportBtn = document.getElementById('generateCustomerHistoryReportBtn');
+    const customerHistoryReportContent = document.getElementById('customerHistoryReportContent');
+    const sendCustomerHistoryReportViaWhatsAppBtn = document.getElementById('sendCustomerHistoryReportViaWhatsAppBtn'); // New WhatsApp button
+
+
+    // --- Utility Functions ---
+    const formatCurrency = (amount) => `₹ ${amount.toFixed(2)}`;
+
+    // --- WhatsApp Integration Functions ---
+
+    /**
+     * Sends a message via WhatsApp Web API.
+     * @param {string} phoneNumber - The recipient's phone number (e.g., '919876543210').
+     * @param {string} message - The message text to send.
+     */
+    const sendWhatsAppMessage = (phoneNumber, message) => {
+        if (!phoneNumber) {
+            phoneNumber = prompt("Please enter the recipient's 10-digit phone number (e.g., 91XXXXXXXXXX for India):");
+            if (!phoneNumber || !/^\d{10,15}$/.test(phoneNumber)) { // Basic validation for 10-15 digits
+                alert('Invalid phone number. Please enter a valid number.');
+                return;
+            }
+            // Prepend '91' if the number is 10 digits and seems like an Indian number without country code
+            if (phoneNumber.length === 10 && phoneNumber.startsWith('7' || '8' || '9')) { // Common Indian mobile starting digits
+                phoneNumber = '91' + phoneNumber;
+            }
+        }
+        
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+        window.open(whatsappUrl, '_blank');
+    };
+
+    /**
+     * Generates a formatted text message for a customer bill.
+     * @param {object} bill - The bill object.
+     * @returns {string} The formatted bill message.
+     */
+    const generateWhatsAppBillMessage = (bill) => {
+        let message = `*Kirana Shop - Bill Receipt*\n\n`;
+        message += `*Bill ID:* ${bill.billId}\n`;
+        message += `*Date:* ${new Date(bill.date).toLocaleString()}\n`;
+        message += `*Customer:* ${bill.customer.name} (${bill.customer.phone})\n`;
+        if (bill.customer.address) {
+            message += `*Address:* ${bill.customer.address}\n`;
+        }
+        message += `--------------------------------\n`;
+        message += `*Items:*\n`;
+        bill.items.forEach(item => {
+            message += `${item.name} (Qty: ${item.quantity}) - ${formatCurrency(item.total)}\n`;
+        });
+        message += `--------------------------------\n`;
+        message += `*Total:* ${formatCurrency(bill.total)}\n`;
+        message += `*Cash Received:* ${formatCurrency(bill.paymentReceived)}\n`;
+        if (bill.amountDue > 0) {
+            message += `*Amount Due:* ${formatCurrency(bill.amountDue)}\n`;
+        }
+        if (bill.change > 0) {
+            message += `*Change Due:* ${formatCurrency(bill.change)}\n`;
+        }
+        message += `--------------------------------\n`;
+        message += `Thank you for your purchase! Visit again! 🙏\n`;
+        message += `My Kirana Shop\nAllagadda, Andhra Pradesh`;
+        return message;
+    };
+
+    /**
+     * Generates a formatted text message for the daily sales report.
+     * @param {string} reportContentHtml - The HTML content of the report.
+     * @returns {string} The formatted report message.
+     */
+    const generateWhatsAppDailyReportMessage = (reportContentHtml) => {
+        let message = `*Kirana Shop - Daily Sales Report*\n\n`;
+        // Basic parsing of HTML to get text content for WhatsApp
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(reportContentHtml, 'text/html');
+        
+        const salesSummary = doc.querySelector('h5')?.textContent || 'Sales Summary';
+        message += `${salesSummary}\n\n`;
+
+        const totalBills = doc.querySelector('.row.mb-3 .col-md-6:first-child')?.textContent;
+        const totalRevenue = doc.querySelector('.row.mb-3 .col-md-6:last-child')?.textContent;
+        if(totalBills) message += `${totalBills}\n`;
+        if(totalRevenue) message += `${totalRevenue}\n\n`;
+
+        message += `*Top Selling Products by Revenue:*\n`;
+        doc.querySelectorAll('#dailySalesReportContent tbody tr').forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length === 3) {
+                message += `- ${cells[0].textContent.trim()}: ${cells[1].textContent.trim()} Qty | ${cells[2].textContent.trim()}\n`;
+            }
+        });
+        message += `\nReport generated on: ${new Date().toLocaleString()}`;
+        return message;
+    };
+
+    /**
+     * Generates a formatted text message for the product sales report.
+     * @param {string} reportContentHtml - The HTML content of the report.
+     * @returns {string} The formatted report message.
+     */
+    const generateWhatsAppProductReportMessage = (reportContentHtml) => {
+        let message = `*Kirana Shop - Product Sales Report*\n\n`;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(reportContentHtml, 'text/html');
+
+        const salesSummary = doc.querySelector('h5')?.textContent || 'Product Sales Summary';
+        message += `${salesSummary}\n\n`;
+
+        message += `*Product Sales Details:*\n`;
+        doc.querySelectorAll('#productSalesReportContent tbody tr').forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length === 3) {
+                message += `- ${cells[0].textContent.trim()}: ${cells[1].textContent.trim()} Qty | ${cells[2].textContent.trim()}\n`;
+            }
+        });
+        message += `\nReport generated on: ${new Date().toLocaleString()}`;
+        return message;
+    };
+
+    /**
+     * Generates a formatted text message for the customer history report.
+     * @param {string} reportContentHtml - The HTML content of the report.
+     * @returns {string} The formatted report message.
+     */
+    const generateWhatsAppCustomerHistoryReportMessage = (reportContentHtml) => {
+        let message = `*Kirana Shop - Customer Purchase History Report*\n\n`;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(reportContentHtml, 'text/html');
+
+        const salesSummary = doc.querySelector('h5')?.textContent || 'Customer Purchase Summary';
+        message += `${salesSummary}\n\n`;
+
+        message += `*Customer Summaries:*\n`;
+        doc.querySelectorAll('#customerHistoryReportContent tbody tr').forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 3) {
+                message += `- ${cells[0].textContent.trim()}: Bills: ${cells[1].textContent.trim()} | Spent: ${cells[2].textContent.trim()}\n`;
+            }
+        });
+        message += `\nReport generated on: ${new Date().toLocaleString()}`;
+        return message;
+    };
+
+
+    // --- Customer Billing Functions ---
+    const renderCustomerList = (searchTerm = '') => {
+        customerListDiv.innerHTML = '';
+        const filteredCustomers = customers.filter(customer =>
+            customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            customer.phone.includes(searchTerm)
+        );
+
+        if (selectedCustomer) {
+            const selectedLi = document.createElement('a');
+            selectedLi.href = '#';
+            selectedLi.classList.add('list-group-item', 'list-group-item-action', 'active');
+            selectedLi.textContent = `${selectedCustomer.name} (${selectedCustomer.phone})`;
+            customerListDiv.appendChild(selectedLi);
+        } else if (filteredCustomers.length > 0) {
+            filteredCustomers.forEach(customer => {
+                const li = document.createElement('a');
+                li.href = '#';
+                li.classList.add('list-group-item', 'list-group-item-action');
+                li.textContent = `${customer.name} (${customer.phone})`;
+                li.addEventListener('click', () => selectCustomer(customer));
+                customerListDiv.appendChild(li);
+            });
+        } else if (searchTerm) {
+            customerListDiv.innerHTML = '<div class="list-group-item text-muted">No customers found. Try adding a new one.</div>';
+        } else {
+            customerListDiv.innerHTML = '<div class="list-group-item text-muted">Start typing to search customers.</div>';
+        }
+    };
+
+    const selectCustomer = (customer) => {
+        selectedCustomer = customer;
+        selectedCustomerDisplay.textContent = `${customer.name} (${customer.phone})`;
+        selectedCustomerDisplay.classList.add('active');
+        customerListDiv.innerHTML = '';
+        customerSearchInput.value = '';
+        displayCustomerBillHistory(customer.id);
+        updatePaymentDetails();
+    };
+
+    const clearSelectedCustomer = () => {
+        selectedCustomer = null;
+        selectedCustomerDisplay.textContent = 'No customer selected';
+        selectedCustomerDisplay.classList.remove('active');
+        renderCustomerList();
+        customerSearchInput.value = '';
+        customerBillHistoryDiv.innerHTML = '<p class="text-muted">Select a customer to view their past bills.</p>';
+    };
+
+    const displayCustomerBillHistory = (customerId) => {
+        customerBillHistoryDiv.innerHTML = '';
+        const bills = customerBills[customerId] || [];
+
+        if (bills.length === 0) {
+            customerBillHistoryDiv.innerHTML = '<p class="text-muted">No past bills for this customer.</p>';
+            return;
+        }
+
+        const ul = document.createElement('ul');
+        ul.classList.add('list-group');
+        bills.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        bills.forEach(bill => {
+            const li = document.createElement('li');
+            li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+            li.innerHTML = `
+                <div>
+                    Bill ID: <strong>${bill.billId}</strong><br>
+                    Date: ${new Date(bill.date).toLocaleString()}<br>
+                    Total: ${formatCurrency(bill.total)}
+                    ${bill.amountDue > 0 ? `<br><span class="badge bg-warning text-dark">Due: ${formatCurrency(bill.amountDue)}</span>` : ''}
+                </div>
+                <button class="btn btn-outline-primary btn-sm view-bill-details" data-bill-id="${bill.billId}" data-customer-id="${customerId}">View</button>
+            `;
+            ul.appendChild(li);
+        });
+        customerBillHistoryDiv.appendChild(ul);
+
+        document.querySelectorAll('.view-bill-details').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const billId = event.target.dataset.billId;
+                const custId = event.target.dataset.customerId;
+                viewBillDetails(custId, billId);
+            });
+        });
+    };
+
+    const viewBillDetails = (customerId, billId) => {
+        const bills = customerBills[customerId] || [];
+        const bill = bills.find(b => b.billId === billId);
+
+        if (bill) {
+            generateReceiptContent(bill);
+            lastGeneratedBill = bill; // Store for WhatsApp sending
+            billReceiptModal.show();
+        } else {
+            // Using a custom message box instead of alert()
+            showCustomMessage('Error', 'Bill not found!', 'danger');
+        }
+    };
+
+
+    // --- Product Billing Functions ---
+    const renderProductList = (searchTerm = '') => {
+        productListDiv.innerHTML = '';
+        selectedProductForAdding = null; // Reset selection whenever search input changes
+
+        const filteredProducts = products.filter(product =>
+            product.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        if (filteredProducts.length > 0) {
+            filteredProducts.forEach(product => {
+                const li = document.createElement('a');
+                li.href = '#';
+                li.classList.add('list-group-item', 'list-group-item-action');
+                li.innerHTML = `<strong>${product.name}</strong> <span class="float-end">${formatCurrency(product.price)}</span>`;
+                li.addEventListener('click', () => {
+                    // IMPORTANT: Set the selected product object
+                    selectedProductForAdding = product;
+                    productSearchInput.value = product.name; // Autopopulate search input
+                    productQuantityInput.focus(); // Focus on quantity for quick entry
+                    productListDiv.innerHTML = ''; // Clear list after selection
+                });
+                productListDiv.appendChild(li);
+            });
+        } else if (searchTerm) {
+            productListDiv.innerHTML = '<div class="list-group-item text-muted">No products found.</div>';
+        } else {
+            productListDiv.innerHTML = '<div class="list-group-item text-muted">Start typing to search products.</div>';
+        }
+    };
+
+    const addProductToBill = () => {
+        const quantity = parseInt(productQuantityInput.value);
+
+        // IMPORTANT: Check if a specific product was selected from the list
+        if (!selectedProductForAdding) {
+            showCustomMessage('Information', 'Please select a product from the search results list.', 'info');
+            return;
+        }
+
+        if (isNaN(quantity) || quantity <= 0) {
+            showCustomMessage('Warning', 'Please enter a valid quantity greater than zero.', 'warning');
+            return;
+        }
+
+        // Use the selected product object directly
+        const productToAdd = selectedProductForAdding;
+
+        // Check if item already exists in bill, update quantity if so
+        const existingItemIndex = currentBill.findIndex(item => item.id === productToAdd.id);
+
+        if (existingItemIndex > -1) {
+            currentBill[existingItemIndex].quantity += quantity;
+            currentBill[existingItemIndex].total = currentBill[existingItemIndex].quantity * currentBill[existingItemIndex].price;
+        } else {
+            // Add new item to bill
+            currentBill.push({
+                id: productToAdd.id,
+                name: productToAdd.name,
+                price: productToAdd.price,
+                quantity: quantity,
+                total: productToAdd.price * quantity
+            });
+        }
+
+        renderBillItems(); // Refresh the bill display
+        productSearchInput.value = ''; // Clear product search
+        productQuantityInput.value = '1'; // Reset quantity
+        productSearchInput.focus(); // Focus back to product search for next item
+        selectedProductForAdding = null; // Clear the selected product for the next addition
+    };
+
+    const removeProductFromBill = (productId) => {
+        currentBill = currentBill.filter(item => item.id !== productId);
+        renderBillItems();
+    };
+
+    const renderBillItems = () => {
+        billItemsTableBody.innerHTML = '';
+        let total = 0;
+
+        if (currentBill.length === 0) {
+            billItemsTableBody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">No items in the bill.</td></tr>';
+            billTotalSpan.textContent = formatCurrency(0);
+            updatePaymentDetails();
+            return;
+        }
+
+        currentBill.forEach(item => {
+            const row = billItemsTableBody.insertRow();
+            row.innerHTML = `
+                <td>${item.name}</td>
+                <td><input type="number" class="form-control form-control-sm bill-item-qty" data-product-id="${item.id}" value="${item.quantity}" min="1"></td>
+                <td><input type="number" class="form-control form-control-sm bill-item-price" data-product-id="${item.id}" value="${item.price}" min="0.01" step="0.01"></td>
+                <td>${formatCurrency(item.total)}</td>
+                <td><button class="btn btn-danger btn-sm remove-item-btn" data-product-id="${item.id}">Remove</button></td>
+            `;
+            total += item.total;
+        });
+
+        billTotalSpan.textContent = formatCurrency(total);
+        updatePaymentDetails();
+
+        document.querySelectorAll('.remove-item-btn').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const productId = event.target.dataset.productId;
+                removeProductFromBill(productId);
+            });
+        });
+
+        document.querySelectorAll('.bill-item-qty').forEach(input => {
+            input.addEventListener('change', (event) => {
+                const productId = event.target.dataset.productId;
+                let newQuantity = parseInt(event.target.value);
+                const item = currentBill.find(i => i.id === productId);
+
+                if (item) {
+                    if (isNaN(newQuantity) || newQuantity <= 0) {
+                        newQuantity = 1;
+                        event.target.value = 1;
+                    }
+                    item.quantity = newQuantity;
+                    item.total = item.quantity * item.price;
+                    renderBillItems();
+                }
+            });
+        });
+
+        document.querySelectorAll('.bill-item-price').forEach(input => {
+            input.addEventListener('change', (event) => {
+                const productId = event.target.dataset.productId;
+                let newPrice = parseFloat(event.target.value);
+                const item = currentBill.find(i => i.id === productId);
+
+                if (item) {
+                    if (isNaN(newPrice) || newPrice <= 0) {
+                        newPrice = item.price;
+                        event.target.value = item.price.toFixed(2);
+                    }
+                    item.price = newPrice;
+                    item.total = item.quantity * item.price;
+                    renderBillItems();
+                }
+            });
+        });
+    };
+
+    const clearCurrentBill = () => {
+        // Replace confirm with custom modal for better UI
+        showCustomConfirm('Clear Bill', 'Are you sure you want to clear the current bill?', () => {
+            currentBill = [];
+            renderBillItems();
+            paymentAmountInput.value = '0';
+            updatePaymentDetails();
+            selectedProductForAdding = null; // Clear any pending selection
+        });
+    };
+
+
+    // --- Payment & Finalize Functions ---
+    const updatePaymentDetails = () => {
+        const total = parseFloat(billTotalSpan.textContent.replace('₹ ', ''));
+        const paymentReceived = parseFloat(paymentAmountInput.value) || 0;
+
+        const amountDue = Math.max(0, total - paymentReceived);
+        const change = Math.max(0, paymentReceived - total);
+
+        amountDueSpan.textContent = formatCurrency(amountDue);
+        changeAmountSpan.textContent = formatCurrency(change);
+
+        generateBillBtn.disabled = false;
+        saveBillBtn.disabled = false;
+
+        if (paymentReceived > 0 && amountDue > 0) {
+            paymentAmountInput.classList.add('is-invalid');
+        } else {
+            paymentAmountInput.classList.remove('is-invalid');
+        }
+    };
+
+    const generateBill = (print = true) => {
+        if (!selectedCustomer) {
+            showCustomMessage('Warning', 'Please select a customer first.', 'warning');
+            return;
+        }
+        if (currentBill.length === 0) {
+            showCustomMessage('Warning', 'Bill is empty. Add some items first.', 'warning');
+            return;
+        }
+
+        const total = parseFloat(billTotalSpan.textContent.replace('₹ ', ''));
+        const paymentReceived = parseFloat(paymentAmountInput.value) || 0;
+        const amountDue = parseFloat(amountDueSpan.textContent.replace('₹ ', ''));
+        const change = parseFloat(changeAmountSpan.textContent.replace('₹ ', ''));
+
+        const bill = {
+            billId: `INV-${nextBillId++}`,
+            date: new Date().toISOString(),
+            customer: { ...selectedCustomer },
+            items: [...currentBill],
+            total: total,
+            paymentReceived: paymentReceived,
+            amountDue: amountDue,
+            change: change
+        };
+
+        if (!customerBills[selectedCustomer.id]) {
+            customerBills[selectedCustomer.id] = [];
+        }
+        customerBills[selectedCustomer.id].push(bill);
+        saveCustomerBills(customerBills);
+        saveNextBillId(nextBillId);
+
+        generateReceiptContent(bill);
+        lastGeneratedBill = bill; // Store the generated bill for WhatsApp sending
+        billReceiptModal.show();
+
+        if (print) {
+            setTimeout(() => {
+                const printWindow = window.open('', '', 'height=600,width=800');
+                printWindow.document.write('<html><head><title>Print Bill</title>');
+                printWindow.document.write('<style>');
+                printWindow.document.write(`
+                    body { font-family: 'Courier New', Courier, monospace; font-size: 12px; margin: 0; padding: 10mm; }
+                    .receipt { width: 80mm; margin: 0 auto; border: 1px dashed #ccc; padding: 10px; }
+                    .header, .footer { text-align: center; margin-bottom: 10px; }
+                    .item-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                    .item-table th, .item-table td { border-bottom: 1px dashed #ccc; padding: 5px 0; text-align: left; }
+                    .item-table th:nth-child(2), .item-table td:nth-child(2) { text-align: center; }
+                    .item-table th:nth-child(3), .item-table td:nth-child(3) { text-align: right; }
+                    .item-table th:nth-child(4), .item-table td:nth-child(4) { text-align: right; }
+                    .total-section { text-align: right; margin-top: 10px; }
+                    .total-section div { margin-bottom: 5px; }
+                    .thank-you { text-align: center; margin-top: 20px; font-style: italic; }
+                `);
+                printWindow.document.write('</style></head><body>');
+                printWindow.document.write(receiptContentDiv.innerHTML);
+                printWindow.document.write('</body></html>');
+                printWindow.document.close();
+                printWindow.focus();
+                printWindow.print();
+                printWindow.onafterprint = () => printWindow.close();
+            }, 500);
+        }
+
+        clearSelectedCustomer();
+        clearCurrentBill();
+        selectedProductForAdding = null; // Just to be extra safe
+    };
+
+    const generateReceiptContent = (bill) => {
+        let receiptHtml = `
+            <div class="receipt">
+                <div class="header">
+                    <h4>My Kirana Shop</h4>
+                    <p>Allagadda, Andhra Pradesh, India</p>
+                    <p>Phone: 9876543210 | GSTIN: ABCDE12345FGHI</p>
+                    <hr style="border-top: 1px dashed #000;">
+                </div>
+                <div>
+                    <strong>Bill ID:</strong> ${bill.billId}<br>
+                    <strong>Date:</strong> ${new Date(bill.date).toLocaleString()}<br>
+                    <strong>Customer:</strong> ${bill.customer.name} (${bill.customer.phone})<br>
+                    ${bill.customer.address ? `<strong>Address:</strong> ${bill.customer.address}<br>` : ''}
+                    <hr style="border-top: 1px dashed #000;">
+                </div>
+                <table class="item-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Qty</th>
+                            <th>Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        bill.items.forEach(item => {
+            receiptHtml += `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td>${item.quantity}</td>
+                            <td>${formatCurrency(item.price)}</td>
+                            <td>${formatCurrency(item.total)}</td>
+                        </tr>
+            `;
+        });
+
+        receiptHtml += `
+                    </tbody>
+                </table>
+                <hr style="border-top: 1px dashed #000;">
+                <div class="total-section">
+                    <div><strong>Subtotal:</strong> ${formatCurrency(bill.total)}</div>
+                    <div><strong>Discount:</strong> ${formatCurrency(0)}</div>
+                    <div><strong>Grand Total:</strong> ${formatCurrency(bill.total)}</div>
+                    <div><strong>Cash Received:</strong> ${formatCurrency(bill.paymentReceived)}</div>
+                    ${bill.amountDue > 0 ? `<div><strong>Amount Due:</strong> ${formatCurrency(bill.amountDue)}</div>` : ''}
+                    ${bill.change > 0 ? `<div><strong>Change Due:</strong> ${formatCurrency(bill.change)}</div>` : ''}
+                </div>
+                <div class="thank-you">
+                    <p>Thank you for your purchase!</p>
+                    <p>Visit again!</p>
+                </div>
+            </div>
+        `;
+        receiptContentDiv.innerHTML = receiptHtml;
+    };
+
+
+    // --- Product Management Functions ---
+    const renderProductListManagement = () => {
+        productListManagementDiv.innerHTML = '';
+        if (products.length === 0) {
+            productListManagementDiv.innerHTML = '<p class="text-muted">No products added yet. Click "Add New Product" to start.</p>';
+            return;
+        }
+
+        const ul = document.createElement('ul');
+        ul.classList.add('list-group');
+        products.forEach(product => {
+            const li = document.createElement('li');
+            li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+            li.innerHTML = `
+                <div>${product.name} - ${formatCurrency(product.price)}</div>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary edit-product-btn" data-product-id="${product.id}">Edit</button>
+                    <button class="btn btn-sm btn-outline-danger delete-product-btn" data-product-id="${product.id}">Delete</button>
+                </div>
+            `;
+            ul.appendChild(li);
+        });
+        productListManagementDiv.appendChild(ul);
+
+        document.querySelectorAll('.edit-product-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const productId = e.target.dataset.productId;
+                showEditProductModal(productId);
+            });
+        });
+        document.querySelectorAll('.delete-product-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const productId = e.target.dataset.productId;
+                // Replace confirm with custom modal
+                showCustomConfirm('Delete Product', 'Are you sure you want to delete this product? This action cannot be undone.', () => {
+                    deleteProduct(productId);
+                });
+            });
+        });
+    };
+
+    const showEditProductModal = (productId) => {
+        const product = products.find(p => p.id === productId);
+        if (product) {
+            currentEditProductId = productId;
+            editProductNameInput.value = product.name;
+            editProductPriceInput.value = product.price;
+            editProductModal.show();
+        }
+    };
+
+    const editProduct = () => {
+        const newName = editProductNameInput.value.trim();
+        const newPrice = parseFloat(editProductPriceInput.value);
+
+        if (!newName || isNaN(newPrice) || newPrice <= 0) {
+            showCustomMessage('Warning', 'Please enter a valid product name and a price greater than zero.', 'warning');
+            return;
+        }
+
+        const productIndex = products.findIndex(p => p.id === currentEditProductId);
+        if (productIndex > -1) {
+            products[productIndex].name = newName;
+            products[productIndex].price = newPrice;
+            saveProducts(products);
+            renderProductListManagement();
+            renderProductList(); // Re-render main billing product list
+            editProductModal.hide();
+            showCustomMessage('Success', 'Product updated successfully!', 'success');
+        }
+    };
+
+    const deleteProduct = (productId) => {
+        products = products.filter(p => p.id !== productId);
+        saveProducts(products);
+        renderProductListManagement();
+        renderProductList(); // Re-render main billing product list
+        showCustomMessage('Success', 'Product deleted successfully!', 'success');
+    };
+
+    const addProduct = () => {
+        const name = productNameInputManagement.value.trim();
+        const price = parseFloat(productPriceInputManagement.value);
+
+        if (!name || isNaN(price) || price <= 0) {
+            showCustomMessage('Warning', 'Please enter a valid product name and a price greater than zero.', 'warning');
+            return;
+        }
+
+        // Check for duplicate product names (especially if units are part of the name)
+        if (products.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+            showCustomMessage('Warning', 'A product with this name already exists. Please use a unique name, or add a unit descriptor (e.g., "Milk (1L)").', 'warning');
+            return;
+        }
+
+        const newProduct = {
+            id: `P${String(nextProductId++).padStart(3, '0')}`,
+            name: name,
+            price: price
+        };
+        products.push(newProduct);
+        saveProducts(products);
+        renderProductListManagement();
+        renderProductList(); // Re-render main billing product list
+        addProductModal.hide();
+        addProductFormManagement.reset();
+        showCustomMessage('Success', 'Product added successfully!', 'success');
+    };
+
+
+    // --- Customer Management Functions ---
+    const renderCustomerListManagement = () => {
+        customerListManagementDiv.innerHTML = '';
+        if (customers.length === 0) {
+            customerListManagementDiv.innerHTML = '<p class="text-muted">No customers added yet. Click "Add New Customer" to start.</p>';
+            return;
+        }
+
+        const ul = document.createElement('ul');
+        ul.classList.add('list-group');
+        customers.forEach(customer => {
+            const li = document.createElement('li');
+            li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+            li.innerHTML = `
+                <div>${customer.name} (${customer.phone})</div>
+                <div>
+                     <button class="btn btn-sm btn-outline-primary edit-customer-btn" data-customer-id="${customer.id}">Edit</button>
+                    <button class="btn btn-sm btn-outline-danger delete-customer-btn" data-customer-id="${customer.id}">Delete</button>
+                </div>
+            `;
+            ul.appendChild(li);
+        });
+        customerListManagementDiv.appendChild(ul);
+
+        document.querySelectorAll('.edit-customer-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const customerId = e.target.dataset.customerId;
+                showEditCustomerModal(customerId);
+            });
+        });
+        document.querySelectorAll('.delete-customer-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const customerId = e.target.dataset.customerId;
+                // Replace confirm with custom modal
+                showCustomConfirm('Delete Customer', 'Are you sure you want to delete this customer? This action cannot be undone.', () => {
+                    deleteCustomer(customerId);
+                });
+            });
+        });
+    };
+
+    const showEditCustomerModal = (customerId) => {
+        const customer = customers.find(c => c.id === customerId);
+        if (customer) {
+            currentEditCustomerId = customerId;
+            editCustomerNameInput.value = customer.name;
+            editCustomerPhoneInput.value = customer.phone;
+            editCustomerAddressInput.value = customer.address || '';
+            editCustomerModal.show();
+        }
+    };
+
+    const editCustomer = () => {
+        const newName = editCustomerNameInput.value.trim();
+        const newPhone = editCustomerPhoneInput.value.trim();
+        const newAddress = editCustomerAddressInput.value.trim();
+
+        if (!newName || !newPhone) {
+            showCustomMessage('Warning', 'Please enter a valid name and phone number.', 'warning');
+            return;
+        }
+
+        const customerIndex = customers.findIndex(c => c.id === currentEditCustomerId);
+        if (customerIndex > -1) {
+            customers[customerIndex].name = newName;
+            customers[customerIndex].phone = newPhone;
+            customers[customerIndex].address = newAddress;
+            saveCustomers(customers);
+            renderCustomerListManagement();
+            renderCustomerList(); // Re-render main billing customer list
+            if (selectedCustomer && selectedCustomer.id === currentEditCustomerId) {
+                selectCustomer(customers[customerIndex]); // Update selected customer display if it's the one being edited
+            }
+            editCustomerModal.hide();
+            showCustomMessage('Success', 'Customer updated successfully!', 'success');
+        }
+    };
+
+    const deleteCustomer = (customerId) => {
+        customers = customers.filter(c => c.id !== customerId);
+        delete customerBills[customerId]; // Also delete their bill history
+        saveCustomers(customers);
+        saveCustomerBills(customerBills);
+        renderCustomerListManagement();
+        renderCustomerList(); // Re-render main billing customer list
+        if (selectedCustomer && selectedCustomer.id === customerId) {
+            clearSelectedCustomer(); // Clear selected customer if it was the one deleted
+        }
+        showCustomMessage('Success', 'Customer deleted successfully!', 'success');
+    };
+
+    // --- Reporting Functions ---
+
+    // Helper to filter bills by date range
+    const filterBillsByDateRange = (allBills, startDate, endDate) => {
+        let filteredBills = [];
+        const startTimestamp = startDate ? new Date(startDate).setHours(0, 0, 0, 0) : 0; // Start of day or epoch
+        const endTimestamp = endDate ? new Date(endDate).setHours(23, 59, 59, 999) : Infinity; // End of day or far future
+
+        for (const customerId in allBills) {
+            allBills[customerId].forEach(bill => {
+                const billDate = new Date(bill.date).getTime(); // Bill date in milliseconds
+                if (billDate >= startTimestamp && billDate <= endTimestamp) {
+                    filteredBills.push(bill);
+                }
+            });
+        }
+        return filteredBills.sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort by date ascending
+    };
+
+    // 1. Generate Daily/Date Range Sales Report
+    const generateDailySalesReport = () => {
+        const start = startDateInput.value;
+        const end = endDateInput.value;
+
+        if (start && end && new Date(start) > new Date(end)) {
+            dailySalesReportContent.innerHTML = '<p class="text-danger text-center">Start date cannot be after end date.</p>';
+            lastGeneratedDailyReport = ''; // Clear report content
+            return;
+        }
+
+        const filteredBills = filterBillsByDateRange(customerBills, start, end);
+
+        if (filteredBills.length === 0) {
+            dailySalesReportContent.innerHTML = `<p class="text-muted text-center">No sales found for the selected date range.</p>`;
+            lastGeneratedDailyReport = ''; // Clear report content
+            return;
+        }
+
+        let totalRevenue = 0;
+        let totalBills = filteredBills.length;
+        const productSales = {}; // {productId: {name: '...', quantity: X, revenue: Y}}
+
+        filteredBills.forEach(bill => {
+            totalRevenue += bill.total;
+            bill.items.forEach(item => {
+                if (!productSales[item.id]) {
+                    productSales[item.id] = { name: item.name, quantity: 0, revenue: 0 };
+                }
+                productSales[item.id].quantity += item.quantity;
+                productSales[item.id].revenue += item.total;
+            });
+        });
+
+        // Convert productSales object to array for sorting
+        const sortedProducts = Object.values(productSales).sort((a, b) => b.revenue - a.revenue);
+
+        let reportHtml = `
+            <h5 class="text-center">Sales Summary: ${start || 'All Time'} to ${end || 'All Time'}</h5>
+            <div class="row mb-3">
+                <div class="col-md-6"><strong>Total Bills:</strong> ${totalBills}</div>
+                <div class="col-md-6"><strong>Total Revenue:</strong> ${formatCurrency(totalRevenue)}</div>
+            </div>
+            <h6 class="mt-4">Top Selling Products by Revenue:</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-center">Quantity Sold</th>
+                            <th class="text-end">Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        sortedProducts.slice(0, 10).forEach(p => { // Show top 10
+            reportHtml += `
+                        <tr>
+                            <td>${p.name}</td>
+                            <td class="text-center">${p.quantity}</td>
+                            <td class="text-end">${formatCurrency(p.revenue)}</td>
+                        </tr>
+            `;
+        });
+        reportHtml += `
+                    </tbody>
+                </table>
+            </div>
+            ${sortedProducts.length > 10 ? '<p class="text-muted text-center">(Showing top 10 products)</p>' : ''}
+        `;
+        dailySalesReportContent.innerHTML = reportHtml;
+        lastGeneratedDailyReport = reportHtml; // Store HTML content for WhatsApp sending
+    };
+
+    // 2. Generate Product Sales Report
+    const generateProductSalesReport = () => {
+        const start = productSalesReportStartDate.value;
+        const end = productSalesReportEndDate.value;
+
+        if (start && end && new Date(start) > new Date(end)) {
+            productSalesReportContent.innerHTML = '<p class="text-danger text-center">Start date cannot be after end date.</p>';
+            lastGeneratedProductReport = ''; // Clear report content
+            return;
+        }
+
+        const filteredBills = filterBillsByDateRange(customerBills, start, end);
+
+        if (filteredBills.length === 0) {
+            productSalesReportContent.innerHTML = `<p class="text-muted text-center">No product sales found for the selected date range.</p>`;
+            lastGeneratedProductReport = ''; // Clear report content
+            return;
+        }
+
+        const productSummary = {}; // {productId: {name: '...', totalQuantity: X, totalRevenue: Y}}
+
+        filteredBills.forEach(bill => {
+            bill.items.forEach(item => {
+                if (!productSummary[item.id]) {
+                    productSummary[item.id] = { name: item.name, totalQuantity: 0, totalRevenue: 0 };
+                }
+                productSummary[item.id].totalQuantity += item.quantity;
+                productSummary[item.id].totalRevenue += item.total;
+            });
+        });
+
+        const sortedProducts = Object.values(productSummary).sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+        let reportHtml = `
+            <h5 class="text-center">Product Sales Summary: ${start || 'All Time'} to ${end || 'All Time'}</h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th class="text-center">Total Quantity Sold</th>
+                            <th class="text-end">Total Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        sortedProducts.forEach(p => {
+            reportHtml += `
+                        <tr>
+                            <td>${p.name}</td>
+                            <td class="text-center">${p.totalQuantity}</td>
+                            <td class="text-end">${formatCurrency(p.totalRevenue)}</td>
+                        </tr>
+            `;
+        });
+        reportHtml += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        productSalesReportContent.innerHTML = reportHtml;
+        lastGeneratedProductReport = reportHtml; // Store HTML content for WhatsApp sending
+    };
+
+    // 3. Generate Customer Purchase History Report
+    const generateCustomerHistoryReport = () => {
+        const start = customerHistoryStartDate.value;
+        const end = customerHistoryEndDate.value;
+
+        if (start && end && new Date(start) > new Date(end)) {
+            customerHistoryReportContent.innerHTML = '<p class="text-danger text-center">Start date cannot be after end date.</p>';
+            lastGeneratedCustomerHistoryReport = ''; // Clear report content
+            return;
+        }
+
+        const customerPurchaseSummary = {}; // {customerId: {name: '...', totalBills: X, totalSpent: Y, bills: []}}
+
+        const filteredBills = filterBillsByDateRange(customerBills, start, end);
+
+        if (filteredBills.length === 0) {
+            customerHistoryReportContent.innerHTML = `<p class="text-muted text-center">No customer purchases found for the selected date range.</p>`;
+            lastGeneratedCustomerHistoryReport = ''; // Clear report content
+            return;
+        }
+
+        filteredBills.forEach(bill => {
+            const custId = bill.customer.id;
+            if (!customerPurchaseSummary[custId]) {
+                customerPurchaseSummary[custId] = {
+                    name: bill.customer.name,
+                    phone: bill.customer.phone,
+                    totalBills: 0,
+                    totalSpent: 0,
+                    bills: [] // Store full bill objects for potential drill-down
+                };
+            }
+            customerPurchaseSummary[custId].totalBills++;
+            customerPurchaseSummary[custId].totalSpent += bill.total;
+            customerPurchaseSummary[custId].bills.push(bill);
+        });
+
+        const sortedCustomers = Object.values(customerPurchaseSummary).sort((a, b) => b.totalSpent - a.totalSpent);
+
+        let reportHtml = `
+            <h5 class="text-center">Customer Purchase Summary: ${start || 'All Time'} to ${end || 'All Time'}</h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Customer Name (Phone)</th>
+                            <th class="text-center">Total Bills</th>
+                            <th class="text-end">Total Spent</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        sortedCustomers.forEach(c => {
+            reportHtml += `
+                        <tr>
+                            <td>${c.name} (${c.phone})</td>
+                            <td class="text-center">${c.totalBills}</td>
+                            <td class="text-end">${formatCurrency(c.totalSpent)}</td>
+                            <td><button class="btn btn-sm btn-outline-info view-customer-bills-btn" data-customer-id="${c.phone}" data-start-date="${start}" data-end-date="${end}">View Bills</button></td>
+                        </tr>
+            `;
+        });
+        reportHtml += `
+                    </tbody>
+                </table>
+            </div>
+            <div id="customerDetailedBills" class="mt-4">
+                </div>
+        `;
+        customerHistoryReportContent.innerHTML = reportHtml;
+        lastGeneratedCustomerHistoryReport = reportHtml; // Store HTML content for WhatsApp sending
+
+        // Add event listeners for "View Bills" buttons
+        document.querySelectorAll('.view-customer-bills-btn').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const customerPhone = event.target.dataset.customerId; // Using phone as a unique identifier for now
+                const startDateForDetail = event.target.dataset.startDate || '';
+                const endDateForDetail = event.target.dataset.endDate || '';
+
+                const customer = customers.find(c => c.phone === customerPhone);
+                if (customer) {
+                    displayCustomerDetailedBills(customer.id, startDateForDetail, endDateForDetail);
+                }
+            });
+        });
+    };
+
+    // Function to display detailed bills for a specific customer in the reports modal
+    const displayCustomerDetailedBills = (customerId, startDate, endDate) => {
+        const customer = customers.find(c => c.id === customerId);
+        const bills = customerBills[customerId] || [];
+
+        let detailedBillsHtml = `
+            <h6 class="mt-4">Detailed Bills for ${customer.name} (${customer.phone}):</h6>
+        `;
+
+        const filteredCustomerBills = filterBillsByDateRange({[customerId]: bills}, startDate, endDate);
+
+        if (filteredCustomerBills.length === 0) {
+            detailedBillsHtml += `<p class="text-muted">No bills found for this customer in the selected date range.</p>`;
+        } else {
+            detailedBillsHtml += `
+            <div class="list-group">
+            `;
+            filteredCustomerBills.forEach(bill => {
+                detailedBillsHtml += `
+                    <div class="list-group-item mb-2 border rounded">
+                        <strong>Bill ID:</strong> ${bill.billId}<br>
+                        <strong>Date:</strong> ${new Date(bill.date).toLocaleString()}<br>
+                        <strong>Total:</strong> ${formatCurrency(bill.total)}<br>
+                        ${bill.amountDue > 0 ? `<span class="badge bg-warning text-dark">Amount Due: ${formatCurrency(bill.amountDue)}</span><br>` : ''}
+                        <strong>Items:</strong>
+                        <ul class="list-group list-group-flush mt-1">
+                `;
+                bill.items.forEach(item => {
+                    detailedBillsHtml += `
+                            <li class="list-group-item py-1 px-0">${item.name} (Qty: ${item.quantity}) - ${formatCurrency(item.total)}</li>
+                    `;
+                });
+                detailedBillsHtml += `
+                        </ul>
+                    </div>
+                `;
+            });
+            detailedBillsHtml += `</div>`;
+        }
+        document.getElementById('customerDetailedBills').innerHTML = detailedBillsHtml;
+        document.getElementById('customerDetailedBills').scrollIntoView({ behavior: 'smooth', block: 'start' }); // Scroll to view details
+    };
+
+
+    // --- Custom Message/Alert Box (Replaces alert() and confirm()) ---
+    const showCustomMessage = (title, message, type = 'info') => {
+        // Simple Bootstrap Modal for messages
+        const modalId = 'customMessageModal';
+        let modalElement = document.getElementById(modalId);
+        if (!modalElement) {
+            modalElement = document.createElement('div');
+            modalElement.classList.add('modal', 'fade');
+            modalElement.id = modalId;
+            modalElement.setAttribute('tabindex', '-1');
+            modalElement.setAttribute('aria-labelledby', `${modalId}Label`);
+            modalElement.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(modalElement);
+        }
+
+        let headerClass = 'bg-primary text-white';
+        if (type === 'success') headerClass = 'bg-success text-white';
+        else if (type === 'warning') headerClass = 'bg-warning text-dark';
+        else if (type === 'danger') headerClass = 'bg-danger text-white';
+
+        modalElement.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header ${headerClass}">
+                        <h5 class="modal-title" id="${modalId}Label">${title}</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>${message}</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    };
+
+    const showCustomConfirm = (title, message, onConfirm) => {
+        const modalId = 'customConfirmModal';
+        let modalElement = document.getElementById(modalId);
+        if (!modalElement) {
+            modalElement = document.createElement('div');
+            modalElement.classList.add('modal', 'fade');
+            modalElement.id = modalId;
+            modalElement.setAttribute('tabindex', '-1');
+            modalElement.setAttribute('aria-labelledby', `${modalId}Label`);
+            modalElement.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(modalElement);
+        }
+
+        modalElement.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title" id="${modalId}Label">${title}</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>${message}</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger" id="confirmActionBtn">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+
+        document.getElementById('confirmActionBtn').onclick = () => {
+            onConfirm();
+            modal.hide();
+        };
+    };
+
+
+    // --- Event Listeners ---
+    customerSearchInput.addEventListener('input', (e) => renderCustomerList(e.target.value));
+    clearCustomerBtn.addEventListener('click', clearSelectedCustomer);
+    addCustomerForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const newCustomer = {
+            id: `C${String(nextCustomerId++).padStart(3, '0')}`,
+            name: customerNameInput.value.trim(),
+            phone: customerPhoneInput.value.trim(),
+            address: customerAddressInput.value.trim()
+        };
+
+        // Basic check for duplicate phone number
+        if (customers.some(c => c.phone === newCustomer.phone)) {
+            showCustomMessage('Warning', 'A customer with this phone number already exists.', 'warning');
+            return;
+        }
+
+        customers.push(newCustomer);
+        saveCustomers(customers);
+        renderCustomerList();
+        selectCustomer(newCustomer);
+        addCustomerModal.hide();
+        addCustomerForm.reset();
+        showCustomMessage('Success', 'Customer added successfully!', 'success');
+    });
+
+    productSearchInput.addEventListener('input', (e) => renderProductList(e.target.value));
+    addProductToBillBtn.addEventListener('click', addProductToBill);
+    clearBillBtn.addEventListener('click', clearCurrentBill);
+
+    paymentAmountInput.addEventListener('input', updatePaymentDetails);
+    generateBillBtn.addEventListener('click', () => generateBill(true));
+    saveBillBtn.addEventListener('click', () => generateBill(false));
+    printReceiptBtn.addEventListener('click', () => {
+        const printContent = receiptContentDiv.innerHTML;
+        const printWindow = window.open('', '', 'height=600,width=800');
+        printWindow.document.write('<html><head><title>Print Bill</title>');
+        printWindow.document.write('<style>');
+        printWindow.document.write(`
+            body { font-family: 'Courier New', Courier, monospace; font-size: 12px; margin: 0; padding: 10mm; }
+            .receipt { width: 80mm; margin: 0 auto; border: 1px dashed #ccc; padding: 10px; }
+            .header, .footer { text-align: center; margin-bottom: 10px; }
+            .item-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            .item-table th, .item-table td { border-bottom: 1px dashed #ccc; padding: 5px 0; text-align: left; }
+            .item-table th:nth-child(2), .item-table td:nth-child(2) { text-align: center; }
+            .item-table th:nth-child(3), .item-table td:nth-child(3) { text-align: right; }
+            .item-table th:nth-child(4), .item-table td:nth-child(4) { text-align: right; }
+            .total-section { text-align: right; margin-top: 10px; }
+            .total-section div { margin-bottom: 5px; }
+            .thank-you { text-align: center; margin-top: 20px; font-style: italic; }
+        `);
+        printWindow.document.write('</style></head><body>');
+        printWindow.document.write(printContent);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.onafterprint = () => printWindow.close();
+    });
+
+    // Event listener for sending bill via WhatsApp
+    sendBillViaWhatsAppBtn.addEventListener('click', () => {
+        if (lastGeneratedBill) {
+            sendWhatsAppMessage(lastGeneratedBill.customer.phone, generateWhatsAppBillMessage(lastGeneratedBill));
+        } else {
+            showCustomMessage('Information', 'No bill has been generated yet to send.', 'info');
+        }
+    });
+
+
+    addProductFormManagement.addEventListener('submit', (e) => {
+        e.preventDefault();
+        addProduct();
+    });
+    editProductForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        editProduct();
+    });
+
+    editCustomerForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        editCustomer();
+    });
+
+    logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Replace confirm with custom modal
+        showCustomConfirm('Logout', 'Are you sure you want to log out? This will clear local data for this session.', () => {
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+            // Optionally, clear other data on logout if you don't want it persisted for next login
+            // localStorage.removeItem('kiranaCustomers');
+            // localStorage.removeItem('kiranaProducts');
+            // localStorage.removeItem('kiranaNextBillId');
+            // localStorage.removeItem('kiranaCustomerBills');
+
+            window.location.href = 'login.html';
+        });
+    });
+
+    // --- Reports Modal Listeners ---
+    generateDailySalesReportBtn.addEventListener('click', generateDailySalesReport);
+    sendDailyReportViaWhatsAppBtn.addEventListener('click', () => {
+        if (lastGeneratedDailyReport) {
+            sendWhatsAppMessage('', generateWhatsAppDailyReportMessage(lastGeneratedDailyReport)); // Prompt for number
+        } else {
+            showCustomMessage('Information', 'Please generate the daily sales report first.', 'info');
+        }
+    });
+
+    generateProductSalesReportBtn.addEventListener('click', generateProductSalesReport);
+    sendProductReportViaWhatsAppBtn.addEventListener('click', () => {
+        if (lastGeneratedProductReport) {
+            sendWhatsAppMessage('', generateWhatsAppProductReportMessage(lastGeneratedProductReport)); // Prompt for number
+        } else {
+            showCustomMessage('Information', 'Please generate the product sales report first.', 'info');
+        }
+    });
+
+    generateCustomerHistoryReportBtn.addEventListener('click', generateCustomerHistoryReport);
+    sendCustomerHistoryReportViaWhatsAppBtn.addEventListener('click', () => {
+        if (lastGeneratedCustomerHistoryReport) {
+            // If a customer is selected on the main billing screen, use their number. Otherwise, prompt.
+            const phoneNumber = selectedCustomer ? selectedCustomer.phone : '';
+            sendWhatsAppMessage(phoneNumber, generateWhatsAppCustomerHistoryReportMessage(lastGeneratedCustomerHistoryReport));
+        } else {
+            showCustomMessage('Information', 'Please generate the customer history report first.', 'info');
+        }
+    });
+
+
+    // When the reports modal is shown, ensure the initial tab's content is generated
+    // This makes sure the first report is ready when the modal opens
+    reportsModal._element.addEventListener('shown.bs.modal', () => {
+        // Automatically set current date for end date for daily report for convenience
+        const today = new Date();
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+
+        endDateInput.valueAsDate = today;
+        startDateInput.valueAsDate = thirtyDaysAgo;
+
+        productSalesReportEndDate.valueAsDate = today;
+        const ninetyDaysAgoProduct = new Date();
+        ninetyDaysAgoProduct.setDate(today.getDate() - 90);
+        productSalesReportStartDate.valueAsDate = ninetyDaysAgoProduct;
+
+        customerHistoryEndDate.valueAsDate = today;
+        const ninetyDaysAgoCustomer = new Date();
+        ninetyDaysAgoCustomer.setDate(today.getDate() - 90);
+        customerHistoryStartDate.valueAsDate = ninetyDaysAgoCustomer;
+
+
+        // Trigger the initial report generation for the active tab (Daily Sales by default)
+        generateDailySalesReport();
+    });
+
+    // Event listener for tab changes to regenerate report for the active tab
+    const reportsTab = document.getElementById('reportsTab');
+    reportsTab.addEventListener('shown.bs.tab', (event) => {
+        const activeTabId = event.target.id;
+        if (activeTabId === 'daily-sales-tab') {
+            generateDailySalesReport();
+        } else if (activeTabId === 'product-sales-tab') {
+            generateProductSalesReport();
+        } else if (activeTabId === 'customer-history-tab') {
+            generateCustomerHistoryReport();
+        }
+    });
+
+
+    // --- Initial Renders ---
+    renderCustomerList();
+    renderProductList();
+    renderBillItems();
+    renderProductListManagement();
+    renderCustomerListManagement();
+});
+</script>
+</body>
+</html>
