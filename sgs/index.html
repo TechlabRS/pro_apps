@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Gen Str Billing System</title>
+    <title>Smart Gen Nxt StoreBilling System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
@@ -13,12 +13,26 @@
         .navbar {
             background-color: #007bff; /* Primary blue */
         }
-        .navbar-brand, .nav-link {
+        .navbar-brand, .main-nav .nav-link { /* Adjusted to include .main-nav */
             color: #ffffff !important;
         }
         .navbar-nav .nav-link.active,
         .navbar-nav .nav-link:hover {
             color: #e2e6ea !important;
+        }
+        /* New styles for reports modal tabs */
+        #reportsModal .nav-tabs .nav-link {
+            color: #343a40; /* Darker text for visibility on white background */
+            background-color: #f8f9fa; /* Slightly off-white for distinction */
+            border-color: #dee2e6 #dee2e6 #fff; /* Standard Bootstrap tab borders */
+        }
+        #reportsModal .nav-tabs .nav-link.active {
+            color: #007bff; /* Blue for the active tab */
+            background-color: #ffffff; /* White background for active tab */
+            border-color: #dee2e6 #dee2e6 #fff;
+        }
+        #reportsModal .nav-tabs .nav-link:hover {
+            border-color: #e9ecef #e9ecef #dee2e6; /* Hover border */
         }
         .card-header {
             background-color: #e9ecef;
@@ -99,17 +113,42 @@
             color: white;
             border-color: #1DA851;
         }
+        /* Style for chips (product variants, categories) */
+        .product-variant-chip, .category-chip, .product-item-chip { /* Added product-item-chip */
+            display: inline-block;
+            padding: .5rem 1rem;
+            margin: .25rem;
+            border: 1px solid #007bff;
+            border-radius: 20px;
+            background-color: #e0f2ff;
+            color: #007bff;
+            cursor: pointer;
+            font-size: .85rem;
+            transition: all 0.2s ease-in-out;
+        }
+        .product-variant-chip:hover, .category-chip:hover, .product-item-chip:hover { /* Added product-item-chip */
+            background-color: #007bff;
+            color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+        }
+        .product-variant-chip.selected, .category-chip.selected, .product-item-chip.selected { /* Added product-item-chip */
+            background-color: #007bff;
+            color: #fff;
+            border-color: #007bff;
+            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">Smart Gen.Str </a>
+            <a class="navbar-brand" href="#">Smart Gen Nxt Store</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 main-nav"> <!-- Added main-nav class here -->
                     <li class="nav-item">
                         <a class="nav-link active" aria-current="page" href="#">Billing</a>
                     </li>
@@ -151,6 +190,11 @@
                             <span id="selectedCustomerDisplay" class="badge bg-secondary ms-2 p-2">No customer selected</span>
                             <button class="btn btn-outline-danger btn-sm ms-2" id="clearCustomerBtn">Clear</button>
                         </div>
+                        <!-- New: Display for customer's total due amount -->
+                        <div class="mb-3">
+                            <strong>Total Due:</strong>
+                            <span id="customerTotalDueDisplay" class="badge bg-danger ms-2 p-2">₹ 0.00</span>
+                        </div>
                         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCustomerModal">Add New Customer</button>
                         <hr>
                         <h6>Customer's Past Bills:</h6>
@@ -168,18 +212,32 @@
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <label for="productSearch" class="form-label">Search Product</label>
                                 <input type="text" class="form-control" id="productSearch" placeholder="Product Name">
-                                <div id="productList" class="list-group mt-2">
-                                    </div>
+                                <!-- Changed productList to be a flex container for chips directly -->
+                                <div id="productList" class="mt-2 d-flex flex-wrap gap-2">
+                                    <!-- Product chips will be here -->
+                                </div>
+                                <!-- New: Display selected product name here, replacing the search list -->
+                                <div id="selectedProductBillingDisplay" class="mt-2 p-2 border rounded bg-light d-none">
+                                    <strong>Selected Product:</strong> <span id="selectedProductNameDisplay"></span>
+                                    <button class="btn btn-sm btn-outline-secondary ms-2" id="clearProductSelectionBtn">Change</button>
+                                </div>
                             </div>
-                            <div class="col-md-3">
-                                <label for="productQuantity" class="form-label">Quantity</label>
-                                <input type="number" class="form-control" id="productQuantity" value="1" min="1">
+                            <!-- New section for product variants (chips) -->
+                            <div class="col-md-12 mt-2">
+                                <div id="productVariantsContainer" class="d-flex flex-wrap gap-2">
+                                    <!-- Product chips will be rendered here -->
+                                </div>
+                                <small id="variantSelectionHint" class="text-muted mt-2 d-none">Select a variant above before adding to bill.</small>
                             </div>
-                            <div class="col-md-3 d-flex align-items-end">
-                                <button class="btn btn-success w-100" id="addProductToBillBtn">Add to Bill</button>
+                            <div class="col-md-3 mt-3">
+                                <label for="productQuantity" class="form-label">Quantity (Multiples of selected variant)</label>
+                                <input type="number" class="form-control" id="productQuantity" value="1" min="1" disabled>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end mt-3">
+                                <button class="btn btn-success w-100" id="addProductToBillBtn" disabled>Add to Bill</button>
                             </div>
                         </div>
 
@@ -190,7 +248,7 @@
                                     <tr>
                                         <th>Item</th>
                                         <th>Quantity</th>
-                                        <th>Price</th>
+                                        <th>Price (per unit)</th>
                                         <th>Total</th>
                                         <th>Actions</th>
                                     </tr>
@@ -325,6 +383,26 @@
                             <input type="text" class="form-control" id="productNameManagement" required>
                         </div>
                         <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <div id="addProductCategoryChips" class="d-flex flex-wrap gap-2">
+                                <!-- Category chips will be dynamically loaded here -->
+                            </div>
+                        </div>
+                        <hr>
+                        <h6>Default Variant Details (First Variant)</h6>
+                        <div class="mb-3">
+                            <label for="productVariantDisplayNameManagement" class="form-label">Variant Display Name (e.g., Rice (1kg))</label>
+                            <input type="text" class="form-control" id="productVariantDisplayNameManagement" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="productVariantUnitManagement" class="form-label">Unit (e.g., kg, L, pc)</label>
+                            <input type="text" class="form-control" id="productVariantUnitManagement" placeholder="e.g., kg, L, pc" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="productVariantQuantityManagement" class="form-label">Quantity (e.g., 1, 0.5, 5)</label>
+                            <input type="number" class="form-control" id="productVariantQuantityManagement" step="0.01" min="0.01" value="1" required>
+                        </div>
+                        <div class="mb-3">
                             <label for="productPriceManagement" class="form-label">Price (₹)</label>
                             <input type="number" class="form-control" id="productPriceManagement" step="0.01" min="0.01" required>
                         </div>
@@ -339,7 +417,7 @@
     </div>
 
     <div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title" id="editProductModalLabel">Edit Product</h5>
@@ -352,13 +430,60 @@
                             <input type="text" class="form-control" id="editProductName" required>
                         </div>
                         <div class="mb-3">
-                            <label for="editProductPrice" class="form-label">Price (₹)</label>
-                            <input type="number" class="form-control" id="editProductPrice" step="0.01" min="0.01" required>
+                            <label class="form-label">Category</label>
+                            <div id="editProductCategoryChips" class="d-flex flex-wrap gap-2">
+                                <!-- Category chips will be dynamically loaded here -->
+                            </div>
                         </div>
+                        <hr>
+                        <h6>Product Variants</h6>
+                        <div id="editProductVariantsContainer" class="d-flex flex-wrap gap-2 mb-3">
+                            <!-- Variants will be rendered here as chips -->
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-success me-2" id="addEditProductVariantBtn">Add/Edit Variant</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" id="deleteProductVariantBtn">Delete Selected Variant</button>
+                        <small id="noVariantSelectedHint" class="text-muted ms-2 d-none">Select a variant chip to edit or delete.</small>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <button type="submit" class="btn btn-primary">Save Product Details</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addEditVariantModal" tabindex="-1" aria-labelledby="addEditVariantModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="addEditVariantModalLabel">Add/Edit Product Variant</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="addEditVariantForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="currentEditingVariantProductId">
+                        <input type="hidden" id="currentEditingVariantId">
+                        <div class="mb-3">
+                            <label for="variantDisplayName" class="form-label">Variant Display Name (e.g., Rice (1kg))</label>
+                            <input type="text" class="form-control" id="variantDisplayName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="variantUnit" class="form-label">Unit (e.g., kg, L, pc)</label>
+                            <input type="text" class="form-control" id="variantUnit" placeholder="e.g., kg, L, pc" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="variantQuantity" class="form-label">Quantity (e.g., 1, 0.5, 5)</label>
+                            <input type="number" class="form-control" id="variantQuantity" step="0.01" min="0.01" value="1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="variantPrice" class="form-label">Price (₹)</label>
+                            <input type="number" class="form-control" id="variantPrice" step="0.01" min="0.01" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success" id="saveVariantBtn">Save Variant</button>
                     </div>
                 </form>
             </div>
@@ -433,6 +558,9 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="customer-history-tab" data-bs-toggle="tab" data-bs-target="#customer-history" type="button" role="tab" aria-controls="customer-history" aria-selected="false">Customer History</button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="price-chart-tab" data-bs-toggle="tab" data-bs-target="#price-chart" type="button" role="tab" aria-controls="price-chart" aria-selected="false">Price Chart</button>
+                        </li>
                     </ul>
                     <div class="tab-content" id="reportsTabContent">
                         <div class="tab-pane fade show active" id="daily-sales" role="tabpanel" aria-labelledby="daily-sales-tab">
@@ -497,6 +625,30 @@
                                 <p class="text-muted text-center">Click "Generate Report" to see all customer purchase summaries, or select a date range.</p>
                             </div>
                         </div>
+
+                        <div class="tab-pane fade" id="price-chart" role="tabpanel" aria-labelledby="price-chart-tab">
+                            <h6 class="mb-3">Product Price History Chart</h6>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label for="chartProductSelect" class="form-label">Select Product:</label>
+                                    <select class="form-select" id="chartProductSelect">
+                                        <option value="">Select a Product</option>
+                                        <!-- Products will be loaded here -->
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="chartVariantSelect" class="form-label">Select Variant:</label>
+                                    <select class="form-select" id="chartVariantSelect" disabled>
+                                        <option value="">Select a Variant</option>
+                                        <!-- Variants will be loaded here -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="report-content" style="height: 350px;">
+                                <canvas id="priceChartCanvas"></canvas>
+                                <p id="priceChartMessage" class="text-muted text-center mt-3">Select a product and variant to view its price history.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -508,9 +660,7 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <script src="script.js"></script>
-</body>
-</html>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -544,24 +694,115 @@ document.addEventListener('DOMContentLoaded', () => {
         saveCustomers(customers); // Save defaults to localStorage for the very first run
     }
 
+    // Predefined product categories
+    const productCategories = [
+        'Grains & Pulses',
+        'Oils & Ghee',
+        'Spices & Masalas',
+        'Snacks & Biscuits',
+        'Beverages',
+        'Dairy & Eggs',
+        'Bakery',
+        'Frozen Foods',
+        'Personal Care',
+        'Home Care',
+        'Sweets & Chocolates',
+        'Others'
+    ];
+
     // Initialize Products: Check localStorage first. If empty, load defaults and save them.
+    // Also, ensure each product has a 'variants' array and each variant has a priceHistory for robustness.
     let products = JSON.parse(localStorage.getItem('kiranaProducts'));
     if (!products || products.length === 0) {
         products = [
-            { id: 'P001', name: 'Rice (1kg)', price: 60.00 },
-            { id: 'P002', name: 'Wheat Flour (5kg)', price: 180.00 },
-            { id: 'P003', name: 'Sugar (1kg)', price: 45.00 },
-            { id: 'P004', name: 'Toor Dal (500g)', price: 75.00 },
-            { id: 'P005', name: 'Cooking Oil (1L)', price: 150.00 },
-            { id: 'P011', name: 'Cooking Oil (500ml)', price: 75.00 }, // New variant
-            { id: 'P012', name: 'Cooking Oil (2L)', price: 290.00 },   // New variant
-            { id: 'P006', name: 'Salt (1kg)', price: 20.00 },
-            { id: 'P007', name: 'Tea Powder (250g)', price: 120.00 },
-            { id: 'P008', name: 'Coffee (100g)', price: 90.00 },
-            { id: 'P009', name: 'Milk (500ml)', price: 30.00 },
-            { id: 'P010', name: 'Eggs (Dozen)', price: 70.00 }
+            {
+                id: 'P001', name: 'Rice', category: 'Grains & Pulses',
+                variants: [
+                    { variantId: 'P001V1', displayName: 'Rice (1kg)', unit: 'kg', quantity: 1, price: 60.00, priceHistory: [{ date: new Date().toISOString(), price: 60.00 }] },
+                    { variantId: 'P001V2', displayName: 'Rice (5kg)', unit: 'kg', quantity: 5, price: 280.00, priceHistory: [{ date: new Date().toISOString(), price: 280.00 }] },
+                    { variantId: 'P001V3', displayName: 'Rice (10kg)', unit: 'kg', quantity: 10, price: 550.00, priceHistory: [{ date: new Date().toISOString(), price: 550.00 }] }
+                ]
+            },
+            {
+                id: 'P002', name: 'Wheat Flour', category: 'Grains & Pulses',
+                variants: [
+                    { variantId: 'P002V1', displayName: 'Wheat Flour (1kg)', unit: 'kg', quantity: 1, price: 40.00, priceHistory: [{ date: new Date().toISOString(), price: 40.00 }] },
+                    { variantId: 'P002V2', displayName: 'Wheat Flour (5kg)', unit: 'kg', quantity: 5, price: 180.00, priceHistory: [{ date: new Date().toISOString(), price: 180.00 }] }
+                ]
+            },
+            {
+                id: 'P003', name: 'Sugar', category: 'Spices & Masalas',
+                variants: [
+                    { variantId: 'P003V1', displayName: 'Sugar (500g)', unit: 'kg', quantity: 0.5, price: 25.00, priceHistory: [{ date: new Date().toISOString(), price: 25.00 }] },
+                    { variantId: 'P003V2', displayName: 'Sugar (1kg)', unit: 'kg', quantity: 1, price: 45.00, priceHistory: [{ date: new Date().toISOString(), price: 45.00 }] }
+                ]
+            },
+            {
+                id: 'P004', name: 'Toor Dal', category: 'Grains & Pulses',
+                variants: [
+                    { variantId: 'P004V1', displayName: 'Toor Dal (500g)', unit: 'kg', quantity: 0.5, price: 75.00, priceHistory: [{ date: new Date().toISOString(), price: 75.00 }] },
+                    { variantId: 'P004V2', displayName: 'Toor Dal (1kg)', unit: 'kg', quantity: 1, price: 140.00, priceHistory: [{ date: new Date().toISOString(), price: 140.00 }] }
+                ]
+            },
+            {
+                id: 'P005', name: 'Cooking Oil', category: 'Oils & Ghee',
+                variants: [
+                    { variantId: 'P005V1', displayName: 'Cooking Oil (500ml)', unit: 'L', quantity: 0.5, price: 75.00, priceHistory: [{ date: new Date().toISOString(), price: 75.00 }] },
+                    { variantId: 'P005V2', displayName: 'Cooking Oil (1L)', unit: 'L', quantity: 1, price: 150.00, priceHistory: [{ date: new Date().toISOString(), price: 150.00 }] },
+                    { variantId: 'P005V3', displayName: 'Cooking Oil (2L)', unit: 'L', quantity: 2, price: 290.00, priceHistory: [{ date: new Date().toISOString(), price: 290.00 }] }
+                ]
+            },
+            {
+                id: 'P006', name: 'Salt', category: 'Spices & Masalas',
+                variants: [
+                    { variantId: 'P006V1', displayName: 'Salt (1kg)', unit: 'kg', quantity: 1, price: 20.00, priceHistory: [{ date: new Date().toISOString(), price: 20.00 }] }
+                ]
+            },
+            {
+                id: 'P007', name: 'Tea Powder', category: 'Beverages',
+                variants: [
+                    { variantId: 'P007V1', displayName: 'Tea Powder (100g)', unit: 'kg', quantity: 0.1, price: 50.00, priceHistory: [{ date: new Date().toISOString(), price: 50.00 }] },
+                    { variantId: 'P007V2', displayName: 'Tea Powder (250g)', unit: 'kg', quantity: 0.25, price: 120.00, priceHistory: [{ date: new Date().toISOString(), price: 120.00 }] }
+                ]
+            },
+            {
+                id: 'P008', name: 'Coffee', category: 'Beverages',
+                variants: [
+                    { variantId: 'P008V1', displayName: 'Coffee (50g)', unit: 'kg', quantity: 0.05, price: 50.00, priceHistory: [{ date: new Date().toISOString(), price: 50.00 }] },
+                    { variantId: 'P008V2', displayName: 'Coffee (100g)', unit: 'kg', quantity: 0.1, price: 90.00, priceHistory: [{ date: new Date().toISOString(), price: 90.00 }] }
+                ]
+            },
+            {
+                id: 'P009', name: 'Milk', category: 'Dairy & Eggs',
+                variants: [
+                    { variantId: 'P009V1', displayName: 'Milk (500ml)', unit: 'L', quantity: 0.5, price: 30.00, priceHistory: [{ date: new Date().toISOString(), price: 30.00 }] },
+                    { variantId: 'P009V2', displayName: 'Milk (1L)', unit: 'L', quantity: 1, price: 60.00, priceHistory: [{ date: new Date().toISOString(), price: 60.00 }] }
+                ]
+            },
+            {
+                id: 'P010', name: 'Eggs', category: 'Dairy & Eggs',
+                variants: [
+                    { variantId: 'P010V1', displayName: 'Eggs (6 pcs)', unit: 'pc', quantity: 6, price: 40.00, priceHistory: [{ date: new Date().toISOString(), price: 40.00 }] },
+                    { variantId: 'P010V2', displayName: 'Eggs (12 pcs)', unit: 'pc', quantity: 12, price: 70.00, priceHistory: [{ date: new Date().toISOString(), price: 70.00 }] }
+                ]
+            }
         ];
         saveProducts(products); // Save defaults to localStorage for the very first run
+    } else {
+        // Ensure all loaded products have a 'variants' array and each variant has a priceHistory array
+        products = products.map(product => {
+            if (!product.variants || !Array.isArray(product.variants)) {
+                product.variants = [];
+            }
+            product.variants = product.variants.map(variant => {
+                if (!variant.priceHistory || !Array.isArray(variant.priceHistory)) {
+                    variant.priceHistory = [{ date: new Date().toISOString(), price: variant.price }];
+                }
+                return variant;
+            });
+            return product;
+        });
+        saveProducts(products); // Save corrected structure back if any changes were made
     }
 
 
@@ -576,7 +817,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let customerBills = JSON.parse(localStorage.getItem('kiranaCustomerBills')) || {};
 
-    let selectedProductForAdding = null; // Track currently selected product from search for adding to bill
+    // Track currently selected main product and its variant for adding to bill
+    let selectedProductForAdding = null; // The main product object (e.g., Rice)
+    let selectedVariantForAdding = null; // The specific variant object (e.g., Rice (1kg))
+
+    // Track currently selected category and variant for product management modals
+    let currentSelectedCategoryForManagement = null;
+    let currentSelectedVariantForManagement = null;
+
 
     // --- Global variables for WhatsApp integration ---
     let lastGeneratedBill = null;
@@ -591,9 +839,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedCustomerDisplay = document.getElementById('selectedCustomerDisplay');
     const clearCustomerBtn = document.getElementById('clearCustomerBtn');
     const customerBillHistoryDiv = document.getElementById('customerBillHistory');
+    const customerTotalDueDisplay = document.getElementById('customerTotalDueDisplay'); // New element
 
     const productSearchInput = document.getElementById('productSearch');
-    const productListDiv = document.getElementById('productList');
+    const productListDiv = document.getElementById('productList'); // Now a flex container for product-item-chips
+    // New: Element to display selected product and clear button
+    const selectedProductBillingDisplay = document.getElementById('selectedProductBillingDisplay');
+    const selectedProductNameDisplay = document.getElementById('selectedProductNameDisplay');
+    const clearProductSelectionBtn = document.getElementById('clearProductSelectionBtn');
+
+    // Container for displaying product variant chips
+    const productVariantsContainer = document.getElementById('productVariantsContainer');
+    const variantSelectionHint = document.getElementById('variantSelectionHint');
+
+
     const productQuantityInput = document.getElementById('productQuantity');
     const addProductToBillBtn = document.getElementById('addProductToBillBtn');
     const billItemsTableBody = document.getElementById('billItemsTableBody');
@@ -616,6 +875,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const addProductModal = new bootstrap.Modal(document.getElementById('addProductModal'));
     const addCustomerModal = new bootstrap.Modal(document.getElementById('addCustomerModal'));
     const editProductModal = new bootstrap.Modal(document.getElementById('editProductModal'));
+    const addEditVariantModal = new bootstrap.Modal(document.getElementById('addEditVariantModal')); // New variant modal
     const editCustomerModal = new bootstrap.Modal(document.getElementById('editCustomerModal'));
 
     const addCustomerForm = document.getElementById('addCustomerForm');
@@ -627,14 +887,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const addProductFormManagement = document.getElementById('addProductFormManagement');
     const productNameInputManagement = document.getElementById('productNameManagement');
-    const productPriceInputManagement = document.getElementById('productPriceManagement');
+    const addProductCategoryChips = document.getElementById('addProductCategoryChips'); // Changed to div for chips
+    const productVariantDisplayNameManagement = document.getElementById('productVariantDisplayNameManagement');
+    const productVariantUnitManagement = document.getElementById('productVariantUnitManagement');
+    const productVariantQuantityManagement = document.getElementById('productVariantQuantityManagement');
+    const productPriceManagement = document.getElementById('productPriceManagement');
+
 
     const customerListManagementDiv = document.getElementById('customerListManagement');
 
     const editProductNameInput = document.getElementById('editProductName');
-    const editProductPriceInput = document.getElementById('editProductPrice');
+    const editProductCategoryChips = document.getElementById('editProductCategoryChips'); // Changed to div for chips
+    const editProductVariantsContainer = document.getElementById('editProductVariantsContainer'); // New container for variants
+    const addEditProductVariantBtn = document.getElementById('addEditProductVariantBtn'); // New button
+    const deleteProductVariantBtn = document.getElementById('deleteProductVariantBtn'); // New button
+    const noVariantSelectedHint = document.getElementById('noVariantSelectedHint'); // New hint
     const editProductForm = document.getElementById('editProductForm');
-    let currentEditProductId = null;
+    let currentEditProductId = null; // This will now refer to the main product ID
+
+    const addEditVariantForm = document.getElementById('addEditVariantForm'); // New variant form
+    const addEditVariantModalLabel = document.getElementById('addEditVariantModalLabel'); // New variant modal label
+    const variantDisplayNameInput = document.getElementById('variantDisplayName');
+    const variantUnitInput = document.getElementById('variantUnit');
+    const variantQuantityInput = document.getElementById('variantQuantity');
+    const variantPriceInput = document.getElementById('variantPrice');
+    const currentEditingVariantProductId = document.getElementById('currentEditingVariantProductId'); // Hidden input
+    const currentEditingVariantId = document.getElementById('currentEditingVariantId'); // Hidden input
+    const saveVariantBtn = document.getElementById('saveVariantBtn');
+
 
     const editCustomerNameInput = document.getElementById('editCustomerName');
     const editCustomerPhoneInput = document.getElementById('editCustomerPhone');
@@ -664,9 +944,54 @@ document.addEventListener('DOMContentLoaded', () => {
     const customerHistoryReportContent = document.getElementById('customerHistoryReportContent');
     const sendCustomerHistoryReportViaWhatsAppBtn = document.getElementById('sendCustomerHistoryReportViaWhatsAppBtn'); // New WhatsApp button
 
+    // Price Chart Elements
+    const chartProductSelect = document.getElementById('chartProductSelect');
+    const chartVariantSelect = document.getElementById('chartVariantSelect');
+    const priceChartCanvas = document.getElementById('priceChartCanvas');
+    const priceChartMessage = document.getElementById('priceChartMessage');
+    let priceChart = null; // Chart.js instance
+
 
     // --- Utility Functions ---
     const formatCurrency = (amount) => `₹ ${amount.toFixed(2)}`;
+
+    /**
+     * Masks a phone number to show only the last 4 digits.
+     * @param {string} phoneNumber - The full phone number.
+     * @returns {string} The masked phone number.
+     */
+    const maskPhoneNumber = (phoneNumber) => {
+        if (!phoneNumber || phoneNumber.length < 4) {
+            return phoneNumber; // Return as is if too short to mask
+        }
+        return 'X'.repeat(phoneNumber.length - 4) + phoneNumber.slice(-4);
+    };
+
+    // Function to render category chips for add/edit product modals
+    const renderCategoryChips = (containerElement, selectedCategory) => {
+        containerElement.innerHTML = ''; // Clear existing chips
+        currentSelectedCategoryForManagement = selectedCategory; // Set the initially selected category
+
+        productCategories.forEach(category => {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.classList.add('category-chip');
+            chip.textContent = category;
+            chip.dataset.category = category;
+
+            if (currentSelectedCategoryForManagement === category) {
+                chip.classList.add('selected');
+            }
+
+            chip.addEventListener('click', () => {
+                // Remove 'selected' from all chips in this container
+                containerElement.querySelectorAll('.category-chip').forEach(c => c.classList.remove('selected'));
+                chip.classList.add('selected');
+                currentSelectedCategoryForManagement = category;
+            });
+            containerElement.appendChild(chip);
+        });
+    };
 
     // --- WhatsApp Integration Functions ---
 
@@ -679,11 +1004,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!phoneNumber) {
             phoneNumber = prompt("Please enter the recipient's 10-digit phone number (e.g., 91XXXXXXXXXX for India):");
             if (!phoneNumber || !/^\d{10,15}$/.test(phoneNumber)) { // Basic validation for 10-15 digits
-                alert('Invalid phone number. Please enter a valid number.');
+                showCustomMessage('Error', 'Invalid phone number. Please enter a valid number.', 'danger');
                 return;
             }
             // Prepend '91' if the number is 10 digits and seems like an Indian number without country code
-            if (phoneNumber.length === 10 && phoneNumber.startsWith('7' || '8' || '9')) { // Common Indian mobile starting digits
+            if (phoneNumber.length === 10 && (phoneNumber.startsWith('7') || phoneNumber.startsWith('8') || phoneNumber.startsWith('9'))) { // Common Indian mobile starting digits
                 phoneNumber = '91' + phoneNumber;
             }
         }
@@ -699,17 +1024,19 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {string} The formatted bill message.
      */
     const generateWhatsAppBillMessage = (bill) => {
-        let message = `*Kirana Shop - Bill Receipt*\n\n`;
+        let message = `*Smart Gen Nxt Store- Bill Receipt*\n\n`;
         message += `*Bill ID:* ${bill.billId}\n`;
         message += `*Date:* ${new Date(bill.date).toLocaleString()}\n`;
-        message += `*Customer:* ${bill.customer.name} (${bill.customer.phone})\n`;
+        // Use masked phone number for WhatsApp message
+        message += `*Customer:* ${bill.customer.name} (${maskPhoneNumber(bill.customer.phone)})\n`;
         if (bill.customer.address) {
             message += `*Address:* ${bill.customer.address}\n`;
         }
         message += `--------------------------------\n`;
         message += `*Items:*\n`;
         bill.items.forEach(item => {
-            message += `${item.name} (Qty: ${item.quantity}) - ${formatCurrency(item.total)}\n`;
+            // item.name now holds the variant's display name, and item.price is the variant's price
+            message += `${item.name} (Qty: ${item.quantityInBill}) - ${formatCurrency(item.total)}\n`; // Use quantityInBill
         });
         message += `--------------------------------\n`;
         message += `*Total:* ${formatCurrency(bill.total)}\n`;
@@ -722,7 +1049,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         message += `--------------------------------\n`;
         message += `Thank you for your purchase! Visit again! 🙏\n`;
-        message += `Smart Gen.Str\nAllagadda, Andhra Pradesh`;
+        message += `Smart Gen Nxt Store\nAllagadda, Andhra Pradesh`;
         return message;
     };
 
@@ -732,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {string} The formatted report message.
      */
     const generateWhatsAppDailyReportMessage = (reportContentHtml) => {
-        let message = `*Kirana Shop - Daily Sales Report*\n\n`;
+        let message = `*Smart Gen Nxt Store- Daily Sales Report*\n\n`;
         // Basic parsing of HTML to get text content for WhatsApp
         const parser = new DOMParser();
         const doc = parser.parseFromString(reportContentHtml, 'text/html');
@@ -762,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {string} The formatted report message.
      */
     const generateWhatsAppProductReportMessage = (reportContentHtml) => {
-        let message = `*Kirana Shop - Product Sales Report*\n\n`;
+        let message = `*Smart Gen Nxt Store- Product Sales Report*\n\n`;
         const parser = new DOMParser();
         const doc = parser.parseFromString(reportContentHtml, 'text/html');
 
@@ -786,7 +1113,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {string} The formatted report message.
      */
     const generateWhatsAppCustomerHistoryReportMessage = (reportContentHtml) => {
-        let message = `*Kirana Shop - Customer Purchase History Report*\n\n`;
+        let message = `*Smart Gen Nxt Store- Customer Purchase History Report*\n\n`;
         const parser = new DOMParser();
         const doc = parser.parseFromString(reportContentHtml, 'text/html');
 
@@ -842,6 +1169,7 @@ document.addEventListener('DOMContentLoaded', () => {
         customerListDiv.innerHTML = '';
         customerSearchInput.value = '';
         displayCustomerBillHistory(customer.id);
+        updateCustomerTotalDue(customer.id); // Update due amount
         updatePaymentDetails();
     };
 
@@ -849,10 +1177,28 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedCustomer = null;
         selectedCustomerDisplay.textContent = 'No customer selected';
         selectedCustomerDisplay.classList.remove('active');
+        customerTotalDueDisplay.textContent = formatCurrency(0); // Clear due amount
         renderCustomerList();
         customerSearchInput.value = '';
         customerBillHistoryDiv.innerHTML = '<p class="text-muted">Select a customer to view their past bills.</p>';
     };
+
+    const updateCustomerTotalDue = (customerId) => {
+        const bills = customerBills[customerId] || [];
+        let totalDue = 0;
+        bills.forEach(bill => {
+            totalDue += bill.amountDue;
+        });
+        customerTotalDueDisplay.textContent = formatCurrency(totalDue);
+        if (totalDue > 0) {
+            customerTotalDueDisplay.classList.remove('bg-secondary', 'bg-success');
+            customerTotalDueDisplay.classList.add('bg-danger');
+        } else {
+            customerTotalDueDisplay.classList.remove('bg-danger');
+            customerTotalDueDisplay.classList.add('bg-success');
+        }
+    };
+
 
     const displayCustomerBillHistory = (customerId) => {
         customerBillHistoryDiv.innerHTML = '';
@@ -909,78 +1255,166 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Product Billing Functions ---
     const renderProductList = (searchTerm = '') => {
-        productListDiv.innerHTML = '';
-        selectedProductForAdding = null; // Reset selection whenever search input changes
+        // Hide selected product display
+        selectedProductBillingDisplay.classList.add('d-none');
 
-        const filteredProducts = products.filter(product =>
-            product.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        // Ensure product search input is visible for typing
+        productSearchInput.classList.remove('d-none');
 
-        if (filteredProducts.length > 0) {
-            filteredProducts.forEach(product => {
-                const li = document.createElement('a');
-                li.href = '#';
-                li.classList.add('list-group-item', 'list-group-item-action');
-                li.innerHTML = `<strong>${product.name}</strong> <span class="float-end">${formatCurrency(product.price)}</span>`;
-                li.addEventListener('click', () => {
-                    // IMPORTANT: Set the selected product object
-                    selectedProductForAdding = product;
-                    productSearchInput.value = product.name; // Autopopulate search input
-                    productQuantityInput.focus(); // Focus on quantity for quick entry
-                    productListDiv.innerHTML = ''; // Clear list after selection
+        // Clear existing product chips and variant chips
+        productListDiv.innerHTML = ''; // This will now hold product-item-chips
+        productVariantsContainer.innerHTML = '';
+        selectedProductForAdding = null;
+        selectedVariantForAdding = null;
+        variantSelectionHint.classList.add('d-none');
+
+        // Disable quantity and add to bill button
+        productQuantityInput.disabled = true;
+        addProductToBillBtn.disabled = true;
+
+        const productsToDisplay = searchTerm
+            ? products.filter(product => product.name.toLowerCase().includes(searchTerm.toLowerCase()))
+            : products; // Show all products if search is empty
+
+        if (productsToDisplay.length > 0) {
+            productsToDisplay.forEach(product => {
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.classList.add('product-item-chip'); // Using a new class for product chips
+                chip.textContent = product.name;
+                chip.dataset.productId = product.id;
+                chip.addEventListener('click', () => {
+                    // Remove 'selected' from all product chips
+                    productListDiv.querySelectorAll('.product-item-chip').forEach(c => c.classList.remove('selected'));
+                    chip.classList.add('selected'); // Add 'selected' to the clicked product chip
+                    selectProductForBilling(product);
                 });
-                productListDiv.appendChild(li);
+                productListDiv.appendChild(chip);
             });
-        } else if (searchTerm) {
-            productListDiv.innerHTML = '<div class="list-group-item text-muted">No products found.</div>';
         } else {
-            productListDiv.innerHTML = '<div class="list-group-item text-muted">Start typing to search products.</div>';
+            productListDiv.innerHTML = '<div class="text-muted">No products found matching your search.</div>';
         }
+    };
+
+
+    const selectProductForBilling = (product) => {
+        selectedProductForAdding = product;
+        selectedVariantForAdding = null; // Ensure no variant is pre-selected
+
+        // Hide search input and product chips, show selected product display
+        productSearchInput.classList.add('d-none');
+        productListDiv.classList.add('d-none'); // Hide the product chips container
+        selectedProductBillingDisplay.classList.remove('d-none');
+        selectedProductNameDisplay.textContent = product.name;
+
+        // Render variants as chips
+        productVariantsContainer.innerHTML = '';
+        // Only attempt to sort and iterate if product.variants is an array and has elements
+        if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+            product.variants.sort((a, b) => a.quantity - b.quantity).forEach(variant => { // Sort variants by quantity
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.classList.add('product-variant-chip');
+                chip.textContent = `${variant.displayName} (${formatCurrency(variant.price)})`;
+                chip.dataset.variantId = variant.variantId;
+                chip.addEventListener('click', (event) => {
+                    selectVariantForBilling(variant, event.target);
+                });
+                productVariantsContainer.appendChild(chip);
+            });
+            variantSelectionHint.classList.remove('d-none'); // Show hint
+        } else {
+            productVariantsContainer.innerHTML = '<p class="text-muted mt-2">No variants available for this product. Please add variants via Manage Products.</p>';
+            variantSelectionHint.classList.add('d-none'); // Hide hint as no variants to select
+        }
+        
+        // Disable quantity and add to bill until a variant is selected
+        productQuantityInput.disabled = true;
+        addProductToBillBtn.disabled = true;
+    };
+
+    const clearProductSelection = () => {
+        selectedProductForAdding = null;
+        selectedVariantForAdding = null;
+        productSearchInput.value = '';
+        productVariantsContainer.innerHTML = '';
+        variantSelectionHint.classList.add('d-none');
+        productQuantityInput.disabled = true; // Disable after clearing
+        addProductToBillBtn.disabled = true; // Disable after clearing
+        
+        // Show product search input and product chips again
+        productSearchInput.classList.remove('d-none');
+        productListDiv.classList.remove('d-none'); // Show the product chips container
+        selectedProductBillingDisplay.classList.add('d-none'); // Hide the selected product display
+
+        renderProductList(''); // Re-render the search list (empty search term to show initial state with all products as chips)
+    };
+
+    const selectVariantForBilling = (variant, clickedChip) => {
+        selectedVariantForAdding = variant;
+        // Remove 'selected' class from all variant chips
+        document.querySelectorAll('.product-variant-chip').forEach(chip => {
+            chip.classList.remove('selected');
+        });
+        // Add 'selected' class to the clicked variant chip
+        clickedChip.classList.add('selected');
+        
+        // Enable quantity and add to bill button once a variant is selected
+        productQuantityInput.disabled = false;
+        addProductToBillBtn.disabled = false;
+        productQuantityInput.focus(); // Focus on quantity for quick entry
     };
 
     const addProductToBill = () => {
         const quantity = parseInt(productQuantityInput.value);
 
-        // IMPORTANT: Check if a specific product was selected from the list
         if (!selectedProductForAdding) {
-            showCustomMessage('Information', 'Please select a product from the search results list.', 'info');
+             showCustomMessage('Information', 'Please search for and select a main product first.', 'info');
+             return;
+        }
+
+        if (!selectedVariantForAdding) {
+            showCustomMessage('Information', 'Please select a specific product variant (e.g., \'Rice (1kg)\') from the chips above.', 'info');
             return;
         }
 
         if (isNaN(quantity) || quantity <= 0) {
-            showCustomMessage('Warning', 'Please enter a valid quantity greater than zero.', 'warning');
+            showCustomMessage('Warning', 'Please enter a valid quantity (multiples of selected variant) greater than zero.', 'warning');
             return;
         }
 
-        // Use the selected product object directly
-        const productToAdd = selectedProductForAdding;
+        // Use the selected variant object directly
+        const variantToAdd = selectedVariantForAdding;
 
-        // Check if item already exists in bill, update quantity if so
-        const existingItemIndex = currentBill.findIndex(item => item.id === productToAdd.id);
+        // Check if item (variant) already exists in bill, update quantity if so
+        const existingItemIndex = currentBill.findIndex(item => item.variantId === variantToAdd.variantId);
 
         if (existingItemIndex > -1) {
-            currentBill[existingItemIndex].quantity += quantity;
-            currentBill[existingItemIndex].total = currentBill[existingItemIndex].quantity * currentBill[existingItemIndex].price;
+            currentBill[existingItemIndex].quantityInBill += quantity; // Quantity of the variant itself
+            currentBill[existingItemIndex].total = currentBill[existingItemIndex].quantityInBill * currentBill[existingItemIndex].price;
         } else {
             // Add new item to bill
             currentBill.push({
-                id: productToAdd.id,
-                name: productToAdd.name,
-                price: productToAdd.price,
-                quantity: quantity,
-                total: productToAdd.price * quantity
+                productId: selectedProductForAdding.id, // Store main product ID
+                variantId: variantToAdd.variantId,
+                name: variantToAdd.displayName, // Display name for the bill
+                unit: variantToAdd.unit, // Unit of the variant (e.g., kg, L)
+                quantityPerUnit: variantToAdd.quantity, // Actual quantity of the variant (e.g., 1 for 1kg, 0.5 for 500ml)
+                price: variantToAdd.price, // Price of this variant
+                quantityInBill: quantity, // How many of this variant is being purchased (e.g., 2 of 5kg rice)
+                total: variantToAdd.price * quantity
             });
         }
 
         renderBillItems(); // Refresh the bill display
-        productSearchInput.value = ''; // Clear product search
+        // Clear all product selection state after adding to bill
+        clearProductSelection(); // Use the new clear function
         productQuantityInput.value = '1'; // Reset quantity
         productSearchInput.focus(); // Focus back to product search for next item
-        selectedProductForAdding = null; // Clear the selected product for the next addition
     };
 
-    const removeProductFromBill = (productId) => {
-        currentBill = currentBill.filter(item => item.id !== productId);
+    const removeProductFromBill = (variantId) => {
+        currentBill = currentBill.filter(item => item.variantId !== variantId);
         renderBillItems();
     };
 
@@ -997,12 +1431,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentBill.forEach(item => {
             const row = billItemsTableBody.insertRow();
+            // Display name from variant, quantity is quantityInBill
             row.innerHTML = `
                 <td>${item.name}</td>
-                <td><input type="number" class="form-control form-control-sm bill-item-qty" data-product-id="${item.id}" value="${item.quantity}" min="1"></td>
-                <td><input type="number" class="form-control form-control-sm bill-item-price" data-product-id="${item.id}" value="${item.price}" min="0.01" step="0.01"></td>
+                <td><input type="number" class="form-control form-control-sm bill-item-qty" data-variant-id="${item.variantId}" value="${item.quantityInBill}" min="1"></td>
+                <td><input type="number" class="form-control form-control-sm bill-item-price" data-variant-id="${item.variantId}" value="${item.price}" min="0.01" step="0.01"></td>
                 <td>${formatCurrency(item.total)}</td>
-                <td><button class="btn btn-danger btn-sm remove-item-btn" data-product-id="${item.id}">Remove</button></td>
+                <td><button class="btn btn-danger btn-sm remove-item-btn" data-variant-id="${item.variantId}">Remove</button></td>
             `;
             total += item.total;
         });
@@ -1012,24 +1447,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.remove-item-btn').forEach(button => {
             button.addEventListener('click', (event) => {
-                const productId = event.target.dataset.productId;
-                removeProductFromBill(productId);
+                const variantId = event.target.dataset.variantId;
+                removeProductFromBill(variantId);
             });
         });
 
         document.querySelectorAll('.bill-item-qty').forEach(input => {
             input.addEventListener('change', (event) => {
-                const productId = event.target.dataset.productId;
-                let newQuantity = parseInt(event.target.value);
-                const item = currentBill.find(i => i.id === productId);
+                const variantId = event.target.dataset.variantId;
+                let newQuantityInBill = parseInt(event.target.value);
+                const item = currentBill.find(i => i.variantId === variantId);
 
                 if (item) {
-                    if (isNaN(newQuantity) || newQuantity <= 0) {
-                        newQuantity = 1;
+                    if (isNaN(newQuantityInBill) || newQuantityInBill <= 0) {
+                        newQuantityInBill = 1;
                         event.target.value = 1;
                     }
-                    item.quantity = newQuantity;
-                    item.total = item.quantity * item.price;
+                    item.quantityInBill = newQuantityInBill;
+                    item.total = item.quantityInBill * item.price;
                     renderBillItems();
                 }
             });
@@ -1037,17 +1472,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.bill-item-price').forEach(input => {
             input.addEventListener('change', (event) => {
-                const productId = event.target.dataset.productId;
+                const variantId = event.target.dataset.variantId;
                 let newPrice = parseFloat(event.target.value);
-                const item = currentBill.find(i => i.id === productId);
+                const item = currentBill.find(i => i.variantId === variantId);
 
                 if (item) {
                     if (isNaN(newPrice) || newPrice <= 0) {
-                        newPrice = item.price;
+                        newPrice = item.price; // Revert to old price if invalid
                         event.target.value = item.price.toFixed(2);
                     }
                     item.price = newPrice;
-                    item.total = item.quantity * item.price;
+                    item.total = item.quantityInBill * item.price; // Recalculate total based on new price
                     renderBillItems();
                 }
             });
@@ -1061,7 +1496,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderBillItems();
             paymentAmountInput.value = '0';
             updatePaymentDetails();
-            selectedProductForAdding = null; // Clear any pending selection
+            clearProductSelection(); // Use the new clear function
         });
     };
 
@@ -1106,7 +1541,17 @@ document.addEventListener('DOMContentLoaded', () => {
             billId: `INV-${nextBillId++}`,
             date: new Date().toISOString(),
             customer: { ...selectedCustomer },
-            items: [...currentBill],
+            // Store items in the bill including their variant details
+            items: currentBill.map(item => ({
+                productId: item.productId,
+                variantId: item.variantId,
+                name: item.name, // Display name of the variant
+                unit: item.unit,
+                quantityPerUnit: item.quantityPerUnit,
+                price: item.price,
+                quantityInBill: item.quantityInBill, // How many of this variant (e.g., 2 bags of 5kg rice)
+                total: item.total
+            })),
             total: total,
             paymentReceived: paymentReceived,
             amountDue: amountDue,
@@ -1144,7 +1589,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 `);
                 printWindow.document.write('</style></head><body>');
                 printWindow.document.write(receiptContentDiv.innerHTML);
-                printWindow.document.write('</body></html>');
                 printWindow.document.close();
                 printWindow.focus();
                 printWindow.print();
@@ -1152,16 +1596,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 500);
         }
 
+        // After successful bill generation, update the customer's total due display
+        if (selectedCustomer) {
+            updateCustomerTotalDue(selectedCustomer.id);
+        }
+
         clearSelectedCustomer();
         clearCurrentBill();
-        selectedProductForAdding = null; // Just to be extra safe
+        // The clearProductSelection() is already called within addProductToBill, no need here.
     };
 
     const generateReceiptContent = (bill) => {
         let receiptHtml = `
             <div class="receipt">
                 <div class="header">
-                    <h4>Smart Gen.Str</h4>
+                    <h4>Smart Gen Nxt Store</h4>
                     <p>Allagadda, Andhra Pradesh, India</p>
                     <p>Phone: 9876543210 | GSTIN: ABCDE12345FGHI</p>
                     <hr style="border-top: 1px dashed #000;">
@@ -1169,7 +1618,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div>
                     <strong>Bill ID:</strong> ${bill.billId}<br>
                     <strong>Date:</strong> ${new Date(bill.date).toLocaleString()}<br>
-                    <strong>Customer:</strong> ${bill.customer.name} (${bill.customer.phone})<br>
+                    <strong>Customer:</strong> ${bill.customer.name} (${maskPhoneNumber(bill.customer.phone)})<br> <!-- Masked phone number here -->
                     ${bill.customer.address ? `<strong>Address:</strong> ${bill.customer.address}<br>` : ''}
                     <hr style="border-top: 1px dashed #000;">
                 </div>
@@ -1186,10 +1635,13 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         bill.items.forEach(item => {
+            // item.name is now the variant's displayName (e.g., Rice (1kg))
+            // item.quantityInBill is the number of *these variants* purchased
+            // item.price is the price of ONE of these variants
             receiptHtml += `
                         <tr>
                             <td>${item.name}</td>
-                            <td>${item.quantity}</td>
+                            <td>${item.quantityInBill}</td>
                             <td>${formatCurrency(item.price)}</td>
                             <td>${formatCurrency(item.total)}</td>
                         </tr>
@@ -1228,11 +1680,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const ul = document.createElement('ul');
         ul.classList.add('list-group');
-        products.forEach(product => {
+        // Sort products by category then by name for better readability
+        const sortedProducts = [...products].sort((a, b) => {
+            if (a.category < b.category) return -1;
+            if (a.category > b.category) return 1;
+            if (a.name < b.name) return -1;
+            if (a.name > b.name) return 1;
+            return 0;
+        });
+
+        sortedProducts.forEach(product => {
+            // Safely get the first variant
+            const firstVariant = (product.variants && product.variants.length > 0) ? product.variants[0] : null;
+            const displayPrice = firstVariant ? formatCurrency(firstVariant.price) : 'N/A';
+            const displayVariantName = firstVariant ? firstVariant.displayName : 'No variants defined';
+
             const li = document.createElement('li');
             li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
             li.innerHTML = `
-                <div>${product.name} - ${formatCurrency(product.price)}</div>
+                <div>
+                    <strong>${product.name}</strong> (Category: ${product.category})<br>
+                    <small>Default Variant: ${displayVariantName} - ${displayPrice}</small>
+                </div>
                 <div>
                     <button class="btn btn-sm btn-outline-primary edit-product-btn" data-product-id="${product.id}">Edit</button>
                     <button class="btn btn-sm btn-outline-danger delete-product-btn" data-product-id="${product.id}">Delete</button>
@@ -1264,27 +1733,37 @@ document.addEventListener('DOMContentLoaded', () => {
         if (product) {
             currentEditProductId = productId;
             editProductNameInput.value = product.name;
-            editProductPriceInput.value = product.price;
+            renderCategoryChips(editProductCategoryChips, product.category); // Render category chips with selected category
+
+            // Reset variant selection and buttons for editing variants
+            currentSelectedVariantForManagement = null;
+            addEditProductVariantBtn.textContent = 'Add Variant';
+            addEditProductVariantBtn.disabled = false; // Always allow adding variants
+            deleteProductVariantBtn.disabled = true;
+            noVariantSelectedHint.classList.add('d-none'); // Hide hint by default
+
+            renderVariantChipsForProductManagement(productId); // Render variants for the product
             editProductModal.show();
         }
     };
 
     const editProduct = () => {
         const newName = editProductNameInput.value.trim();
-        const newPrice = parseFloat(editProductPriceInput.value);
+        const newCategory = currentSelectedCategoryForManagement; // Get from selected chip
 
-        if (!newName || isNaN(newPrice) || newPrice <= 0) {
-            showCustomMessage('Warning', 'Please enter a valid product name and a price greater than zero.', 'warning');
+        if (!newName || !newCategory || newCategory === '') {
+            showCustomMessage('Warning', 'Please fill all product details correctly, including selecting a category.', 'warning');
             return;
         }
 
         const productIndex = products.findIndex(p => p.id === currentEditProductId);
         if (productIndex > -1) {
             products[productIndex].name = newName;
-            products[productIndex].price = newPrice;
+            products[productIndex].category = newCategory;
+            
             saveProducts(products);
             renderProductListManagement();
-            renderProductList(); // Re-render main billing product list
+            renderProductList(''); // Re-render main billing product list with empty search to show all
             editProductModal.hide();
             showCustomMessage('Success', 'Product updated successfully!', 'success');
         }
@@ -1294,38 +1773,219 @@ document.addEventListener('DOMContentLoaded', () => {
         products = products.filter(p => p.id !== productId);
         saveProducts(products);
         renderProductListManagement();
-        renderProductList(); // Re-render main billing product list
+        renderProductList(''); // Re-render main billing product list with empty search to show all
         showCustomMessage('Success', 'Product deleted successfully!', 'success');
     };
 
     const addProduct = () => {
         const name = productNameInputManagement.value.trim();
-        const price = parseFloat(productPriceInputManagement.value);
+        const category = currentSelectedCategoryForManagement; // Get from selected chip
+        const variantDisplayName = productVariantDisplayNameManagement.value.trim();
+        const variantUnit = productVariantUnitManagement.value.trim();
+        const variantQuantity = parseFloat(productVariantQuantityManagement.value);
+        const price = parseFloat(productPriceManagement.value);
 
-        if (!name || isNaN(price) || price <= 0) {
-            showCustomMessage('Warning', 'Please enter a valid product name and a price greater than zero.', 'warning');
+        if (!name || !category || category === '' || // Ensure category is selected
+            !variantDisplayName || !variantUnit || variantUnit === '' ||
+            isNaN(variantQuantity) || variantQuantity <= 0 ||
+            isNaN(price) || price <= 0) {
+            showCustomMessage('Warning', 'Please fill all product and default variant fields correctly, ensuring quantities and prices are positive numbers and a category is selected.', 'warning');
             return;
         }
 
-        // Check for duplicate product names (especially if units are part of the name)
+        // Check for duplicate product names (case-insensitive)
         if (products.some(p => p.name.toLowerCase() === name.toLowerCase())) {
-            showCustomMessage('Warning', 'A product with this name already exists. Please use a unique name, or add a unit descriptor (e.g., "Milk (1L)").', 'warning');
+            showCustomMessage('Warning', 'A product with this name already exists. Please use a unique name.', 'warning');
             return;
         }
 
+        const newProductId = `P${String(nextProductId++).padStart(3, '0')}`;
         const newProduct = {
-            id: `P${String(nextProductId++).padStart(3, '0')}`,
+            id: newProductId,
             name: name,
-            price: price
+            category: category,
+            variants: [
+                {
+                    variantId: `${newProductId}V1`, // First variant ID
+                    displayName: variantDisplayName,
+                    unit: variantUnit,
+                    quantity: variantQuantity,
+                    price: price,
+                    priceHistory: [{ date: new Date().toISOString(), price: price }] // Initial price entry
+                }
+            ]
         };
         products.push(newProduct);
         saveProducts(products);
         renderProductListManagement();
-        renderProductList(); // Re-render main billing product list
+        renderProductList(''); // Re-render main billing product list with empty search to show all
         addProductModal.hide();
         addProductFormManagement.reset();
+        currentSelectedCategoryForManagement = null; // Reset selected category after adding
         showCustomMessage('Success', 'Product added successfully!', 'success');
     };
+
+
+    // --- Variant Management Functions (within Edit Product Modal) ---
+    const renderVariantChipsForProductManagement = (productId) => {
+        const container = document.getElementById('editProductVariantsContainer');
+        if (!container) return;
+
+        container.innerHTML = '';
+        currentSelectedVariantForManagement = null; // Reset selection
+
+        const product = products.find(p => p.id === productId);
+        if (!product || !product.variants || product.variants.length === 0) {
+            container.innerHTML = '<p class="text-muted">No variants for this product. Click "Add/Edit Variant" to add one.</p>';
+            addEditProductVariantBtn.textContent = 'Add Variant';
+            addEditProductVariantBtn.disabled = false; // Always allow adding new if none exist
+            deleteProductVariantBtn.disabled = true;
+            noVariantSelectedHint.classList.add('d-none'); // Hide hint
+            return;
+        }
+
+        // Initially, the button should say "Add Variant" and delete should be disabled
+        addEditProductVariantBtn.textContent = 'Add Variant';
+        addEditProductVariantBtn.disabled = false;
+        deleteProductVariantBtn.disabled = true;
+        noVariantSelectedHint.classList.remove('d-none'); // Show hint to select for edit/delete
+
+        product.variants.forEach(variant => {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.classList.add('product-variant-chip');
+            chip.textContent = `${variant.displayName} (${formatCurrency(variant.price)})`;
+            chip.dataset.variantId = variant.variantId;
+            chip.addEventListener('click', (e) => {
+                // Remove 'selected' from all chips
+                document.querySelectorAll('#editProductVariantsContainer .product-variant-chip').forEach(c => c.classList.remove('selected'));
+                e.target.classList.add('selected');
+                currentSelectedVariantForManagement = variant;
+                // Update button text and enable delete
+                addEditProductVariantBtn.textContent = 'Edit Selected Variant';
+                deleteProductVariantBtn.disabled = false;
+                noVariantSelectedHint.classList.add('d-none'); // Hide hint once selected
+            });
+            container.appendChild(chip);
+        });
+    };
+
+    // Event listener for the "Add/Edit Variant" button in the Product Management Modal
+    addEditProductVariantBtn.addEventListener('click', () => {
+        const product = products.find(p => p.id === currentEditProductId);
+        if (!product) {
+            showCustomMessage('Error', 'No product selected for variant management.', 'danger');
+            return;
+        }
+
+        // If a variant is selected, prepare for edit; otherwise, prepare for add
+        if (currentSelectedVariantForManagement) {
+            addEditVariantModalLabel.textContent = 'Edit Product Variant';
+            variantDisplayNameInput.value = currentSelectedVariantForManagement.displayName;
+            variantUnitInput.value = currentSelectedVariantForManagement.unit;
+            variantQuantityInput.value = currentSelectedVariantForManagement.quantity;
+            variantPriceInput.value = currentSelectedVariantForManagement.price;
+            currentEditingVariantId.value = currentSelectedVariantForManagement.variantId;
+        } else {
+            addEditVariantModalLabel.textContent = 'Add New Product Variant';
+            addEditVariantForm.reset();
+            currentEditingVariantId.value = ''; // Clear variant ID for new variant
+        }
+        currentEditingVariantProductId.value = currentEditProductId; // Always set the product ID
+
+        addEditVariantModal.show();
+    });
+
+    // Event listener for the "Delete Selected Variant" button
+    deleteProductVariantBtn.addEventListener('click', () => {
+        if (!currentSelectedVariantForManagement) {
+            showCustomMessage('Warning', 'Please select a variant to delete.', 'warning');
+            return;
+        }
+        showCustomConfirm('Delete Variant', 'Are you sure you want to delete this variant? This action cannot be undone.', () => {
+            const product = products.find(p => p.id === currentEditProductId);
+            if (product) {
+                // Ensure there's at least one variant remaining
+                if (product.variants.length <= 1) {
+                    showCustomMessage('Warning', 'A product must have at least one variant. Cannot delete the last variant.', 'warning');
+                    return;
+                }
+                product.variants = product.variants.filter(v => v.variantId !== currentSelectedVariantForManagement.variantId);
+                saveProducts(products);
+                renderVariantChipsForProductManagement(currentEditProductId); // Re-render variants
+                renderProductList(''); // Update main billing view
+                showCustomMessage('Success', 'Variant deleted successfully!', 'success');
+            }
+        });
+    });
+
+    // Event listener for saving variant (add/edit)
+    addEditVariantForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const productId = currentEditingVariantProductId.value;
+        const variantId = currentEditingVariantId.value;
+        const displayName = variantDisplayNameInput.value.trim();
+        const unit = variantUnitInput.value.trim();
+        const quantity = parseFloat(variantQuantityInput.value);
+        const price = parseFloat(variantPriceInput.value);
+
+        if (!displayName || !unit || isNaN(quantity) || quantity <= 0 || isNaN(price) || price <= 0) {
+            showCustomMessage('Warning', 'Please fill all variant details correctly, ensuring quantity and price are positive numbers.', 'warning');
+            return;
+        }
+
+        const product = products.find(p => p.id === productId);
+        if (!product) {
+            showCustomMessage('Error', 'Product not found for variant operation.', 'danger');
+            return;
+        }
+
+        const isEditing = !!variantId;
+        if (isEditing) {
+            const existingVariant = product.variants.find(v => v.variantId === variantId);
+            if (existingVariant) {
+                // Check if price has changed and record history
+                if (existingVariant.price !== price) {
+                    if (!existingVariant.priceHistory) {
+                        existingVariant.priceHistory = [];
+                    }
+                    existingVariant.priceHistory.push({ date: new Date().toISOString(), price: existingVariant.price }); // Record old price
+                    // Ensure the price history is sorted by date for Chart.js
+                    existingVariant.priceHistory.sort((a,b) => new Date(a.date) - new Date(b.date));
+                }
+                existingVariant.displayName = displayName;
+                existingVariant.unit = unit;
+                existingVariant.quantity = quantity;
+                existingVariant.price = price;
+            } else {
+                showCustomMessage('Error', 'Variant to edit not found.', 'danger');
+                return;
+            }
+        } else {
+            // Add new variant
+            // Check for duplicate display name for the same product
+            if (product.variants.some(v => v.displayName.toLowerCase() === displayName.toLowerCase())) {
+                showCustomMessage('Warning', `A variant with display name "${displayName}" already exists for this product.`, 'warning');
+                return;
+            }
+
+            const newVariantId = `${productId}V${product.variants.length + 1}`; // Simple incrementing ID for new variants
+            product.variants.push({
+                variantId: newVariantId,
+                displayName: displayName,
+                unit: unit,
+                quantity: quantity,
+                price: price,
+                priceHistory: [{ date: new Date().toISOString(), price: price }] // Initial price entry
+            });
+        }
+
+        saveProducts(products);
+        renderVariantChipsForProductManagement(productId); // Re-render variants
+        renderProductList(''); // Update main billing view
+        addEditVariantModal.hide();
+        showCustomMessage('Success', `Variant ${isEditing ? 'updated' : 'added'} successfully!`, 'success');
+    });
 
 
     // --- Customer Management Functions ---
@@ -1459,21 +2119,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let totalRevenue = 0;
         let totalBills = filteredBills.length;
-        const productSales = {}; // {productId: {name: '...', quantity: X, revenue: Y}}
+        const productSales = {}; // {variantId: {name: '...', quantity: X, revenue: Y}}
 
         filteredBills.forEach(bill => {
             totalRevenue += bill.total;
             bill.items.forEach(item => {
-                if (!productSales[item.id]) {
-                    productSales[item.id] = { name: item.name, quantity: 0, revenue: 0 };
+                // Use variantId for product sales aggregation
+                if (!productSales[item.variantId]) {
+                    productSales[item.variantId] = { name: item.name, totalQuantityInBill: 0, totalRevenue: 0, unit: item.unit, quantityPerUnit: item.quantityPerUnit };
                 }
-                productSales[item.id].quantity += item.quantity;
-                productSales[item.id].revenue += item.total;
+                productSales[item.variantId].totalQuantityInBill += item.quantityInBill; // Number of variants sold
+                productSales[item.variantId].totalRevenue += item.total;
             });
         });
 
         // Convert productSales object to array for sorting
-        const sortedProducts = Object.values(productSales).sort((a, b) => b.revenue - a.revenue);
+        const sortedProducts = Object.values(productSales).sort((a, b) => b.totalRevenue - a.totalRevenue);
 
         let reportHtml = `
             <h5 class="text-center">Sales Summary: ${start || 'All Time'} to ${end || 'All Time'}</h5>
@@ -1486,8 +2147,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <table class="table table-sm table-striped">
                     <thead>
                         <tr>
-                            <th>Product</th>
-                            <th class="text-center">Quantity Sold</th>
+                            <th>Product Variant</th>
+                            <th class="text-center">Units Sold</th>
                             <th class="text-end">Revenue</th>
                         </tr>
                     </thead>
@@ -1497,8 +2158,8 @@ document.addEventListener('DOMContentLoaded', () => {
             reportHtml += `
                         <tr>
                             <td>${p.name}</td>
-                            <td class="text-center">${p.quantity}</td>
-                            <td class="text-end">${formatCurrency(p.revenue)}</td>
+                            <td class="text-center">${p.totalQuantityInBill}</td>
+                            <td class="text-end">${formatCurrency(p.totalRevenue)}</td>
                         </tr>
             `;
         });
@@ -1531,15 +2192,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const productSummary = {}; // {productId: {name: '...', totalQuantity: X, totalRevenue: Y}}
-
+        const productSummary = {}; // {productId: {name: '...', totalQuantitySold: X, totalRevenue: Y}}
+        // Aggregate by main product, not variant, for this report
         filteredBills.forEach(bill => {
             bill.items.forEach(item => {
-                if (!productSummary[item.id]) {
-                    productSummary[item.id] = { name: item.name, totalQuantity: 0, totalRevenue: 0 };
+                const mainProduct = products.find(p => p.id === item.productId);
+                const mainProductName = mainProduct ? mainProduct.name : 'Unknown Product';
+
+                if (!productSummary[item.productId]) {
+                    productSummary[item.productId] = { name: mainProductName, totalQuantitySold: 0, totalRevenue: 0 };
                 }
-                productSummary[item.id].totalQuantity += item.quantity;
-                productSummary[item.id].totalRevenue += item.total;
+                productSummary[item.productId].totalQuantitySold += (item.quantityPerUnit * item.quantityInBill); // Aggregate total kg/L/pcs
+                productSummary[item.productId].totalRevenue += item.total;
             });
         });
 
@@ -1552,7 +2216,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <thead>
                         <tr>
                             <th>Product Name</th>
-                            <th class="text-center">Total Quantity Sold</th>
+                            <th class="text-center">Total Quantity (Aggregated)</th>
                             <th class="text-end">Total Revenue</th>
                         </tr>
                     </thead>
@@ -1562,7 +2226,7 @@ document.addEventListener('DOMContentLoaded', () => {
             reportHtml += `
                         <tr>
                             <td>${p.name}</td>
-                            <td class="text-center">${p.totalQuantity}</td>
+                            <td class="text-center">${p.totalQuantitySold.toFixed(2)}</td> <!-- Display aggregated quantity -->
                             <td class="text-end">${formatCurrency(p.totalRevenue)}</td>
                         </tr>
             `;
@@ -1632,7 +2296,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sortedCustomers.forEach(c => {
             reportHtml += `
                         <tr>
-                            <td>${c.name} (${c.phone})</td>
+                            <td>${c.name} (${maskPhoneNumber(c.phone)})</td> <!-- Masked phone number here -->
                             <td class="text-center">${c.totalBills}</td>
                             <td class="text-end">${formatCurrency(c.totalSpent)}</td>
                             <td><button class="btn btn-sm btn-outline-info view-customer-bills-btn" data-customer-id="${c.phone}" data-start-date="${start}" data-end-date="${end}">View Bills</button></td>
@@ -1670,7 +2334,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const bills = customerBills[customerId] || [];
 
         let detailedBillsHtml = `
-            <h6 class="mt-4">Detailed Bills for ${customer.name} (${customer.phone}):</h6>
+            <h6 class="mt-4">Detailed Bills for ${customer.name} (${maskPhoneNumber(customer.phone)}):</h6> <!-- Masked phone number here -->
         `;
 
         const filteredCustomerBills = filterBillsByDateRange({[customerId]: bills}, startDate, endDate);
@@ -1692,8 +2356,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <ul class="list-group list-group-flush mt-1">
                 `;
                 bill.items.forEach(item => {
+                    // Use item.name (which is variant's displayName)
                     detailedBillsHtml += `
-                            <li class="list-group-item py-1 px-0">${item.name} (Qty: ${item.quantity}) - ${formatCurrency(item.total)}</li>
+                            <li class="list-group-item py-1 px-0">${item.name} (Qty: ${item.quantityInBill}) - ${formatCurrency(item.total)}</li>
                     `;
                 });
                 detailedBillsHtml += `
@@ -1707,6 +2372,150 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('customerDetailedBills').scrollIntoView({ behavior: 'smooth', block: 'start' }); // Scroll to view details
     };
 
+
+    // --- Price Chart Functions ---
+    const populateChartProductSelect = () => {
+        chartProductSelect.innerHTML = '<option value="">Select a Product</option>';
+        chartVariantSelect.innerHTML = '<option value="">Select a Variant</option>';
+        chartVariantSelect.disabled = true;
+        priceChartMessage.textContent = 'Select a product and variant to view its price history.';
+
+        products.forEach(p => {
+            const option = document.createElement('option');
+            option.value = p.id;
+            option.textContent = p.name;
+            chartProductSelect.appendChild(option);
+        });
+        // Destroy existing chart if any
+        if (priceChart) {
+            priceChart.destroy();
+            priceChart = null;
+        }
+    };
+
+    const populateChartVariantSelect = () => {
+        const productId = chartProductSelect.value;
+        chartVariantSelect.innerHTML = '<option value="">Select a Variant</option>';
+        chartVariantSelect.disabled = true;
+        priceChartMessage.textContent = 'Select a variant to view its price history.';
+
+        if (priceChart) {
+            priceChart.destroy();
+            priceChart = null;
+        }
+
+        if (productId) {
+            const product = products.find(p => p.id === productId);
+            if (product && product.variants && product.variants.length > 0) {
+                product.variants.forEach(variant => {
+                    const option = document.createElement('option');
+                    option.value = variant.variantId;
+                    option.textContent = variant.displayName;
+                    chartVariantSelect.appendChild(option);
+                });
+                chartVariantSelect.disabled = false;
+            } else {
+                priceChartMessage.textContent = 'No variants available for this product.';
+            }
+        }
+    };
+
+    const renderPriceChart = () => {
+        const productId = chartProductSelect.value;
+        const variantId = chartVariantSelect.value;
+
+        if (!productId || !variantId) {
+            priceChartMessage.textContent = 'Please select both a product and a variant.';
+            if (priceChart) priceChart.destroy();
+            priceChart = null;
+            return;
+        }
+
+        const product = products.find(p => p.id === productId);
+        const variant = product ? product.variants.find(v => v.variantId === variantId) : null;
+
+        if (!variant || !variant.priceHistory || variant.priceHistory.length === 0) {
+            priceChartMessage.textContent = 'No price history available for this variant.';
+            if (priceChart) priceChart.destroy();
+            priceChart = null;
+            return;
+        }
+
+        // Filter out duplicate consecutive prices to make the chart cleaner if needed
+        // For example, if price was 10, then 10 again, then 12. Only show 10 and 12.
+        const uniquePricePoints = [];
+        if (variant.priceHistory.length > 0) {
+            uniquePricePoints.push(variant.priceHistory[0]);
+            for (let i = 1; i < variant.priceHistory.length; i++) {
+                if (variant.priceHistory[i].price !== variant.priceHistory[i-1].price) {
+                    uniquePricePoints.push(variant.priceHistory[i]);
+                }
+            }
+        }
+
+        const labels = uniquePricePoints.map(entry => new Date(entry.date).toLocaleDateString());
+        const data = uniquePricePoints.map(entry => entry.price);
+
+        priceChartMessage.textContent = ''; // Clear message
+
+        if (priceChart) {
+            priceChart.destroy(); // Destroy previous chart instance
+        }
+
+        const ctx = priceChartCanvas.getContext('2d');
+        priceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: `${variant.displayName} Price (₹)`,
+                    data: data,
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1,
+                    fill: false,
+                    pointBackgroundColor: 'rgb(75, 192, 192)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(75, 192, 192)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Price (₹)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(context.parsed.y);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    };
 
     // --- Custom Message/Alert Box (Replaces alert() and confirm()) ---
     const showCustomMessage = (title, message, type = 'info') => {
@@ -1793,12 +2602,43 @@ document.addEventListener('DOMContentLoaded', () => {
     clearCustomerBtn.addEventListener('click', clearSelectedCustomer);
     addCustomerForm.addEventListener('submit', (e) => {
         e.preventDefault();
+
+        // --- IMPORTANT: CHECK YOUR BROWSER'S DEVELOPER CONSOLE FOR THESE LOGS ---
+        console.log('--- Debugging New Customer Addition ---');
+        console.log('Raw Name Input Value:', customerNameInput.value);
+        console.log('Raw Phone Input Value:', customerPhoneInput.value);
+        console.log('Raw Address Input Value:', customerAddressInput.value);
+        // --- END DEBUG LOGS ---
+
+        const name = customerNameInput.value.trim();
+        const phone = customerPhoneInput.value.trim();
+        const address = customerAddressInput.value.trim();
+
+        // --- MORE DEBUG LOGS AFTER TRIMMING ---
+        console.log('Trimmed Name:', name);
+        console.log('Trimmed Phone:', phone);
+        console.log('Trimmed Address:', address);
+        // --- END MORE DEBUG LOGS ---
+
+        if (!name) {
+            showCustomMessage('Warning', 'Customer Name cannot be empty.', 'warning');
+            customerNameInput.focus();
+            return;
+        }
+        if (!phone || !/^\d{10}$/.test(phone)) { // Checks for empty and exact 10 digits
+            showCustomMessage('Warning', 'Please enter a valid 10-digit Phone Number.', 'warning');
+            customerPhoneInput.focus();
+            return;
+        }
+
         const newCustomer = {
             id: `C${String(nextCustomerId++).padStart(3, '0')}`,
-            name: customerNameInput.value.trim(),
-            phone: customerPhoneInput.value.trim(),
-            address: customerAddressInput.value.trim()
+            name: name,
+            phone: phone,
+            address: address
         };
+
+        console.log('New Customer Object to be saved:', newCustomer); // Final object before save
 
         // Basic check for duplicate phone number
         if (customers.some(c => c.phone === newCustomer.phone)) {
@@ -1811,11 +2651,13 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCustomerList();
         selectCustomer(newCustomer);
         addCustomerModal.hide();
-        addCustomerForm.reset();
+        addCustomerForm.reset(); // This clears the form *after* values are read and saved
         showCustomMessage('Success', 'Customer added successfully!', 'success');
+        console.log('--- New Customer Addition Process Completed ---');
     });
 
     productSearchInput.addEventListener('input', (e) => renderProductList(e.target.value));
+    clearProductSelectionBtn.addEventListener('click', clearProductSelection); // New event listener
     addProductToBillBtn.addEventListener('click', addProductToBill);
     clearBillBtn.addEventListener('click', clearCurrentBill);
 
@@ -1842,7 +2684,6 @@ document.addEventListener('DOMContentLoaded', () => {
         `);
         printWindow.document.write('</style></head><body>');
         printWindow.document.write(printContent);
-        printWindow.document.write('</body></html>');
         printWindow.document.close();
         printWindow.focus();
         printWindow.print();
@@ -1866,6 +2707,18 @@ document.addEventListener('DOMContentLoaded', () => {
     editProductForm.addEventListener('submit', (e) => {
         e.preventDefault();
         editProduct();
+    });
+
+    // When Add Product modal is shown, render category chips
+    addProductModal._element.addEventListener('shown.bs.modal', () => {
+        renderCategoryChips(addProductCategoryChips, currentSelectedCategoryForManagement); // Pass currently selected if applicable
+    });
+
+    // When Edit Product modal is shown, render category chips and variants
+    editProductModal._element.addEventListener('shown.bs.modal', () => {
+        const product = products.find(p => p.id === currentEditProductId);
+        renderCategoryChips(editProductCategoryChips, product ? product.category : null);
+        renderVariantChipsForProductManagement(currentEditProductId);
     });
 
     editCustomerForm.addEventListener('submit', (e) => {
@@ -1942,7 +2795,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         // Trigger the initial report generation for the active tab (Daily Sales by default)
-        generateDailySalesReport();
+        // Check which tab is active and generate its report
+        const activeTab = reportsTab.querySelector('.nav-link.active');
+        if (activeTab) {
+            const activeTabId = activeTab.id;
+            if (activeTabId === 'daily-sales-tab') {
+                generateDailySalesReport();
+            } else if (activeTabId === 'product-sales-tab') {
+                generateProductSalesReport();
+            } else if (activeTabId === 'customer-history-tab') {
+                generateCustomerHistoryReport();
+            } else if (activeTabId === 'price-chart-tab') {
+                populateChartProductSelect(); // Populate product select for price chart
+            }
+        }
     });
 
     // Event listener for tab changes to regenerate report for the active tab
@@ -1955,13 +2821,19 @@ document.addEventListener('DOMContentLoaded', () => {
             generateProductSalesReport();
         } else if (activeTabId === 'customer-history-tab') {
             generateCustomerHistoryReport();
+        } else if (activeTabId === 'price-chart-tab') {
+            populateChartProductSelect(); // Re-populate on tab switch to clear previous selections/chart
         }
     });
+
+    // Price Chart Listeners
+    chartProductSelect.addEventListener('change', populateChartVariantSelect);
+    chartVariantSelect.addEventListener('change', renderPriceChart);
 
 
     // --- Initial Renders ---
     renderCustomerList();
-    renderProductList();
+    renderProductList(''); // Initialize product search area correctly, with empty search term to show all products as chips
     renderBillItems();
     renderProductListManagement();
     renderCustomerListManagement();
