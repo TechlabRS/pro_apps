@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Data Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+            padding-top: 20px;
+        }
+        .container {
+            max-width: 900px;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background-color: #0d6efd;
+            color: white;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .data-list-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: .25rem;
+            padding: 10px;
+            background-color: #fff;
+        }
+        .data-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dashed #e9ecef;
+        }
+        .data-item:last-child {
+            border-bottom: none;
+        }
+        .data-item-key {
+            font-weight: bold;
+            color: #0d6efd;
+            margin-right: 10px;
+            flex-shrink: 0;
+            width: 150px; /* Fixed width for key */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .data-item-value {
+            flex-grow: 1;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            background-color: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .data-item-actions {
+            flex-shrink: 0;
+            margin-left: 10px;
+        }
+        .empty-message {
+            color: #6c757d;
+            font-style: italic;
+            padding: 15px;
+            text-align: center;
+        }
+        .form-check-input {
+            margin-top: .3em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="mb-4 text-center">Browser Local Storage & Session Storage Manager</h2>
+
+        <div id="alertPlaceholder"></div>
+
+        <div class="card">
+            <div class="card-header">
+                <div><i class="bi bi-hdd-fill me-2"></i>Local Storage Data</div>
+                <button id="clearSelectedLocal" class="btn btn-sm btn-danger ms-2" style="display:none;"><i class="bi bi-trash-fill"></i> Clear Selected</button>
+            </div>
+            <div class="card-body">
+                <div class="data-list-container" id="localStorageList">
+                    <div class="empty-message">No data in Local Storage.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div><i class="bi bi-clock-fill me-2"></i>Session Storage Data</div>
+                <button id="clearSelectedSession" class="btn btn-sm btn-danger ms-2" style="display:none;"><i class="bi bi-trash-fill"></i> Clear Selected</button>
+            </div>
+            <div class="card-body">
+                <div class="data-list-container" id="sessionStorageList">
+                    <div class="empty-message">No data in Session Storage.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mb-4">
+            <button id="clearAllDataButton" class="btn btn-warning btn-lg"><i class="bi bi-trash-fill me-2"></i>Clear ALL Data for this Page</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function displayStorageData() {
+            renderStorageList(localStorage, 'localStorageList', 'local');
+            renderStorageList(sessionStorage, 'sessionStorageList', 'session');
+            updateClearSelectedButtonsVisibility();
+        }
+
+        function renderStorageList(storageObj, listId, type) {
+            const listContainer = document.getElementById(listId);
+            listContainer.innerHTML = ''; // Clear previous content
+
+            if (storageObj.length === 0) {
+                listContainer.innerHTML = `<div class="empty-message">No data in ${type === 'local' ? 'Local' : 'Session'} Storage.</div>`;
+                return;
+            }
+
+            for (let i = 0; i < storageObj.length; i++) {
+                const key = storageObj.key(i);
+                const value = storageObj.getItem(key);
+
+                const dataItem = document.createElement('div');
+                dataItem.className = 'data-item';
+                dataItem.dataset.key = key; // Store key for easy access
+
+                dataItem.innerHTML = `
+                    <div class="form-check me-2">
+                        <input class="form-check-input ${type}-checkbox" type="checkbox" value="${key}" id="${type}Check-${key.replace(/[^a-zA-Z0-9]/g, '-')}" data-storage-type="${type}">
+                        <label class="form-check-label visually-hidden" for="${type}Check-${key.replace(/[^a-zA-Z0-9]/g, '-')}}">Select ${key}</label>
+                    </div>
+                    <div class="data-item-key" title="${key}">${key}:</div>
+                    <div class="data-item-value"><code>${escapeHTML(value)}</code></div>
+                    <div class="data-item-actions">
+                        <button class="btn btn-sm btn-outline-danger delete-individual-btn" data-key="${key}" data-storage-type="${type}" title="Delete this item">
+                            <i class="bi bi-x-circle"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary copy-individual-btn ms-1" data-key="${key}" data-storage-type="${type}" title="Copy value">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                `;
+                listContainer.appendChild(dataItem);
+            }
+
+            // Add event listeners for new buttons
+            listContainer.querySelectorAll('.delete-individual-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const key = event.currentTarget.dataset.key;
+                    const storageType = event.currentTarget.dataset.storageType;
+                    deleteIndividualItem(key, storageType);
+                });
+            });
+
+            listContainer.querySelectorAll('.copy-individual-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const key = event.currentTarget.dataset.key;
+                    const storageType = event.currentTarget.dataset.storageType;
+                    copyItemValue(key, storageType);
+                });
+            });
+
+             // Add event listeners for checkboxes
+            listContainer.querySelectorAll(`.${type}-checkbox`).forEach(checkbox => {
+                checkbox.addEventListener('change', updateClearSelectedButtonsVisibility);
+            });
+        }
+
+        function updateClearSelectedButtonsVisibility() {
+            const localCheckboxes = document.querySelectorAll('.local-checkbox:checked');
+            const sessionCheckboxes = document.querySelectorAll('.session-checkbox:checked');
+
+            document.getElementById('clearSelectedLocal').style.display = localCheckboxes.length > 0 ? 'inline-block' : 'none';
+            document.getElementById('clearSelectedSession').style.display = sessionCheckboxes.length > 0 ? 'inline-block' : 'none';
+        }
+
+        function deleteIndividualItem(key, storageType) {
+            const storageObj = storageType === 'local' ? localStorage : sessionStorage;
+            if (confirm(`Are you sure you want to delete '${key}' from ${storageType} storage?`)) {
+                storageObj.removeItem(key);
+                showAlert(`'${key}' deleted from ${storageType} storage.`, 'success');
+                displayStorageData(); // Re-render to reflect changes
+            }
+        }
+
+        function copyItemValue(key, storageType) {
+            const storageObj = storageType === 'local' ? localStorage : sessionStorage;
+            const value = storageObj.getItem(key);
+            navigator.clipboard.writeText(value)
+                .then(() => showAlert(`Value of '${key}' copied to clipboard!`, 'success'))
+                .catch(err => showAlert(`Failed to copy value: ${err}`, 'danger'));
+        }
+
+        function clearSelectedItems(storageType) {
+            const checkboxes = document.querySelectorAll(`.${storageType}-checkbox:checked`);
+            if (checkboxes.length === 0) {
+                showAlert('No items selected to clear.', 'info');
+                return;
+            }
+
+            if (confirm(`Are you sure you want to delete ${checkboxes.length} selected items from ${storageType} storage?`)) {
+                const storageObj = storageType === 'local' ? localStorage : sessionStorage;
+                checkboxes.forEach(checkbox => {
+                    storageObj.removeItem(checkbox.value);
+                });
+                showAlert(`${checkboxes.length} items cleared from ${storageType} storage.`, 'success');
+                displayStorageData(); // Re-render
+            }
+        }
+
+        function clearAllData() {
+            if (confirm("Are you sure you want to clear ALL Local Storage and Session Storage data for this page (origin)? This action cannot be undone.")) {
+                localStorage.clear();
+                sessionStorage.clear();
+                showAlert('All data cleared for this page!', 'success');
+                displayStorageData(); // Refresh display
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertPlaceholder = document.getElementById('alertPlaceholder');
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = [
+                `<div class="alert alert-${type} alert-dismissible fade show mt-2" role="alert">`,
+                `   ${message}`,
+                '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                '</div>'
+            ].join('');
+            alertPlaceholder.innerHTML = ''; // Clear previous alerts
+            alertPlaceholder.append(wrapper.firstChild);
+            // Auto-hide alert after a few seconds
+            setTimeout(() => {
+                const bsAlert = bootstrap.Alert.getOrCreateInstance(alertPlaceholder.querySelector('.alert'));
+                if (bsAlert) bsAlert.close();
+            }, 5000);
+        }
+
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.appendChild(document.createTextNode(str));
+            return div.innerHTML;
+        }
+
+        // Initialize display and set up event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            displayStorageData();
+            document.getElementById('clearAllDataButton').addEventListener('click', clearAllData);
+            document.getElementById('clearSelectedLocal').addEventListener('click', () => clearSelectedItems('local'));
+            document.getElementById('clearSelectedSession').addEventListener('click', () => clearSelectedItems('session'));
+        });
+    </script>
+</body>
+</html>
