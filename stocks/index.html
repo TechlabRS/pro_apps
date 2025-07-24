@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stock Registry</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .stock-card { margin-bottom: 1rem; border-left: 5px solid #0d6efd; }
+    .card-title { font-weight: 600; }
+    .dropdown-toggle::after { display: none; }
+  </style>
+</head>
+<body class="bg-light">
+  <div class="container py-4">
+    <h2 class="mb-4">Stock Registry</h2>
+
+    <!-- Input form -->
+    <div class="input-group mb-3">
+      <input type="text" id="stockName" placeholder="Stock Name" class="form-control">
+      <input type="text" id="stockSymbol" placeholder="Symbol" class="form-control">
+      <input type="number" id="stockPrice" placeholder="Current Price" class="form-control">
+      <input type="number" id="stockTarget" placeholder="Target Price" class="form-control">
+      <button onclick="addStock()" class="btn btn-primary">Add Stock</button>
+    </div>
+    
+    <div class="d-flex gap-2 my-3">
+  <button class="btn btn-outline-primary" onclick="exportStocks()">Export Stocks</button>
+  <input type="file" id="importFile" accept=".json" onchange="importStocks()" hidden>
+  <button class="btn btn-outline-success" onclick="document.getElementById('importFile').click()">Import Stocks</button>
+</div>
+
+
+<div id="portfolioMeter" class="p-3 mt-3 border rounded bg-light">
+  <h5>Portfolio Health Score: <span id="score">84</span>/100</h5>
+  <div class="progress mb-2">
+    <div class="progress-bar" role="progressbar" style="width: 84%;" id="scoreBar"></div>
+  </div>
+  <ul id="portfolioTips" class="mb-0"></ul>
+</div>
+
+    <!-- Search field -->
+    <input type="text" id="searchStock" class="form-control mb-3" placeholder="Search by stock...">
+
+    <!-- Stock Cards -->
+    <div id="stockList" class="row"></div>
+
+    <!-- Summary Table -->
+    <table class="table table-bordered mt-4">
+      <thead>
+        <tr>
+          <th>Stock</th>
+          <th>Qty</th>
+          <th>Avg Buy</th>
+          <th>Realized</th>
+          <th>Unrealized</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="stockTable"></tbody>
+    </table>
+    
+    <div id="aiInsights" class="my-3"></div>
+    
+    <h5 id="totalSummary"></h5>
+
+    <!-- Transaction History -->
+    <div id="transactionsList" class="list-group mt-3"></div>
+  </div>
+
+  <!-- Modal for Chart -->
+  <div class="modal fade" id="chartModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Price History</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <canvas id="priceChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let stocks = JSON.parse(localStorage.getItem('stocks') || '[]');
+
+    function saveStocks() {
+      localStorage.setItem('stocks', JSON.stringify(stocks));
+    }
+
+    function addStock() {
+      const name = stockName.value.trim();
+      const symbol = stockSymbol.value.trim().toUpperCase();
+      const price = +stockPrice.value;
+      const target = +stockTarget.value;
+      if (!name || !symbol || !price) return alert("Fill all fields");
+
+      stocks.push({
+        name, symbol, targetPrice: target || 0,
+        priceHistory: [price],
+        transactions: []
+      });
+      saveStocks();
+      renderAll();
+      stockName.value = stockSymbol.value = stockPrice.value = stockTarget.value = "";
+    }
+
+    function renderAll() {
+      renderStocks();
+      renderTable();
+      renderTransactions();
+      showInsights();
+      analyzePortfolioAI();
+    }
+
+    function renderStocks() {
+  const query = (searchStock?.value || "").toLowerCase();
+  stockList.innerHTML = "";
+
+  stocks.forEach((s, i) => {
+    const name = (s.name || "").toLowerCase();
+    const symbol = (s.symbol || "").toLowerCase();
+
+    if (!name.includes(query) && !symbol.includes(query)) return;
+
+    const lastPrice = s.priceHistory?.at(-1) || 0;
+    const buyTxns = s.transactions?.filter(t => t.type === 'buy') || [];
+    const sellTxns = s.transactions?.filter(t => t.type === 'sell') || [];
+
+    const buyQty = buyTxns.reduce((a, t) => a + +t.qty, 0);
+    const sellQty = sellTxns.reduce((a, t) => a + +t.qty, 0);
+    const netQty = buyQty - sellQty;
+    const buyValue = buyTxns.reduce((a, t) => a + t.qty * t.price, 0);
+    const avgBuy = buyQty ? (buyValue / buyQty).toFixed(2) : 0;
+    const realizedPL = sellTxns.reduce((pl, t) => pl + (t.price * t.qty - avgBuy * t.qty), 0).toFixed(2);
+    const unrealizedPL = ((lastPrice - avgBuy) * netQty).toFixed(2);
+
+    const card = document.createElement('div');
+    card.className = 'col-md-6';
+    card.innerHTML = `
+      <div class="card stock-card p-3">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h5 class="card-title">${s.name} (${s.symbol})</h5>
+            <p>Current: ₹${lastPrice} | Target: ₹${s.targetPrice}</p>
+            <p>Qty: ${netQty} | Avg Buy: ₹${avgBuy}</p>
+            <p>Unrealized P/L: ₹${unrealizedPL} | Realized: ₹${realizedPL}</p>
+          </div>
+          <div class="dropdown">
+            <button class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown">Actions</button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" onclick="addTxn(${i}, 'buy')">+ Buy</a></li>
+              <li><a class="dropdown-item" onclick="addTxn(${i}, 'sell')">+ Sell</a></li>
+              <li><a class="dropdown-item" onclick="updatePrice(${i})">Update Price</a></li>
+              <li><a class="dropdown-item" onclick="showChart(${i})" data-bs-toggle="modal" data-bs-target="#chartModal">View Chart</a></li>
+              <li><a class="dropdown-item text-danger" onclick="deleteStock(${i})">Delete</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>`;
+    stockList.appendChild(card);
+  });
+}
+
+    function renderTable() {
+  let tableBody = document.getElementById("stockTable");
+  tableBody.innerHTML = "";
+
+  let totalRealized = 0;
+  let totalUnrealized = 0;
+
+  stocks.forEach((s, i) => {
+    const lastPrice = (s.priceHistory?.at(-1)) || 0;
+    const buyTxns = s.transactions?.filter(t => t.type === 'buy') || [];
+    const sellTxns = s.transactions?.filter(t => t.type === 'sell') || [];
+    
+    const buyQty = buyTxns.reduce((a, t) => a + (+t.qty || 0), 0);
+    const sellQty = sellTxns.reduce((a, t) => a + (+t.qty || 0), 0);
+    const netQty = buyQty - sellQty;
+    const buyValue = buyTxns.reduce((a, t) => a + (t.qty * t.price || 0), 0);
+    const avgBuy = buyQty ? (buyValue / buyQty).toFixed(2) : 0;
+    const realized = sellTxns.reduce((pl, t) => pl + ((t.price * t.qty || 0) - avgBuy * t.qty), 0);
+    const unrealized = (lastPrice - avgBuy) * netQty;
+
+    totalRealized += realized;
+    totalUnrealized += unrealized;
+
+    tableBody.innerHTML += `
+      <tr>
+        <td>${s.symbol || "N/A"}</td>
+        <td>${netQty}</td>
+        <td>₹${avgBuy}</td>
+        <td>₹${realized.toFixed(2)}</td>
+        <td>₹${unrealized.toFixed(2)}</td>
+        <td>${realized >= 0 ? "Profit" : "Loss"}</td>
+      </tr>`;
+  });
+
+  document.getElementById("totalSummary").innerText = 
+    `Total Realized: ₹${totalRealized.toFixed(2)}, Unrealized: ₹${totalUnrealized.toFixed(2)}`;
+}
+
+    function renderTransactions() {
+  const list = document.getElementById("transactionsList");
+  list.innerHTML = "";
+
+  stocks.forEach(s => {
+    const txns = Array.isArray(s.transactions) ? s.transactions : []; // fallback to empty array
+    txns.forEach(t => {
+      const item = document.createElement("div");
+      item.className = `list-group-item list-group-item-${t.type === 'buy' ? 'success' : 'danger'}`;
+      item.textContent = `${s.symbol} - ${t.type.toUpperCase()} ${t.qty} @ ₹${t.price} on ${new Date(t.date).toLocaleString()}`;
+      list.appendChild(item);
+    });
+  });
+}
+
+    function addTxn(index, type) {
+      const qty = +prompt(`Enter ${type.toUpperCase()} quantity:`);
+      const price = +prompt(`Enter ${type.toUpperCase()} price:`);
+      if (qty > 0 && price > 0) {
+        stocks[index].transactions.push({ qty, price, type, date: new Date().toISOString() });
+        saveStocks();
+        renderAll();
+      }
+    }
+
+    function updatePrice(index) {
+      const newPrice = +prompt("Enter updated price:");
+      if (newPrice > 0) {
+        stocks[index].priceHistory.push(newPrice);
+        saveStocks();
+        renderAll();
+      }
+    }
+
+    function deleteStock(index) {
+      if (confirm("Delete this stock?")) {
+        stocks.splice(index, 1);
+        saveStocks();
+        renderAll();
+      }
+    }
+
+    function showChart(index) {
+      const ctx = document.getElementById("priceChart").getContext("2d");
+      const data = stocks[index].priceHistory;
+      if (window.currentChart) window.currentChart.destroy();
+      window.currentChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: data.map((_, i) => `T${i + 1}`),
+          datasets: [{
+            label: stocks[index].symbol,
+            data,
+            borderColor: 'blue',
+            backgroundColor: 'rgba(0,0,255,0.1)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+    }
+    
+    function showInsights() {
+  const insights = document.getElementById("aiInsights");
+  insights.innerHTML = "";
+
+  stocks.forEach(s => {
+    const lastPrice = s.priceHistory.at(-1) || 0;
+    const buyTxns = s.transactions.filter(t => t.type === 'buy');
+    const sellTxns = s.transactions.filter(t => t.type === 'sell');
+    const buyQty = buyTxns.reduce((a, t) => a + +t.qty, 0);
+    const sellQty = sellTxns.reduce((a, t) => a + +t.qty, 0);
+    const netQty = buyQty - sellQty;
+    const buyValue = buyTxns.reduce((a, t) => a + t.qty * t.price, 0);
+    const avgBuy = buyQty ? (buyValue / buyQty) : 0;
+    const unrealized = (lastPrice - avgBuy) * netQty;
+
+    if (netQty > 0 && unrealized < -100) {
+      insights.innerHTML += `<div class="alert alert-warning">${s.symbol} is down ₹${Math.abs(unrealized.toFixed(2))}. Consider reviewing it.</div>`;
+    } else if (netQty > 0 && unrealized > 500) {
+      insights.innerHTML += `<div class="alert alert-success">${s.symbol} has earned ₹${unrealized.toFixed(2)} in unrealized gains! You might want to sell.</div>`;
+    } else if (netQty === 0) {
+      insights.innerHTML += `<div class="alert alert-info">${s.symbol} has no active holdings. Maybe time to re-enter?</div>`;
+    }
+  });
+}
+
+function exportStocks() {
+  const dataStr = JSON.stringify(stocks, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "stocks-backup.json";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+
+function importStocks() {
+  const fileInput = document.getElementById("importFile");
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+
+      if (!Array.isArray(imported)) throw new Error("Invalid data format");
+
+      // Optionally: merge or replace
+      if (confirm("Replace current stocks with imported data? Click 'Cancel' to merge.")) {
+        stocks = imported;
+      } else {
+        imported.forEach(item => {
+          if (!stocks.find(s => s.symbol === item.symbol)) {
+            stocks.push(item);
+          }
+        });
+      }
+
+      saveStocks();
+      renderAll();
+      alert("Stocks imported successfully!");
+    } catch (err) {
+      alert("Import failed: " + err.message);
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+function analyzePortfolioAI() {
+  let score = 100;
+  let tips = [];
+
+  const symbols = stocks.map(s => s.symbol);
+  const unrealized = stocks.reduce((sum, s) => {
+    const last = s.priceHistory.at(-1) || 0;
+    const buy = s.transactions.filter(t => t.type === 'buy');
+    const sell = s.transactions.filter(t => t.type === 'sell');
+    const qty = buy.reduce((a, t) => a + +t.qty, 0) - sell.reduce((a, t) => a + +t.qty, 0);
+    const buyVal = buy.reduce((a, t) => a + t.price * t.qty, 0);
+    const avg = qty ? buyVal / (buy.reduce((a, t) => a + +t.qty, 0)) : 0;
+    return sum + ((last - avg) * qty);
+  }, 0);
+
+  if (symbols.length < 3) {
+    score -= 15;
+    tips.push("Low diversification: Consider adding more stocks.");
+  }
+
+  if (unrealized < 0) {
+    score -= 20;
+    tips.push("Portfolio has negative unrealized gains. Review your positions.");
+  }
+
+  const heavy = stocks.find(s => {
+    const buyQty = s.transactions.filter(t => t.type === 'buy').reduce((a, t) => a + +t.qty, 0);
+    return buyQty > 0.5 * stocks.reduce((total, stock) => total + stock.transactions.filter(t => t.type === 'buy').reduce((a, t) => a + +t.qty, 0), 0);
+  });
+
+  if (heavy) {
+    score -= 10;
+    tips.push(`High concentration in ${heavy.symbol}. Diversify your holdings.`);
+  }
+
+  // Update UI
+  document.getElementById("score").innerText = score;
+  document.getElementById("scoreBar").style.width = `${score}%`;
+
+  let tipsList = document.getElementById("portfolioTips");
+  tipsList.innerHTML = tips.map(t => `<li>${t}</li>`).join("");
+}
+    document.getElementById("searchStock").addEventListener("input", renderAll);
+    renderAll();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
