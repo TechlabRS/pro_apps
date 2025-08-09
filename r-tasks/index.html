@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ragh'S Advanced Job Task Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 800px;
+        }
+        .task-details, .update-history {
+            font-size: 0.85em;
+            color: #6c757d;
+        }
+        .task-details span {
+            margin-right: 15px;
+        }
+        .list-group-item.list-group-item-danger {
+            border-left: 5px solid #dc3545;
+        }
+        .list-group-item.list-group-item-warning {
+            border-left: 5px solid #ffc107;
+        }
+        .report-section .card {
+            margin-bottom: 20px;
+        }
+
+        /* Mobile-specific adjustments */
+        @media (max-width: 767px) {
+            .task-details span {
+                display: block;
+                margin-right: 0;
+            }
+            .d-flex.justify-content-between.align-items-center > div:last-child {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+            }
+            .d-flex.justify-content-between.align-items-center .btn {
+                margin-top: 5px;
+            }
+            .row.text-center .col-6 {
+                margin-bottom: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Ragh'S Job Task Tracker</h1>
+        
+        <div class="card mb-4">
+            <div class="card-header">Add New Task</div>
+            <div class="card-body">
+                <form id="taskForm">
+                    <div class="mb-3">
+                        <label for="taskName" class="form-label">Task Name</label>
+                        <input type="text" class="form-control" id="taskName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="taskCategory" class="form-label">Category</label>
+                        <select class="form-select" id="taskCategory" required>
+                            <option value="">Select...</option>
+                            <option value="RCA and Fix">RCA and Fix</option>
+                            <option value="Development">Development</option>
+                            <option value="Dedups">Dedups</option>
+                            <option value="Testing">Testing</option>
+                            <option value="Documentation">Documentation</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="startDate" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="startDate" required>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" value="" id="isUrgent">
+                        <label class="form-check-label" for="isUrgent">
+                            Mark as Urgent
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Task</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">Update Task Progress</div>
+            <div class="card-body">
+                <form id="updateForm">
+                    <div class="mb-3">
+                        <label for="updateTaskSelect" class="form-label">Select Task</label>
+                        <select class="form-select" id="updateTaskSelect" required>
+                            <option value="">Select a task to update...</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="updateDate" class="form-label">Update Date</label>
+                            <input type="date" class="form-control" id="updateDate" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="updateHours" class="form-label">Hours Spent</label>
+                            <input type="number" class="form-control" id="updateHours" min="0">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="updateNotes" class="form-label">Notes/Findings</label>
+                        <textarea class="form-control" id="updateNotes" rows="2"></textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" value="" id="isFutureReference">
+                        <label class="form-check-label" for="isFutureReference">
+                            Mark as "Future Reference"
+                        </label>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-check mb-3">
+                            <input class="form-check-input" type="checkbox" value="" id="updateIsComplete">
+                            <label class="form-check-label" for="updateIsComplete">
+                                Mark as Completed
+                            </label>
+                        </div>
+                        <div class="col-md-6 form-check mb-3">
+                            <input class="form-check-input" type="checkbox" value="" id="updateIsOnHold">
+                            <label class="form-check-label" for="updateIsOnHold">
+                                Put Task On Hold
+                            </label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success">Log Update</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="searchInput" class="form-label">Search Tasks</label>
+            <input type="text" class="form-control" id="searchInput" placeholder="Search by name, category, or notes...">
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
+                <span>Daily Tasks</span>
+                <div class="mt-2 mt-md-0">
+                    <button class="btn btn-secondary btn-sm" id="exportBtn">Export Data</button>
+                    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importFile').click()">Import Data</button>
+                    <input type="file" id="importFile" style="display: none;" accept="application/json" />
+                </div>
+            </div>
+            <div class="card-body">
+                <ul class="list-group" id="taskList">
+                    </ul>
+            </div>
+        </div>
+        
+        <div class="report-section">
+            <h2 class="text-center mb-3">Progress Reports</h2>
+            <div class="card mb-4">
+                <div class="card-header">Overall Task Status</div>
+                <div class="card-body">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">Hours Worked by Category</div>
+                <div class="card-body">
+                    <canvas id="hoursChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">Completed Task Summary</div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 id="finishedTaskCount">0</h4>
+                        <p>Tasks Finished</p>
+                    </div>
+                    <div class="col-6">
+                        <h4 id="avgTimePerTask">0 days</h4>
+                        <p>Avg. Time Per Task (Excl. On Hold & Weekends)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">Detailed Task History</div>
+            <div class="card-body">
+                <ul class="list-group" id="detailedReportList">
+                    </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const taskForm = document.getElementById('taskForm');
+            const updateForm = document.getElementById('updateForm');
+            const taskList = document.getElementById('taskList');
+            const updateTaskSelect = document.getElementById('updateTaskSelect');
+            const exportBtn = document.getElementById('exportBtn');
+            const importFile = document.getElementById('importFile');
+            const searchInput = document.getElementById('searchInput');
+            
+            let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+            let statusChartInstance = null;
+            let hoursChartInstance = null;
+            
+            renderAll();
+
+            // Handle New Task Submission
+            taskForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const taskName = document.getElementById('taskName').value;
+                const taskCategory = document.getElementById('taskCategory').value;
+                const startDate = document.getElementById('startDate').value;
+                const isUrgent = document.getElementById('isUrgent').checked;
+
+                if (taskName && taskCategory && startDate) {
+                    const newTask = {
+                        id: Date.now(),
+                        name: taskName,
+                        category: taskCategory,
+                        startDate: startDate,
+                        completed: false,
+                        isUrgent: isUrgent,
+                        isOnHold: false,
+                        holdHistory: [],
+                        history: []
+                    };
+                    tasks.push(newTask);
+                    localStorage.setItem('tasks', JSON.stringify(tasks));
+                    renderAll();
+                    taskForm.reset();
+                }
+            });
+
+            // Handle Task Update Submission
+            updateForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const taskId = document.getElementById('updateTaskSelect').value;
+                const updateDate = document.getElementById('updateDate').value;
+                const updateHours = parseFloat(document.getElementById('updateHours').value) || 0;
+                const updateNotes = document.getElementById('updateNotes').value;
+                const isFutureReference = document.getElementById('isFutureReference').checked;
+                const updateIsComplete = document.getElementById('updateIsComplete').checked;
+                const updateIsOnHold = document.getElementById('updateIsOnHold').checked;
+
+                const task = tasks.find(t => t.id == taskId);
+                if (task) {
+                    if (updateIsOnHold && !task.isOnHold) {
+                        task.holdHistory.push({ onHoldDate: updateDate });
+                        task.isOnHold = true;
+                    } else if (!updateIsOnHold && task.isOnHold) {
+                        task.holdHistory.at(-1).resumeDate = updateDate;
+                        task.isOnHold = false;
+                    }
+
+                    const update = {
+                        date: updateDate,
+                        hours: updateHours,
+                        notes: updateNotes,
+                        futureReference: isFutureReference
+                    };
+                    task.history.push(update);
+                    task.completed = updateIsComplete;
+                    
+                    localStorage.setItem('tasks', JSON.stringify(tasks));
+                    renderAll();
+                    updateForm.reset();
+                }
+            });
+            
+            // Handle Search Input
+            searchInput.addEventListener('input', () => {
+                const searchTerm = searchInput.value.toLowerCase();
+                if (searchTerm) {
+                    const filteredTasks = tasks.filter(task => {
+                        const taskString = `${task.name} ${task.category} ${task.history.map(h => h.notes).join(' ')}`.toLowerCase();
+                        return taskString.includes(searchTerm);
+                    });
+                    renderAll(filteredTasks);
+                } else {
+                    renderAll();
+                }
+            });
+
+            function renderAll(tasksToRender = tasks) {
+                renderTaskList(tasksToRender);
+                updateCharts(tasksToRender);
+                populateUpdateSelect();
+                updateReports(tasksToRender);
+            }
+
+            function renderTaskList(tasksToRender) {
+                taskList.innerHTML = '';
+                tasksToRender.sort((a, b) => {
+                    // Sort by urgency first
+                    if (a.isUrgent && !b.isUrgent) return -1;
+                    if (!a.isUrgent && b.isUrgent) return 1;
+
+                    // Then sort by most recent update date
+                    const dateA = a.history.length > 0 ? a.history.at(-1).date : a.startDate;
+                    const dateB = b.history.length > 0 ? b.history.at(-1).date : b.startDate;
+                    return new Date(dateB) - new Date(dateA);
+                });
+                tasksToRender.forEach(task => {
+                    const li = document.createElement('li');
+                    let listItemClass = `list-group-item d-flex justify-content-between align-items-center`;
+                    if (task.completed) {
+                        listItemClass += ' list-group-item-success';
+                    } else if (task.isUrgent) {
+                        listItemClass += ' list-group-item-danger';
+                    } else if (task.isOnHold) {
+                        listItemClass += ' list-group-item-warning';
+                    }
+                    li.className = listItemClass;
+
+                    const totalHours = task.history.reduce((sum, entry) => sum + entry.hours, 0);
+                    const endDate = task.completed && task.history.at(-1)?.date ? task.history.at(-1)?.date : 'N/A';
+
+                    li.innerHTML = `
+                        <div>
+                            <div class="fw-bold">
+                                <span class="${task.completed ? 'text-decoration-line-through' : ''}">${task.name}</span>
+                                ${task.isUrgent && !task.completed ? `<span class="badge bg-danger ms-2">URGENT</span>` : ''}
+                                ${task.isOnHold ? `<span class="badge bg-warning text-dark ms-2">ON HOLD</span>` : ''}
+                            </div>
+                            <div class="task-details mt-1">
+                                <span><strong>Category:</strong> ${task.category}</span>
+                                <span><strong>Start Date:</strong> ${task.startDate}</span>
+                                <span><strong>End Date:</strong> ${endDate}</span>
+                                <span><strong>Total Hours:</strong> ${totalHours}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <button class="btn btn-danger btn-sm delete-btn" data-id="${task.id}">Delete</button>
+                        </div>
+                    `;
+                    taskList.appendChild(li);
+                });
+            }
+            
+            taskList.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-btn')) {
+                    const taskId = parseInt(e.target.dataset.id);
+                    tasks = tasks.filter(task => task.id !== taskId);
+                    localStorage.setItem('tasks', JSON.stringify(tasks));
+                    renderAll();
+                }
+            });
+
+            function populateUpdateSelect() {
+                updateTaskSelect.innerHTML = '<option value="">Select a task to update...</option>';
+                tasks.filter(t => !t.completed).forEach(task => {
+                    const option = document.createElement('option');
+                    option.value = task.id;
+                    option.textContent = task.name;
+                    updateTaskSelect.appendChild(option);
+                });
+            }
+
+            function updateCharts(tasksToRender) {
+                const completedTasks = tasksToRender.filter(t => t.completed).length;
+                const totalTasks = tasksToRender.length;
+                const pendingTasks = totalTasks - completedTasks;
+                const urgentTasks = tasksToRender.filter(t => t.isUrgent && !t.completed).length;
+
+                const statusCtx = document.getElementById('statusChart').getContext('2d');
+                if (statusChartInstance) { statusChartInstance.destroy(); }
+                statusChartInstance = new Chart(statusCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Completed', 'Pending', 'Urgent'],
+                        datasets: [{
+                            data: [completedTasks, pendingTasks, urgentTasks],
+                            backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' },
+                            title: { display: true, text: 'Overall Task Status' },
+                            tooltip: {
+                                callbacks: {
+                                    label: (tooltipItem) => `${tooltipItem.label}: ${tooltipItem.raw} (${((tooltipItem.raw / totalTasks) * 100).toFixed(2)}%)`
+                                }
+                            }
+                        }
+                    }
+                });
+
+                const hoursByCat = tasksToRender.reduce((acc, task) => {
+                    if (!acc[task.category]) { acc[task.category] = 0; }
+                    acc[task.category] += task.history.reduce((sum, entry) => sum + entry.hours, 0);
+                    return acc;
+                }, {});
+
+                const hoursLabels = Object.keys(hoursByCat);
+                const hoursData = Object.values(hoursByCat);
+                const hoursCtx = document.getElementById('hoursChart').getContext('2d');
+                if (hoursChartInstance) { hoursChartInstance.destroy(); }
+                hoursChartInstance = new Chart(hoursCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: hoursLabels,
+                        datasets: [{
+                            label: 'Hours Worked',
+                            data: hoursData,
+                            backgroundColor: '#0d6efd',
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            title: { display: true, text: 'Hours Spent by Category' }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Hours' } }
+                        }
+                    }
+                });
+            }
+            
+            function updateReports(tasksToRender) {
+                const finishedTasks = tasksToRender.filter(t => t.completed);
+                const finishedCount = finishedTasks.length;
+                
+                let totalWorkingDays = 0;
+
+                finishedTasks.forEach(task => {
+                    const startDate = new Date(task.startDate);
+                    const completedDate = new Date(task.history.at(-1)?.date);
+                    
+                    if (!startDate || !completedDate) return;
+                    
+                    let holdDuration = 0;
+                    task.holdHistory.forEach(hold => {
+                        const holdStart = new Date(hold.onHoldDate);
+                        const holdEnd = hold.resumeDate ? new Date(hold.resumeDate) : completedDate;
+                        let currentHoldDay = new Date(holdStart);
+                        let holdWorkingDays = 0;
+                        while(currentHoldDay <= holdEnd){
+                            const dayOfWeek = currentHoldDay.getDay();
+                            if(dayOfWeek !== 0 && dayOfWeek !== 6){
+                                holdWorkingDays++;
+                            }
+                            currentHoldDay.setDate(currentHoldDay.getDate() + 1);
+                        }
+                        holdDuration += holdWorkingDays;
+                    });
+                    
+                    let currentDay = new Date(startDate);
+                    let workingDaysCount = 0;
+                    while (currentDay <= completedDate) {
+                        const dayOfWeek = currentDay.getDay(); // 0 = Sunday, 6 = Saturday
+                        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                            workingDaysCount++;
+                        }
+                        currentDay.setDate(currentDay.getDate() + 1);
+                    }
+                    
+                    totalWorkingDays += workingDaysCount - holdDuration;
+                });
+                
+                const avgDays = finishedCount > 0 ? (totalWorkingDays / finishedCount).toFixed(1) : 0;
+                
+                document.getElementById('finishedTaskCount').textContent = finishedCount;
+                document.getElementById('avgTimePerTask').textContent = `${avgDays} days`;
+
+                const detailedReportList = document.getElementById('detailedReportList');
+                detailedReportList.innerHTML = '';
+
+                tasksToRender.forEach(task => {
+                    const li = document.createElement('li');
+                    li.className = `list-group-item`;
+                    
+                    const totalTaskHours = task.history.reduce((sum, entry) => sum + entry.hours, 0);
+                    
+                    let holdDurationSummary = '';
+                    if (task.holdHistory.length > 0) {
+                        let totalHoldDays = 0;
+                        task.holdHistory.forEach(hold => {
+                            const holdStart = new Date(hold.onHoldDate);
+                            const holdEnd = hold.resumeDate ? new Date(hold.resumeDate) : new Date();
+                            const timeDiff = holdEnd - holdStart;
+                            totalHoldDays += Math.round(timeDiff / (1000 * 60 * 60 * 24));
+                        });
+                        holdDurationSummary = `<span class="ms-3"><strong>On Hold for:</strong> ${totalHoldDays} days</span>`;
+                    }
+                    
+                    // Sort history to show latest updates first
+                    const sortedHistory = [...task.history].reverse();
+
+                    li.innerHTML = `
+                        <div class="d-flex justify-content-between">
+                            <strong>${task.name}</strong>
+                            <span class="badge bg-secondary">${task.category}</span>
+                        </div>
+                        <div class="update-history mt-2">
+                            <span><strong>Status:</strong> ${task.completed ? 'Completed' : task.isOnHold ? 'On Hold' : 'Pending'}</span>
+                            <span class="ms-3"><strong>Start Date:</strong> ${task.startDate}</span>
+                            <span class="ms-3"><strong>Total Hours:</strong> ${totalTaskHours}</span>
+                            ${holdDurationSummary}
+                        </div>
+                        ${sortedHistory.length > 0 ? `
+                        <ul class="list-group list-group-flush mt-2">
+                            ${sortedHistory.map(entry => `
+                                <li class="list-group-item p-1">
+                                    <small><strong>Date:</strong> ${entry.date}, <strong>Hours:</strong> ${entry.hours}, <strong>Notes:</strong> ${entry.notes}</small>
+                                    ${entry.futureReference ? `<span class="badge bg-info ms-2">Future Ref</span>` : ''}
+                                </li>
+                            `).join('')}
+                        </ul>
+                        ` : '<small class="text-muted">No updates logged yet.</small>'}
+                    `;
+                    detailedReportList.appendChild(li);
+                });
+            }
+
+
+            // Import/Export Functions
+            exportBtn.addEventListener('click', () => {
+                const dataStr = JSON.stringify(tasks, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `tasks-export-${new Date().toISOString()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+
+            importFile.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const importedTasks = JSON.parse(e.target.result);
+                        if (Array.isArray(importedTasks)) {
+                            tasks = importedTasks;
+                            localStorage.setItem('tasks', JSON.stringify(tasks));
+                            renderAll();
+                            alert('Data imported successfully!');
+                        } else {
+                            alert('Invalid JSON file. Please import a valid task list.');
+                        }
+                    } catch (error) {
+                        alert('Error parsing JSON file. Please check the file format.');
+                    }
+                };
+                reader.readAsText(file);
+            });
+        });
+    </script>
+</body>
+</html>
