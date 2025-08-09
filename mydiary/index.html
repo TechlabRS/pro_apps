@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RDiary - Your Personal Encrypted Diary</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color-light: #f8f9fa;
+      --bg-gradient-light: linear-gradient(135deg, var(--bg-color-light), #e0e7ff);
+      --text-color-light: #343a40;
+      --form-bg-light: #ffffff;
+      --header-bg-light: #0d6efd;
+      --header-text-light: white;
+      --border-color-light: #ced4da;
+      --input-bg-light: #ffffff;
+      --button-bg-light: #0d6efd;
+      --button-text-light: white;
+      --slider-bg-light: #ced4da;
+      --slider-before-bg-light: white;
+      --card-bg-light: #ffffff;
+      --card-shadow-light: rgba(0,0,0,0.1);
+    }
+
+    .dark-mode {
+      --bg-color-dark: #212529;
+      --bg-gradient-dark: linear-gradient(135deg, #212529, #343a40);
+      --text-color-dark: #f8f9fa;
+      --form-bg-dark: #343a40;
+      --header-bg-dark: #004085;
+      --header-text-dark: #f8f9fa;
+      --border-color-dark: #495057;
+      --input-bg-dark: #495057;
+      --button-bg-dark: #004085;
+      --button-text-dark: #f8f9fa;
+      --slider-bg-dark: #0d6efd;
+      --slider-before-bg-dark: white;
+      --card-bg-dark: #343a40;
+      --card-shadow-dark: rgba(255,255,255,0.1);
+
+      background: var(--bg-gradient-dark);
+      color: var(--text-color-dark);
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: var(--bg-gradient-light);
+      color: var(--text-color-light);
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    header {
+      padding: 1rem;
+      background: var(--header-bg-light);
+      color: var(--header-text-light);
+    }
+
+    .container {
+      max-width: 768px;
+    }
+
+    .card {
+      background: var(--form-bg-light);
+      border: 1px solid var(--border-color-light);
+      border-radius: 10px;
+      box-shadow: 0 2px 10px var(--card-shadow-light);
+    }
+
+    .entry-card {
+      background: var(--card-bg-light);
+      border: none;
+      box-shadow: 0 2px 5px var(--card-shadow-light);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .entry-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 15px var(--card-shadow-light);
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 26px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--slider-bg-light);
+      transition: .4s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: var(--slider-before-bg-light);
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: var(--button-bg-light);
+    }
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+
+    .modal-content {
+        background: var(--form-bg-light);
+        color: var(--text-color-light);
+    }
+
+    .dark-mode .modal-content {
+        background: var(--form-bg-dark);
+        color: var(--text-color-dark);
+    }
+
+    .btn-primary {
+      background-color: var(--button-bg-light);
+      border-color: var(--button-bg-light);
+    }
+    .dark-mode .btn-primary {
+      background-color: var(--button-bg-dark);
+      border-color: var(--button-bg-dark);
+    }
+
+    .form-control, .form-select {
+        background-color: var(--input-bg-light);
+        color: var(--text-color-light);
+        border: 1px solid var(--border-color-light);
+    }
+
+    .dark-mode .form-control, .dark-mode .form-select {
+        background-color: var(--input-bg-dark);
+        color: var(--text-color-dark);
+        border: 1px solid var(--border-color-dark);
+    }
+
+    @media (max-width: 768px) {
+        .btn-group {
+            width: 100%;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .btn-group .btn {
+            width: 100%;
+        }
+    }
+  </style>
+</head>
+<body>
+
+<div id="pin-setup" class="container mt-5">
+    <div class="card p-4">
+        <h2 class="card-title text-center mb-4">Set Your 4-digit PIN 🔐</h2>
+        <input type="password" id="new-pin" class="form-control mb-3" placeholder="Enter 4-digit PIN" maxlength="4">
+        <input type="text" id="security-question" class="form-control mb-3" placeholder="Security Question (e.g., Your pet's name?)">
+        <input type="text" id="security-answer" class="form-control mb-3" placeholder="Security Answer">
+        <button id="set-pin-btn" class="btn btn-primary w-100">Set PIN</button>
+    </div>
+</div>
+
+<div id="login-screen" class="container mt-5" style="display: none;">
+    <div class="card p-4">
+        <h2 class="card-title text-center mb-4">Enter Your PIN</h2>
+        <input type="password" id="pin-input" class="form-control mb-3" placeholder="Enter PIN">
+        <button id="login-btn" class="btn btn-primary w-100 mb-2">Login</button>
+        <button id="forgot-pin-btn" class="btn btn-link w-100">Forgot PIN?</button>
+    </div>
+</div>
+
+<div id="forgot-pin-modal" class="modal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reset PIN</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="modal-security-question"></p>
+                <input type="text" id="modal-security-answer" class="form-control" placeholder="Enter Answer">
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-reset-btn" type="button" class="btn btn-secondary">Cancel</button>
+                <button id="confirm-reset-btn" type="button" class="btn btn-primary">Reset PIN</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="app-screen" class="container" style="display: none;">
+    <header class="d-flex flex-wrap justify-content-between align-items-center mb-3 rounded shadow">
+        <h1 class="text-white my-2"> RaGh'S Diary ✍️</h1>
+        <div class="d-flex flex-wrap align-items-center gap-3 my-2">
+            <input type="text" id="search-input" class="form-control me-2" placeholder="Search entries..." style="max-width: 250px;">
+            <div class="d-flex align-items-center">
+                <label class="switch me-2">
+                    <input type="checkbox" id="theme-toggle">
+                    <span class="slider rounded-pill"></span>
+                </label>
+                <span id="theme-label" class="text-white me-3">Dark Mode</span>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button id="add-entry-btn" class="btn btn-light">Add Entry</button>
+                <button id="export-json-btn" class="btn btn-light">Export JSON</button>
+                <button id="import-json-btn" class="btn btn-light">Import JSON</button>
+                <input type="file" id="import-file" style="display: none;" accept=".json">
+                <button id="logout-btn" class="btn btn-outline-light">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <div id="entry-form" class="card mb-4 p-4" style="display: none;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="card-title" id="form-title">New Entry</h2>
+            <button id="close-form-btn" class="btn btn-danger">Close</button>
+        </div>
+        <form id="diary-form">
+            <input type="hidden" id="entry-id">
+            <div class="mb-3">
+                <label for="entry-date" class="form-label">Date:</label>
+                <input type="date" id="entry-date" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label for="entry-mood" class="form-label">Mood:</label>
+                <select id="entry-mood" class="form-select">
+                    <option>😊 Happy</option>
+                    <option>😢 Sad</option>
+                    <option>😡 Angry</option>
+                    <option>😴 Tired</option>
+                    <option>😎 Cool</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="entry-title" class="form-label">Title:</label>
+                <input type="text" id="entry-title" class="form-control" placeholder="Entry Title">
+            </div>
+            <div class="mb-3">
+                <label for="entry-content" class="form-label">Content:</label>
+                <textarea id="entry-content" class="form-control" placeholder="Write your thoughts..." rows="6"></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="entry-tags" class="form-label">Tags:</label>
+                <select id="entry-tags" class="form-select">
+                    <option value="">Select a Tag</option>
+                    <option value="MySelf">🌟 MySelf</option>
+                    <option value="Realize">💭 Realize</option>
+                    <option value="Learning">📚 Learning</option>
+                    <option value="InnoV">💡 InnoV</option>
+                    <option value="Accept">🤝 Accept</option>
+                </select>
+            </div>
+            <button type="submit" id="save-entry-btn" class="btn btn-primary w-100">Save Entry</button>
+        </form>
+    </div>
+
+    <ul id="entries-list" class="list-unstyled"></ul>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const loginScreen = document.getElementById('login-screen');
+    const appScreen = document.getElementById('app-screen');
+    const entryForm = document.getElementById('entry-form');
+    const pinSetup = document.getElementById('pin-setup');
+
+    const pinInput = document.getElementById('pin-input');
+    const loginBtn = document.getElementById('login-btn');
+    const newPinInput = document.getElementById('new-pin');
+    const setPinBtn = document.getElementById('set-pin-btn');
+    const secQ = document.getElementById('security-question');
+    const secA = document.getElementById('security-answer');
+
+    const addEntryBtn = document.getElementById('add-entry-btn');
+    const closeFormBtn = document.getElementById('close-form-btn');
+    const diaryForm = document.getElementById('diary-form');
+    const entriesList = document.getElementById('entries-list');
+    const searchInput = document.getElementById('search-input');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    const forgotPinBtn = document.getElementById('forgot-pin-btn');
+    const forgotPinModal = new bootstrap.Modal(document.getElementById('forgot-pin-modal'));
+    const modalSecAns = document.getElementById('modal-security-answer');
+    const confirmResetBtn = document.getElementById('confirm-reset-btn');
+    const cancelResetBtn = document.getElementById('cancel-reset-btn');
+    const modalSecQText = document.getElementById('modal-security-question');
+
+    const formTitle = document.getElementById('form-title');
+    const entryIdInput = document.getElementById('entry-id');
+    const saveEntryBtn = document.getElementById('save-entry-btn');
+
+    const exportJsonBtn = document.getElementById('export-json-btn');
+    const importJsonBtn = document.getElementById('import-json-btn');
+    const importFile = document.getElementById('import-file');
+    
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeLabel = document.getElementById('theme-label');
+
+    const salt = "your-diary-secret-salt-12345";
+
+    function getCryptoKey() {
+        const pin = localStorage.getItem('diaryAppPin');
+        return pin ? pin + salt : null;
+    }
+
+    function encrypt(text) {
+        const key = getCryptoKey();
+        if (!key) return text;
+        return CryptoJS.AES.encrypt(text, key).toString();
+    }
+
+    function decrypt(ciphertext) {
+        const key = getCryptoKey();
+        if (!key) return ciphertext;
+        try {
+            const bytes  = CryptoJS.AES.decrypt(ciphertext, key);
+            return bytes.toString(CryptoJS.enc.Utf8);
+        } catch (e) {
+            console.error("Decryption failed:", e);
+            return "Decryption Failed";
+        }
+    }
+
+    function saveEntries(entries) {
+        const encryptedEntries = entries.map(entry => ({
+            id: entry.id,
+            date: entry.date,
+            mood: entry.mood,
+            title: encrypt(entry.title),
+            content: encrypt(entry.content),
+            tags: entry.tags
+        }));
+        localStorage.setItem('diaryEntries', JSON.stringify(encryptedEntries));
+    }
+
+    function getEntries() {
+        const encryptedEntries = JSON.parse(localStorage.getItem('diaryEntries')) || [];
+        return encryptedEntries.map(entry => ({
+            id: entry.id,
+            date: entry.date,
+            mood: entry.mood,
+            title: decrypt(entry.title),
+            content: decrypt(entry.content),
+            tags: entry.tags
+        }));
+    }
+
+    function setTheme(mode) {
+        if (mode === 'dark') {
+            document.body.classList.add('dark-mode');
+            themeToggle.checked = true;
+            themeLabel.textContent = 'Dark Mode';
+        } else {
+            document.body.classList.remove('dark-mode');
+            themeToggle.checked = false;
+            themeLabel.textContent = 'Light Mode';
+        }
+        localStorage.setItem('theme', mode);
+    }
+    
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
+
+    themeToggle.addEventListener('change', () => {
+        const newTheme = themeToggle.checked ? 'dark' : 'light';
+        setTheme(newTheme);
+    });
+
+    const hasPin = localStorage.getItem('diaryAppPin');
+    if (!hasPin) {
+        pinSetup.style.display = 'block';
+        loginScreen.style.display = 'none';
+        appScreen.style.display = 'none';
+    } else {
+        pinSetup.style.display = 'none';
+        loginScreen.style.display = 'block';
+        appScreen.style.display = 'none';
+    }
+    
+    setPinBtn.addEventListener('click', () => {
+        const pinVal = newPinInput.value;
+        const question = secQ.value.trim();
+        const answer = secA.value.trim().toLowerCase();
+        if (/^\d{4}$/.test(pinVal) && question && answer) {
+            localStorage.setItem('diaryAppPin', pinVal);
+            localStorage.setItem('diarySecurityQuestion', question);
+            localStorage.setItem('diarySecurityAnswer', answer);
+            alert('PIN and Security Question Set!');
+            pinSetup.style.display = 'none';
+            loginScreen.style.display = 'block';
+        } else {
+            alert('Enter a 4-digit PIN and valid security Q&A');
+        }
+    });
+
+    loginBtn.addEventListener('click', () => {
+        if (pinInput.value === localStorage.getItem('diaryAppPin')) {
+            loginScreen.style.display = 'none';
+            appScreen.style.display = 'block';
+            renderEntries();
+        } else {
+            alert('Incorrect PIN!');
+        }
+    });
+    
+    logoutBtn.addEventListener('click', () => {
+        appScreen.style.display = 'none';
+        loginScreen.style.display = 'block';
+        pinInput.value = '';
+    });
+
+    forgotPinBtn.addEventListener('click', () => {
+        const question = localStorage.getItem('diarySecurityQuestion');
+        if (question) {
+            modalSecQText.textContent = `Security Question: ${question}`;
+            forgotPinModal.show();
+        } else {
+            alert('No security question set.');
+        }
+    });
+
+    cancelResetBtn.addEventListener('click', () => {
+        forgotPinModal.hide();
+    });
+
+    confirmResetBtn.addEventListener('click', () => {
+        const storedAnswer = localStorage.getItem('diarySecurityAnswer');
+        if (modalSecAns.value.trim().toLowerCase() === storedAnswer) {
+            localStorage.removeItem('diaryAppPin');
+            forgotPinModal.hide();
+            alert('PIN reset! Reload to set a new one.');
+            location.reload();
+        } else {
+            alert('Incorrect answer!');
+        }
+    });
+
+    addEntryBtn.addEventListener('click', () => {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('entry-date').value = today;
+        formTitle.textContent = 'New Entry';
+        saveEntryBtn.textContent = 'Save Entry';
+        entryIdInput.value = '';
+        //diaryForm.reset();
+        entryForm.style.display = 'block';
+    });
+
+    
+    
+    closeFormBtn.addEventListener('click', () => entryForm.style.display = 'none');
+
+    diaryForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const date = document.getElementById('entry-date').value || new Date().toISOString().split('T')[0];
+        const mood = document.getElementById('entry-mood').value;
+        const title = document.getElementById('entry-title').value;
+        const content = document.getElementById('entry-content').value;
+        const tags = document.getElementById('entry-tags').value;
+
+        const entries = getEntries();
+        const entryId = entryIdInput.value;
+
+        if (entryId) {
+            // Update existing entry
+            const index = entries.findIndex(entry => entry.id === entryId);
+            if (index !== -1) {
+                entries[index] = { ...entries[index], date, mood, title, content, tags };
+            }
+        } else {
+            // Create new entry
+            const entry = { id: crypto.randomUUID(), date, mood, title, content, tags };
+            entries.push(entry);
+        }
+        
+        saveEntries(entries);
+        renderEntries(entries);
+        diaryForm.reset();
+        entryForm.style.display = 'none';
+    });
+    
+    function renderEntries(filtered = null) {
+        const entries = filtered || getEntries();
+        entriesList.innerHTML = entries.map(entry => `
+            <li class="entry-card card p-4 mb-3">
+                <h3>${entry.title}</h3>
+                <p class="text-muted mb-1"><strong>Date:</strong> ${entry.date} | <strong>Mood:</strong> ${entry.mood}</p>
+                <p>${entry.content}</p>
+                <p class="mb-3"><span class="badge bg-primary">${entry.tags}</span></p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-warning btn-sm edit-btn" data-id="${entry.id}">Edit</button>
+                    <button class="btn btn-danger btn-sm delete-btn" data-id="${entry.id}">Delete</button>
+                </div>
+            </li>
+        `).join('');
+        
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', handleEdit);
+        });
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', handleDelete);
+        });
+    }
+
+    function handleEdit(e) {
+        const entryId = e.target.dataset.id;
+        const entries = getEntries();
+        const entryToEdit = entries.find(entry => entry.id === entryId);
+        
+        if (entryToEdit) {
+            document.getElementById('entry-date').value = entryToEdit.date;
+            document.getElementById('entry-mood').value = entryToEdit.mood;
+            document.getElementById('entry-title').value = entryToEdit.title;
+            document.getElementById('entry-content').value = entryToEdit.content;
+            document.getElementById('entry-tags').value = entryToEdit.tags;
+
+            formTitle.textContent = 'Edit Entry';
+            saveEntryBtn.textContent = 'Update Entry';
+            entryIdInput.value = entryId;
+            entryForm.style.display = 'block';
+        }
+    }
+
+    function handleDelete(e) {
+        const entryId = e.target.dataset.id;
+        if (confirm('Are you sure you want to delete this entry?')) {
+            let entries = getEntries();
+            entries = entries.filter(entry => entry.id !== entryId);
+            saveEntries(entries);
+            renderEntries(entries);
+        }
+    }
+
+    searchInput.addEventListener('input', () => {
+        const term = searchInput.value.toLowerCase();
+        const all = getEntries();
+        const filtered = all.filter(e =>
+            e.title.toLowerCase().includes(term) ||
+            e.content.toLowerCase().includes(term) ||
+            e.tags.toLowerCase().includes(term)
+        );
+        renderEntries(filtered);
+    });
+
+    // JSON Export
+    exportJsonBtn.addEventListener('click', () => {
+        const entries = getEntries();
+        if (entries.length === 0) {
+            alert('No entries available to export.');
+            return;
+        }
+
+        const dataStr = JSON.stringify(entries, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `diary_backup_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+
+    // JSON Import
+    importJsonBtn.addEventListener('click', () => {
+        importFile.click();
+    });
+
+    importFile.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (!file) {
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const newEntries = JSON.parse(e.target.result);
+                if (Array.isArray(newEntries)) {
+                    let currentEntries = getEntries();
+                    newEntries.forEach(entry => {
+                        entry.id = crypto.randomUUID();
+                    });
+                    currentEntries = currentEntries.concat(newEntries);
+                    saveEntries(currentEntries);
+                    renderEntries(currentEntries);
+                    alert('Entries imported successfully!');
+                } else {
+                    alert('Invalid JSON file format.');
+                }
+            } catch (error) {
+                alert('Failed to parse JSON file.');
+                console.error('Import error:', error);
+            }
+        };
+        reader.readAsText(file);
+        importFile.value = ''; // Reset file input
+    });
+});
+</script>
+</body>
+</html>
