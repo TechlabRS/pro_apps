@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ragh'S Advanced Job Task Tracker</title>
+    <title>RaGh's Advanced Job Task Tracker</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -47,11 +47,21 @@
                 margin-bottom: 1rem;
             }
         }
+        
+        /* New custom styles for task status colors */
+        .task-name.urgent {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .task-name.completed {
+            color: #198754;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="container mt-5">
-        <h1 class="text-center mb-4">Ragh'S Job Task Tracker</h1>
+        <h1 class="text-center mb-4">RaGh's Job Task Tracker</h1>
         
         <div class="card mb-4">
             <div class="card-header">Add New Task</div>
@@ -156,6 +166,22 @@
                     </ul>
             </div>
         </div>
+
+        <div class="card mt-4">
+            <div class="card-header">Completed Task Summary</div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 id="finishedTaskCount">0</h4>
+                        <p>Tasks Finished</p>
+                    </div>
+                    <div class="col-6">
+                        <h4 id="avgTimePerTask">0 days</h4>
+                        <p>Avg. Time Per Task (Excl. On Hold & Weekends)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
         
         <div class="report-section">
             <h2 class="text-center mb-3">Progress Reports</h2>
@@ -173,27 +199,23 @@
             </div>
         </div>
         
-        <div class="card mt-4">
-            <div class="card-header">Completed Task Summary</div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-6">
-                        <h4 id="finishedTaskCount">0</h4>
-                        <p>Tasks Finished</p>
+        
+
+        <div class="modal fade" id="taskHistoryModal" tabindex="-1" aria-labelledby="taskHistoryModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="taskHistoryModalLabel">Task History: <span id="modalTaskName"></span></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="col-6">
-                        <h4 id="avgTimePerTask">0 days</h4>
-                        <p>Avg. Time Per Task (Excl. On Hold & Weekends)</p>
+                    <div class="modal-body">
+                        <div id="modalHistoryContent">
+                            </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="card mt-4">
-            <div class="card-header">Detailed Task History</div>
-            <div class="card-body">
-                <ul class="list-group" id="detailedReportList">
-                    </ul>
             </div>
         </div>
     </div>
@@ -210,7 +232,8 @@
             const exportBtn = document.getElementById('exportBtn');
             const importFile = document.getElementById('importFile');
             const searchInput = document.getElementById('searchInput');
-            
+            const taskHistoryModal = new bootstrap.Modal(document.getElementById('taskHistoryModal'));
+
             let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
             let statusChartInstance = null;
             let hoursChartInstance = null;
@@ -328,10 +351,15 @@
                     const totalHours = task.history.reduce((sum, entry) => sum + entry.hours, 0);
                     const endDate = task.completed && task.history.at(-1)?.date ? task.history.at(-1)?.date : 'N/A';
 
+                    // Determine task name color class
+                    let taskNameClass = 'task-name';
+                    if (task.isUrgent && !task.completed) taskNameClass += ' urgent';
+                    if (task.completed) taskNameClass += ' completed';
+
                     li.innerHTML = `
                         <div>
                             <div class="fw-bold">
-                                <span class="${task.completed ? 'text-decoration-line-through' : ''}">${task.name}</span>
+                                <span class="${taskNameClass} ${task.completed ? 'text-decoration-line-through' : ''}">${task.name}</span>
                                 ${task.isUrgent && !task.completed ? `<span class="badge bg-danger ms-2">URGENT</span>` : ''}
                                 ${task.isOnHold ? `<span class="badge bg-warning text-dark ms-2">ON HOLD</span>` : ''}
                             </div>
@@ -342,7 +370,8 @@
                                 <span><strong>Total Hours:</strong> ${totalHours}</span>
                             </div>
                         </div>
-                        <div>
+                        <div class="d-flex flex-column align-items-end">
+                            <button class="btn btn-info btn-sm mb-2 view-history-btn" data-id="${task.id}">View History</button>
                             <button class="btn btn-danger btn-sm delete-btn" data-id="${task.id}">Delete</button>
                         </div>
                     `;
@@ -350,14 +379,77 @@
                 });
             }
             
-            taskList.addEventListener('click', (e) => {
-                if (e.target.classList.contains('delete-btn')) {
+        taskList.addEventListener('click', (e) => {
+            // Check if the clicked element has the 'delete-btn' class
+            if (e.target.classList.contains('delete-btn')) {
+                // Show a confirmation dialog
+                const confirmDelete = confirm("Are you sure you want to delete this task? This action cannot be undone.");
+                
+                // Only proceed if the user clicked 'OK'
+                if (confirmDelete) {
                     const taskId = parseInt(e.target.dataset.id);
                     tasks = tasks.filter(task => task.id !== taskId);
                     localStorage.setItem('tasks', JSON.stringify(tasks));
                     renderAll();
                 }
-            });
+            }
+            // Handle the 'view-history-btn' click as before
+            if (e.target.classList.contains('view-history-btn')) {
+                const taskId = parseInt(e.target.dataset.id);
+                showTaskHistoryModal(taskId);
+            }
+        });
+
+            function showTaskHistoryModal(taskId) {
+                const task = tasks.find(t => t.id === taskId);
+                if (!task) return;
+
+                document.getElementById('modalTaskName').textContent = task.name;
+                const modalHistoryContent = document.getElementById('modalHistoryContent');
+                modalHistoryContent.innerHTML = '';
+                
+                const totalTaskHours = task.history.reduce((sum, entry) => sum + entry.hours, 0);
+
+                let holdDurationSummary = '';
+                if (task.holdHistory.length > 0) {
+                    let totalHoldDays = 0;
+                    task.holdHistory.forEach(hold => {
+                        const holdStart = new Date(hold.onHoldDate);
+                        const holdEnd = hold.resumeDate ? new Date(hold.resumeDate) : new Date();
+                        const timeDiff = holdEnd - holdStart;
+                        totalHoldDays += Math.round(timeDiff / (1000 * 60 * 60 * 24));
+                    });
+                    holdDurationSummary = `<p class="mb-1"><strong>On Hold for:</strong> ${totalHoldDays} days</p>`;
+                }
+                
+                let introHTML = `<p class="mb-1"><strong>Status:</strong> ${task.completed ? 'Completed' : task.isOnHold ? 'On Hold' : 'Pending'}</p>
+                                 <p class="mb-1"><strong>Start Date:</strong> ${task.startDate}</p>
+                                 <p class="mb-1"><strong>Total Hours:</strong> ${totalTaskHours}</p>
+                                 ${holdDurationSummary}`;
+                modalHistoryContent.innerHTML += introHTML;
+
+                // Sort history to show latest updates first
+                const sortedHistory = [...task.history].reverse();
+                
+                if (sortedHistory.length > 0) {
+                    const historyList = document.createElement('ul');
+                    historyList.className = 'list-group mt-3';
+                    sortedHistory.forEach(entry => {
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item';
+                        li.innerHTML = `
+                            <small><strong>Date:</strong> ${entry.date}, <strong>Hours:</strong> ${entry.hours}, <strong>Notes:</strong> ${entry.notes}</small>
+                            ${entry.futureReference ? `<span class="badge bg-info ms-2">Future Ref</span>` : ''}
+                        `;
+                        historyList.appendChild(li);
+                    });
+                    modalHistoryContent.appendChild(historyList);
+                } else {
+                    modalHistoryContent.innerHTML += '<p class="text-muted mt-3">No updates logged yet.</p>';
+                }
+
+                taskHistoryModal.show();
+            }
 
             function populateUpdateSelect() {
                 updateTaskSelect.innerHTML = '<option value="">Select a task to update...</option>';
@@ -478,55 +570,6 @@
                 
                 document.getElementById('finishedTaskCount').textContent = finishedCount;
                 document.getElementById('avgTimePerTask').textContent = `${avgDays} days`;
-
-                const detailedReportList = document.getElementById('detailedReportList');
-                detailedReportList.innerHTML = '';
-
-                tasksToRender.forEach(task => {
-                    const li = document.createElement('li');
-                    li.className = `list-group-item`;
-                    
-                    const totalTaskHours = task.history.reduce((sum, entry) => sum + entry.hours, 0);
-                    
-                    let holdDurationSummary = '';
-                    if (task.holdHistory.length > 0) {
-                        let totalHoldDays = 0;
-                        task.holdHistory.forEach(hold => {
-                            const holdStart = new Date(hold.onHoldDate);
-                            const holdEnd = hold.resumeDate ? new Date(hold.resumeDate) : new Date();
-                            const timeDiff = holdEnd - holdStart;
-                            totalHoldDays += Math.round(timeDiff / (1000 * 60 * 60 * 24));
-                        });
-                        holdDurationSummary = `<span class="ms-3"><strong>On Hold for:</strong> ${totalHoldDays} days</span>`;
-                    }
-                    
-                    // Sort history to show latest updates first
-                    const sortedHistory = [...task.history].reverse();
-
-                    li.innerHTML = `
-                        <div class="d-flex justify-content-between">
-                            <strong>${task.name}</strong>
-                            <span class="badge bg-secondary">${task.category}</span>
-                        </div>
-                        <div class="update-history mt-2">
-                            <span><strong>Status:</strong> ${task.completed ? 'Completed' : task.isOnHold ? 'On Hold' : 'Pending'}</span>
-                            <span class="ms-3"><strong>Start Date:</strong> ${task.startDate}</span>
-                            <span class="ms-3"><strong>Total Hours:</strong> ${totalTaskHours}</span>
-                            ${holdDurationSummary}
-                        </div>
-                        ${sortedHistory.length > 0 ? `
-                        <ul class="list-group list-group-flush mt-2">
-                            ${sortedHistory.map(entry => `
-                                <li class="list-group-item p-1">
-                                    <small><strong>Date:</strong> ${entry.date}, <strong>Hours:</strong> ${entry.hours}, <strong>Notes:</strong> ${entry.notes}</small>
-                                    ${entry.futureReference ? `<span class="badge bg-info ms-2">Future Ref</span>` : ''}
-                                </li>
-                            `).join('')}
-                        </ul>
-                        ` : '<small class="text-muted">No updates logged yet.</small>'}
-                    `;
-                    detailedReportList.appendChild(li);
-                });
             }
 
 
