@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"> 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,79 +7,94 @@
     <style>
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: #f4f4f9;
+            background-color: #f0f4f8;
             margin: 0;
+            padding: 20px;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             min-height: 100vh;
         }
 
         .container {
-            max-width: 430px;
-            width: 95%;
-            margin: 24px auto;
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
             background: white;
             padding: 24px;
             border-radius: 16px;
-            box-shadow: 0px 4px 18px rgba(0,0,0,0.08);
-            box-sizing: border-box;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
 
         h2, h3 {
-            margin: 0 0 17px 0;
+            margin: 0 0 16px 0;
             text-align: center;
             font-weight: 600;
+            color: #2c3e50;
         }
 
         form {
             display: flex;
             flex-direction: column;
             gap: 12px;
-            align-items: center;
-            margin-bottom: 20px;
+        }
+
+        .form-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
         input[type="number"],
         input[type="text"],
-        input[type="date"] {
+        input[type="date"],
+        select {
             width: 100%;
             padding: 12px 15px;
             border-radius: 8px;
-            border: 1px solid #ccc;
+            border: 1px solid #dfe4e8;
             font-size: 16px;
-            background: #f8f8fb;
+            background: #fcfdfe;
             box-sizing: border-box;
-            transition: border-color 0.2s;
+            transition: border-color 0.3s, box-shadow 0.3s;
         }
 
-        input:focus {
+        input:focus, select:focus {
             outline: none;
-            border-color: #007bff;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
         }
         
         .btn-group {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
-            width: 100%;
+        }
+        
+        .btn-group-full {
+            grid-template-columns: 1fr;
         }
         
         button {
             border: none;
             border-radius: 8px;
-            padding: 12px 0;
+            padding: 14px 0;
             font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            font-weight: 500;
             transition: background-color 0.2s, transform 0.1s;
-            box-sizing: border-box;
         }
         
-        .btn-add { background: #28a745; color: #fff; }
-        .btn-spent { background: #dc3545; color: #fff; }
-        .btn-export { background: #007bff; color: #fff; }
-        .btn-import { background: #ff9800; color: #fff; }
+        .btn-add { background: #2ecc71; color: #fff; }
+        .btn-spent { background: #e74c3c; color: #fff; }
+        .btn-export { background: #3498db; color: #fff; }
+        .btn-import { background: #f39c12; color: #fff; }
+        .btn-transfer { background: #9b59b6; color: #fff; }
         
         button:hover {
             opacity: 0.9;
@@ -89,74 +104,247 @@
             transform: scale(0.98);
         }
 
-        .summary {
-            margin: 20px 0;
-            padding: 15px;
+        .summary-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .summary-card {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .summary-card h4 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: #7f8c8d;
+            font-weight: 500;
+        }
+
+        .summary-card p {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .summary-balances {
+            margin-top: 15px;
+        }
+        
+        .account-balance {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-top: 1px solid #bdc3c7;
+        }
+        .account-balance:first-child { border-top: none; }
+        .account-name { font-weight: 600; font-size: 15px;}
+        .account-amount { font-weight: 600; color: #2c3e50;}
+
+        .toggle-group {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin-top: 15px;
+        }
+        
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            color: #34495e;
+            font-weight: 500;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #3498db;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        .search-and-filter {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        #searchInput {
+            flex-grow: 1;
+        }
+
+        .date-filter-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .date-filter-group label {
+            font-size: 14px;
+            color: #7f8c8d;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .date-filter-group input {
+            padding: 8px;
+            width: auto;
+        }
+        
+        .transactions-list {
+            margin-top: 15px;
+        }
+
+        .monthly-group {
+            margin-bottom: 25px;
+        }
+        
+        .monthly-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+            font-weight: 600;
+            color: #2c3e50;
+            background-color: #eef3f7;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .monthly-summary {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .monthly-income, .monthly-expense {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .monthly-income { color: #2ecc71; }
+        .monthly-expense { color: #e74c3c; }
+
+        .transaction-row {
+            display: grid;
+            grid-template-columns: 40px 1fr auto 50px;
+            align-items: center;
+            gap: 15px;
             background: #f8f8fb;
             border-radius: 10px;
-            box-shadow: 0 1.5px 5px rgba(0,0,0,0.03);
-            text-align: center;
-            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: transform 0.2s;
+        }
+
+        .transaction-row:hover {
+            transform: translateY(-2px);
         }
         
-        .summary div { margin: 8px 0; font-size: 18px;}
-        .income { color: green; font-weight: 600;}
-        .expense { color: red; font-weight: 600;}
-        .balance { color: #2d3b4f; font-weight: 700;}
-        
-        h3 { 
-            margin-top: 20px; 
-            margin-bottom: 12px;
-            text-align: center;
-        }
-        
-        .transactions { margin-top: 15px; }
-        
-        .card-table { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 12px;
-        }
-        
-        .transaction-row {
-            display: grid; 
-            grid-template-columns: 60px 1fr auto 75px;
+        .t-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
             align-items: center;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-            padding: 10px;
         }
-        
-        .t-date { 
-            font-weight: bold; 
-            color: #222;
-            font-size: 14px;
+
+        .t-icon svg {
+            width: 20px;
+            height: 20px;
         }
+
+        .icon-income { background-color: #2ecc71; }
+        .icon-expense { background-color: #e74c3c; }
+        .icon-transfer { background-color: #9b59b6; }
         
         .t-desc { 
-            padding-left: 10px; 
-            color: #4d5368; 
-            font-size: 15px; 
-            word-break: break-word;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .t-desc .main-desc {
+            font-size: 15px;
+            color: #2c3e50;
+        }
+        
+        .t-category, .t-account, .t-date {
+            font-size: 12px;
+            color: #95a5a6;
         }
         
         .t-amt {
-            font-size: 15px;
+            font-size: 16px;
             text-align: right;
-            font-weight: bold;
+            font-weight: 700;
         }
         
-        .amount-positive { color: green;}
-        .amount-negative { color: red;}
+        .amount-positive { color: #2ecc71;}
+        .amount-negative { color: #e74c3c;}
+        .amount-transfer { color: #9b59b6;}
         
         .t-actions { 
             display: flex; 
-            gap: 5px;
+            gap: 8px;
         }
         
         .action-btn {
-            border-radius: 5px;
+            border-radius: 50%;
             border: none;
             width: 32px;
             height: 32px;
@@ -172,13 +360,13 @@
             height: 16px;
         }
         
-        .edit-btn { background: #ff9800; color: #fff;}
-        .delete-btn { background: #dc3545; color: #fff;}
+        .edit-btn { background: #f39c12; color: #fff;}
+        .delete-btn { background: #e74c3c; color: #fff;}
         
         .undo {
             display: none; 
             margin-top: 20px; 
-            background-color: #ff9800; 
+            background-color: #f39c12; 
             color: white; 
             padding: 12px; 
             border: none; 
@@ -188,70 +376,216 @@
             transition: opacity 0.3s;
         }
 
-        @media (max-width: 500px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .btn-group {
-                grid-template-columns: 1fr;
-            }
-
-            .btn-group button {
-                width: 100%;
-            }
+        .trends-container {
+            margin-top: 20px;
+        }
         
-            .transaction-row { 
-                grid-template-columns: 50px 1fr auto 65px; 
-                padding: 8px;
+        /* Modal and Floating Button Styles */
+        .fab-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .fab {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #3498db;
+            color: white;
+            font-size: 30px;
+            border: none;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .fab:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 101;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            width: 90%;
+            max-width: 400px;
+            animation: slideIn 0.3s forwards;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .close-btn {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .close-btn:hover,
+        .close-btn:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        @media (min-width: 600px) {
+            .container {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 24px;
+                max-width: 900px;
             }
-            
-            .t-desc { 
-                font-size: 13px; 
-                padding-left: 5px;
+            .card.summary-main {
+                grid-column: 1 / 2;
+                grid-row: 1 / 2;
             }
-            
-            .t-amt { 
-                font-size: 13px;
+            .card.transactions-list {
+                grid-column: 1 / 3;
             }
-            
-            .action-btn { 
-                width: 28px;
-                height: 28px;
+            .card.trends-container {
+                grid-column: 2 / 3;
             }
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h2>RaGhS Simple₹ App</h2>
-    <form onsubmit="return false;">
-        <input type="number" id="amount" placeholder="Enter Amount" step="0.01">
-        <input type="text" id="description" placeholder="Description (Optional)">
-        <input type="date" id="date">
-        <div class="btn-group">
-            <button class="btn-add" id="incomeBtn" onclick="addOrUpdateTransaction(true)">Add Income</button>
-            <button class="btn-spent" id="spendBtn" onclick="addOrUpdateTransaction(false)">Add Spend</button>
+
+    <div class="card summary-main">
+        <h2>RaGhS Simple₹ App</h2>
+        <h3>Balances</h3>
+        <div class="summary-section">
+            <div class="summary-card">
+                <h4>Total Income</h4>
+                <p>₹<span id="totalIncome">0.00</span></p>
+            </div>
+            <div class="summary-card">
+                <h4>Total Spends</h4>
+                <p>₹<span id="totalExpense">0.00</span></p>
+            </div>
         </div>
-        <div class="btn-group">
+        <div class="summary-balances">
+            <div class="account-balance">
+                <span class="account-name">Final Balance</span>
+                <span class="account-amount">₹<span id="finalBalance">0.00</span></span>
+            </div>
+            <h3>Account Balances</h3>
+            <div id="accountBalancesList"></div>
+        </div>
+        <div class="toggle-group">
+            <div class="switch-container">
+                <label for="toggleTrends">Chart</label>
+                <label class="switch">
+                    <input type="checkbox" id="toggleTrends" onchange="toggleVisibility('trendsSection', 'toggleTrends')" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="switch-container">
+                <label for="toggleTransactions">Transactions</label>
+                <label class="switch">
+                    <input type="checkbox" id="toggleTransactions" onchange="toggleVisibility('transactionsSection', 'toggleTransactions')" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+        <div style="margin-top: 20px;" class="btn-group">
             <button class="btn-export" onclick="exportData()">Export Data</button>
             <button class="btn-import" onclick="document.getElementById('importFile').click()">Import Data</button>
         </div>
         <input type="file" id="importFile" style="display: none" accept=".json" onchange="importData(event)">
-    </form>
-    <div class="summary">
-        <div class="income">Total Income: ₹<span id="totalIncome">0.00</span></div>
-        <div class="expense">Total Spends: ₹<span id="totalExpense">0.00</span></div>
-        <div class="balance">Final Balance: ₹<span id="finalBalance">0.00</span></div>
     </div>
-    <h3>Transaction History</h3>
-    <div class="transactions"><div class="card-table" id="transactionList"></div></div>
-    <button class="undo" id="undoBtn" onclick="undoDelete()">Undo</button>
+    
+    <div class="card transactions-list" id="transactionsSection">
+        <h3>Transaction History</h3>
+        <div class="search-and-filter">
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search by description, amount, or category" oninput="displayTransactions()">
+                <select id="filterByPeriod" onchange="updateViews()">
+                    <option value="all">All Time</option>
+                    <option value="week">Current Week</option>
+                    <option value="month">Current Month</option>
+                    <option value="year">Current Year</option>
+                </select>
+            </div>
+            <div class="date-filter-group">
+                <label for="startDate">From:</label>
+                <input type="date" id="startDate" onchange="updateViews()">
+                <label for="endDate">To:</label>
+                <input type="date" id="endDate" onchange="updateViews()">
+            </div>
+        </div>
+        <div class="transactions" id="transactionList"></div>
+        <button class="undo" id="undoBtn" onclick="undoDelete()">Undo</button>
+    </div>
+
+    <div class="card" id="trendsSection">
+        <h3>Monthly Spend Trends</h3>
+        <canvas id="spendTrendsChart"></canvas>
+    </div>
 </div>
+
+<div class="fab-container">
+    <button class="fab" onclick="openModal()">+</button>
+</div>
+
+<div id="myModal" class="modal" onclick="closeModalOnOutsideClick(event)">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+        <h2>Add Transaction</h2>
+        <form onsubmit="return false;">
+            <div class="form-input-group">
+                <input type="number" id="amount" placeholder="Enter Amount" step="0.01">
+                <input type="text" id="description" placeholder="Description (Optional)">
+                <input type="text" id="category" placeholder="Category (e.g., Groceries)">
+                <input type="text" id="account" placeholder="From Account (e.g., Cash, PhonePe)">
+                <input type="text" id="toAccount" placeholder="To Account (for transfers only)">
+                <input type="date" id="date">
+            </div>
+            <div class="btn-group">
+                <button class="btn-add" id="incomeBtn" onclick="addOrUpdateTransaction('income')">Add Income</button>
+                <button class="btn-spent" id="spendBtn" onclick="addOrUpdateTransaction('expense')">Add Spend</button>
+            </div>
+            <div class="btn-group btn-group-full">
+                <button class="btn-transfer" id="transferBtn" onclick="addOrUpdateTransaction('transfer')">Transfer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     let transactions = [];
     let deletedTransaction = null;
     let editTransactionId = null;
+    let myChart;
+
+    const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
     function loadSavedData() {
         try {
@@ -264,14 +598,24 @@
         } catch (e) {
             transactions = [];
         }
-        updateSummary();
-        displayTransactions();
+        updateViews();
         resetForm();
     }
+    
+    function updateViews() {
+        const filteredTransactions = getTransactionsByTimePeriod();
+        updateSummary(filteredTransactions);
+        displayTransactions(filteredTransactions);
+        renderChart(filteredTransactions);
+        updateAccountBalances();
+    }
 
-    function addOrUpdateTransaction(isIncome) {
+    function addOrUpdateTransaction(type) {
         let amount = parseFloat(document.getElementById("amount").value);
         let description = document.getElementById("description").value || "No Description";
+        let category = document.getElementById("category").value || "Uncategorized";
+        let fromAccount = document.getElementById("account").value || "Cash";
+        let toAccount = document.getElementById("toAccount").value;
         let date = document.getElementById("date").value || new Date().toISOString().split('T')[0];
 
         if (isNaN(amount) || amount <= 0) {
@@ -279,39 +623,103 @@
             return;
         }
 
+        if (type === 'transfer' && !toAccount) {
+            alert("Please specify a 'To Account' for transfers.");
+            return;
+        }
+
+        let transaction;
+        if (type === 'transfer') {
+            transaction = { 
+                id: Date.now(), 
+                amount, 
+                description: `Transfer to ${toAccount}`, 
+                category, 
+                account: fromAccount, 
+                toAccount, 
+                date, 
+                type: 'transfer' 
+            };
+        } else {
+            transaction = { 
+                id: Date.now(), 
+                amount, 
+                description, 
+                category, 
+                account: fromAccount, 
+                date, 
+                type: (type === 'income') ? 'income' : 'expense' 
+            };
+        }
+        
         if (editTransactionId) {
             let idx = transactions.findIndex(t => t.id === editTransactionId);
             if (idx !== -1) {
-                transactions[idx] = { id: editTransactionId, amount, description, date, type: isIncome };
+                transactions[idx] = transaction;
             }
         } else {
-            let transaction = { id: Date.now(), amount, description, date, type: isIncome };
             transactions.push(transaction);
         }
         
         saveData();
-        updateSummary();
-        displayTransactions();
+        updateViews();
         resetForm();
+        closeModal();
     }
 
     function editTransaction(id) {
+        openModal();
         let t = transactions.find(tx => tx.id === id);
         if (!t) return;
+        
+        // Hide/Show fields based on type
+        if (t.type === 'transfer') {
+            document.getElementById("category").style.display = "none";
+            document.getElementById("toAccount").style.display = "block";
+            document.getElementById("incomeBtn").style.display = "none";
+            document.getElementById("spendBtn").style.display = "none";
+            document.getElementById("transferBtn").style.display = "block";
+        } else {
+            document.getElementById("category").style.display = "block";
+            document.getElementById("toAccount").style.display = "none";
+            document.getElementById("incomeBtn").style.display = "block";
+            document.getElementById("spendBtn").style.display = "block";
+            document.getElementById("transferBtn").style.display = "none";
+        }
+
         document.getElementById("amount").value = t.amount;
         document.getElementById("description").value = t.description;
+        document.getElementById("category").value = t.category || "";
+        document.getElementById("account").value = t.account || "";
+        document.getElementById("toAccount").value = t.toAccount || '';
         document.getElementById("date").value = t.date;
+        
         editTransactionId = t.id;
-        document.getElementById("incomeBtn").textContent = t.type ? "Update" : "Add Income";
-        document.getElementById("spendBtn").textContent = t.type ? "Add Spend" : "Update";
+
+        // Set the button text based on the transaction type
+        document.getElementById("incomeBtn").textContent = (t.type === 'income') ? "Update Income" : "Add Income";
+        document.getElementById("spendBtn").textContent = (t.type === 'expense') ? "Update Spend" : "Add Spend";
+        document.getElementById("transferBtn").textContent = (t.type === 'transfer') ? "Update Transfer" : "Transfer";
     }
 
     function resetForm() {
         document.getElementById("amount").value = "";
         document.getElementById("description").value = "";
+        document.getElementById("category").value = "";
+        document.getElementById("account").value = "";
+        document.getElementById("toAccount").value = "";
         document.getElementById("date").value = "";
+
+        // Reset button text and field visibility
         document.getElementById("incomeBtn").textContent = "Add Income";
         document.getElementById("spendBtn").textContent = "Add Spend";
+        document.getElementById("transferBtn").textContent = "Transfer";
+        document.getElementById("category").style.display = "block";
+        document.getElementById("toAccount").style.display = "none";
+        document.getElementById("incomeBtn").style.display = "block";
+        document.getElementById("spendBtn").style.display = "block";
+        document.getElementById("transferBtn").style.display = "block";
+
         editTransactionId = null;
     }
 
@@ -322,8 +730,7 @@
             deletedTransaction = tx;
             transactions.splice(idx, 1);
             saveData();
-            updateSummary();
-            displayTransactions();
+            updateViews();
             document.getElementById("undoBtn").style.display = "block";
             setTimeout(() => {
                 document.getElementById("undoBtn").style.display = "none"; 
@@ -337,8 +744,7 @@
         if (deletedTransaction) {
             transactions.push(deletedTransaction);
             saveData();
-            updateSummary();
-            displayTransactions();
+            updateViews();
             document.getElementById("undoBtn").style.display = "none"; 
             deletedTransaction = null;
         }
@@ -348,40 +754,284 @@
         localStorage.setItem("transactions", JSON.stringify(transactions));
     }
 
-    function updateSummary() {
-        const totalIncome = transactions.filter(t => t.type).reduce((sum, t) => sum + t.amount, 0);
-        const totalExpense = transactions.filter(t => !t.type).reduce((sum, t) => sum + t.amount, 0);
+    function updateSummary(filteredTransactions) {
+        const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+        const totalExpense = filteredTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
 
         document.getElementById("totalIncome").textContent = totalIncome.toFixed(2);
         document.getElementById("totalExpense").textContent = totalExpense.toFixed(2);
         document.getElementById("finalBalance").textContent = (totalIncome - totalExpense).toFixed(2);
     }
 
+    function updateAccountBalances() {
+        const accounts = {};
+        transactions.forEach(t => {
+            const fromAccount = t.account || 'Cash';
+            if (!accounts[fromAccount]) {
+                accounts[fromAccount] = 0;
+            }
+
+            if (t.type === 'income') {
+                accounts[fromAccount] += t.amount;
+            } else if (t.type === 'expense') {
+                accounts[fromAccount] -= t.amount;
+            } else if (t.type === 'transfer') {
+                const toAccount = t.toAccount || 'Unspecified';
+                if (!accounts[toAccount]) {
+                    accounts[toAccount] = 0;
+                }
+                accounts[fromAccount] -= t.amount;
+                accounts[toAccount] += t.amount;
+            }
+        });
+
+        const accountsList = document.getElementById("accountBalancesList");
+        accountsList.innerHTML = "";
+        for (const account in accounts) {
+            const div = document.createElement('div');
+            div.className = 'account-balance';
+            div.innerHTML = `
+                <span class="account-name">${account}</span>
+                <span class="account-amount">₹${accounts[account].toFixed(2)}</span>
+            `;
+            accountsList.appendChild(div);
+        }
+    }
+
+    function getTransactionsByTimePeriod() {
+        let tempTransactions = [...transactions];
+        
+        const startDate = document.getElementById("startDate").value;
+        const endDate = document.getElementById("endDate").value;
+        
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            end.setDate(end.getDate() + 1);
+            tempTransactions = tempTransactions.filter(t => {
+                const transactionDate = new Date(t.date);
+                return transactionDate >= start && transactionDate < end;
+            });
+            document.getElementById("filterByPeriod").value = 'all';
+        } else {
+            const filterPeriod = document.getElementById("filterByPeriod").value;
+            const today = new Date();
+            let periodStartDate;
+
+            switch (filterPeriod) {
+                case 'week':
+                    periodStartDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
+                    break;
+                case 'month':
+                    periodStartDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    break;
+                case 'year':
+                    periodStartDate = new Date(today.getFullYear(), 0, 1);
+                    break;
+                default:
+                    return transactions;
+            }
+            tempTransactions = tempTransactions.filter(t => new Date(t.date) >= periodStartDate);
+        }
+        return tempTransactions;
+    }
+
     function displayTransactions() {
         const container = document.getElementById("transactionList");
         container.innerHTML = "";
-        transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        let filteredTransactions = getTransactionsByTimePeriod();
 
-        transactions.forEach(t => {
-            const row = document.createElement("div");
-            row.className = "transaction-row";
-            const [yyyy, mm, dd] = t.date.split("-");
-            const formattedDate = `${dd}.${mm}`;
-            row.innerHTML = `
-                <div class="t-date">${formattedDate}</div>
-                <div class="t-desc">${t.description}</div>
-                <div class="t-amt ${t.type ? 'amount-positive' : 'amount-negative'}">${t.type ? '+' : '-'}₹${t.amount.toFixed(2)}</div>
-                <div class="t-actions">
-                    <button class="action-btn edit-btn" onclick="editTransaction(${t.id})">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M7.127 22.569c-.149 0-.29-.033-.42-.098l-5.694-2.846c-.521-.261-.715-.892-.454-1.413l13.136-26.273c.261-.521.892-.715 1.413-.454l5.694 2.846c.521.261.715.892.454 1.413l-13.136 26.273c-.053.106-.118.196-.2.269-.082.074-.184.116-.293.116zm-3.003-4.576l4.249 2.124-11.233-5.617-4.249-2.124 11.233 5.617zm1.196 2.392l-2.392-1.196 10.778-21.556 2.392 1.196-10.778 21.556z"/></svg>
-                    </button>
-                    <button class="action-btn delete-btn" onclick="deleteTransaction(${t.id})">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.695 3.697 8.313 8.212-8.2 8.318 3.697 3.697 8.216-8.318 8.286 8.23z"/></svg>
-                    </button>
+        const searchTerm = document.getElementById("searchInput").value.trim().toLowerCase();
+        if (searchTerm) {
+            filteredTransactions = filteredTransactions.filter(t => {
+                const descriptionMatch = t.description.toLowerCase().includes(searchTerm);
+                const amountMatch = String(t.amount).includes(searchTerm);
+                const categoryMatch = (t.category || '').toLowerCase().includes(searchTerm);
+                const accountMatch = (t.account || '').toLowerCase().includes(searchTerm);
+                const toAccountMatch = (t.toAccount || '').toLowerCase().includes(searchTerm);
+                return descriptionMatch || amountMatch || categoryMatch || accountMatch || toAccountMatch;
+            });
+        }
+
+        filteredTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        const transactionsByMonth = filteredTransactions.reduce((acc, transaction) => {
+            const date = new Date(transaction.date);
+            const monthYear = `${date.getFullYear()}-${date.getMonth()}`;
+            if (!acc[monthYear]) {
+                acc[monthYear] = {
+                    transactions: [],
+                    totalIncome: 0,
+                    totalExpense: 0
+                };
+            }
+            acc[monthYear].transactions.push(transaction);
+            if (transaction.type === 'income') acc[monthYear].totalIncome += transaction.amount;
+            else if (transaction.type === 'expense') acc[monthYear].totalExpense += transaction.amount;
+            return acc;
+        }, {});
+
+        const sortedMonths = Object.keys(transactionsByMonth).sort((a, b) => {
+            const [yearA, monthA] = a.split('-').map(Number);
+            const [yearB, monthB] = b.split('-').map(Number);
+            if (yearA !== yearB) return yearB - yearA;
+            return monthB - monthA;
+        });
+
+        sortedMonths.forEach(monthYear => {
+            const data = transactionsByMonth[monthYear];
+            const [year, month] = monthYear.split('-');
+            const monthName = monthNames[parseInt(month)];
+            const header = document.createElement('div');
+            header.className = 'monthly-group';
+            header.innerHTML = `
+                <div class="monthly-header">
+                    <span>${monthName} ${year}</span>
+                    <div class="monthly-summary">
+                        <span class="monthly-income">+ ₹${data.totalIncome.toFixed(2)}</span>
+                        <span class="monthly-expense">- ₹${data.totalExpense.toFixed(2)}</span>
+                    </div>
                 </div>
             `;
-            container.appendChild(row);
+            container.appendChild(header);
+
+            data.transactions.forEach(t => {
+                const row = document.createElement("div");
+                row.className = "transaction-row";
+                const date = new Date(t.date);
+                const formattedDate = `${date.getDate()} ${monthNames[date.getMonth()]}`;
+
+                let amountDisplay;
+                let descriptionDisplay;
+                let amountClass;
+                let iconHtml;
+
+                if (t.type === 'income') {
+                    amountDisplay = `+₹${t.amount.toFixed(2)}`;
+                    descriptionDisplay = t.description;
+                    amountClass = 'amount-positive';
+                    iconHtml = `
+                        <div class="t-icon icon-income">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm6 13h-4v4h-4v-4h-4v-4h4v-4h4v4h4v4z"/></svg>
+                        </div>
+                    `;
+                } else if (t.type === 'expense') {
+                    amountDisplay = `-₹${t.amount.toFixed(2)}`;
+                    descriptionDisplay = t.description;
+                    amountClass = 'amount-negative';
+                    iconHtml = `
+                        <div class="t-icon icon-expense">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-6 13h12v-2h-12v2z"/></svg>
+                        </div>
+                    `;
+                } else if (t.type === 'transfer') {
+                    amountDisplay = `₹${t.amount.toFixed(2)}`;
+                    descriptionDisplay = `Transfer to ${t.toAccount}`;
+                    amountClass = 'amount-transfer';
+                    iconHtml = `
+                        <div class="t-icon icon-transfer">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M14.5 19h-5c-2.481 0-4.5-2.019-4.5-4.5v-2c0-.552.447-1 1-1h15c.553 0 1 .448 1 1v2c0 2.481-2.019 4.5-4.5 4.5zm-5-3h5c1.379 0 2.5-1.122 2.5-2.5v-1.5c0-.276-.224-.5-.5-.5h-15c-.276 0-.5.224-.5.5v1.5c0 1.378 1.121 2.5 2.5 2.5zm11.5-7h-12c-2.481 0-4.5-2.019-4.5-4.5v-2c0-.552.447-1 1-1h15c.553 0 1 .448 1 1v2c0 2.481-2.019 4.5-4.5 4.5zm-12-3h12c1.379 0 2.5-1.122 2.5-2.5v-1.5c0-.276-.224-.5-.5-.5h-15c-.276 0-.5.224-.5.5v1.5c0 1.378 1.121 2.5 2.5 2.5z"/></svg>
+                        </div>
+                    `;
+                }
+
+                row.innerHTML = `
+                    ${iconHtml}
+                    <div class="t-desc">
+                        <span class="main-desc">${t.description}</span>
+                        ${t.type !== 'transfer' ? `<span class="t-category">Category: ${t.category}</span>` : `<span class="t-account">From: ${t.account}</span>`}
+                        <span class="t-date">${formattedDate}</span>
+                    </div>
+                    <div class="t-amt ${amountClass}">${amountDisplay}</div>
+                    <div class="t-actions">
+                        <button class="action-btn edit-btn" onclick="editTransaction(${t.id})">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M7.127 22.569c-.149 0-.29-.033-.42-.098l-5.694-2.846c-.521-.261-.715-.892-.454-1.413l13.136-26.273c.261-.521.892-.715 1.413-.454l5.694 2.846c.521.261.715.892.454 1.413l-13.136 26.273c-.053.106-.118.196-.2.269-.082.074-.184.116-.293.116zm-3.003-4.576l4.249 2.124-11.233-5.617-4.249-2.124 11.233 5.617zm1.196 2.392l-2.392-1.196 10.778-21.556 2.392 1.196-10.778 21.556z"/></svg>
+                        </button>
+                        <button class="action-btn delete-btn" onclick="deleteTransaction(${t.id})">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.695 3.697 8.313 8.212-8.2 8.318 3.697 3.697 8.216-8.318 8.286 8.23z"/></svg>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
         });
+
+    }
+
+    function renderChart(filteredTransactions) {
+        const expenseTransactions = filteredTransactions.filter(t => t.type === 'expense').sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        const monthlyData = expenseTransactions.reduce((acc, t) => {
+            const month = t.date.slice(0, 7);
+            const category = t.category || "Uncategorized";
+            if (!acc[month]) {
+                acc[month] = {};
+            }
+            if (!acc[month][category]) {
+                acc[month][category] = 0;
+            }
+            acc[month][category] += t.amount;
+            return acc;
+        }, {});
+
+        const months = Object.keys(monthlyData).sort();
+        const categories = [...new Set(expenseTransactions.map(t => t.category || "Uncategorized"))].sort();
+        
+        const datasets = categories.map(category => {
+            const data = months.map(month => {
+                return monthlyData[month][category] || 0;
+            });
+            return {
+                label: category,
+                data: data,
+                backgroundColor: getRandomColor(),
+            };
+        });
+
+        const data = {
+            labels: months,
+            datasets: datasets
+        };
+
+        const config = {
+            type: 'bar',
+            data: data,
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Month'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Total Spends (₹)'
+                        }
+                    }
+                }
+            }
+        };
+
+        const ctx = document.getElementById('spendTrendsChart').getContext('2d');
+        if (myChart) {
+            myChart.destroy();
+        }
+        myChart = new Chart(ctx, config);
+    }
+
+    function getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
     }
 
     function exportData() {
@@ -402,8 +1052,7 @@
                 if (Array.isArray(importedData)) {
                     transactions = importedData;
                     saveData();
-                    updateSummary();
-                    displayTransactions();
+                    updateViews();
                     resetForm();
                 } else {
                     alert("Invalid JSON format in the file.");
@@ -413,6 +1062,33 @@
             }
         };
         reader.readAsText(file);
+    }
+    
+    function toggleVisibility(sectionId, checkboxId) {
+        const element = document.getElementById(sectionId);
+        const checkbox = document.getElementById(checkboxId);
+        if (checkbox.checked) {
+            element.style.display = "block";
+        } else {
+            element.style.display = "none";
+        }
+    }
+
+    // Modal functions
+    const modal = document.getElementById("myModal");
+    function openModal() {
+        modal.style.display = "flex";
+        resetForm();
+    }
+
+    function closeModal() {
+        modal.style.display = "none";
+    }
+
+    function closeModalOnOutsideClick(event) {
+        if (event.target == modal) {
+            closeModal();
+        }
     }
 
     window.onload = loadSavedData;
