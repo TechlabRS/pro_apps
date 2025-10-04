@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en"> 
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RaGhS Simple₹ App</title>
     <style>
+        /* --- General Layout and Card Styling --- */
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
             background-color: #f0f4f8;
@@ -38,6 +39,7 @@
             color: #2c3e50;
         }
 
+        /* --- Form and Input Styling --- */
         form {
             display: flex;
             flex-direction: column;
@@ -70,6 +72,7 @@
             box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
         }
         
+        /* --- Button Group Styling --- */
         .btn-group {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -90,11 +93,13 @@
             transition: background-color 0.2s, transform 0.1s;
         }
         
+        /* Specific Button Colors */
         .btn-add { background: #2ecc71; color: #fff; }
         .btn-spent { background: #e74c3c; color: #fff; }
         .btn-export { background: #3498db; color: #fff; }
         .btn-import { background: #f39c12; color: #fff; }
         .btn-transfer { background: #9b59b6; color: #fff; }
+        .btn-clear { background: #e74c3c; color: #fff; }
         
         button:hover {
             opacity: 0.9;
@@ -104,6 +109,7 @@
             transform: scale(0.98);
         }
 
+        /* --- Summary Section Styling --- */
         .summary-section {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -146,6 +152,7 @@
         .account-name { font-weight: 600; font-size: 15px;}
         .account-amount { font-weight: 600; color: #2c3e50;}
 
+        /* --- Toggle/Switch Styling --- */
         .toggle-group {
             display: flex;
             justify-content: center;
@@ -207,6 +214,7 @@
             transform: translateX(20px);
         }
 
+        /* --- Search and Filter Styling --- */
         .search-and-filter {
             display: flex;
             flex-direction: column;
@@ -242,6 +250,7 @@
             width: auto;
         }
         
+        /* --- Transaction List Styling --- */
         .transactions-list {
             margin-top: 15px;
         }
@@ -376,11 +385,27 @@
             transition: opacity 0.3s;
         }
 
-        .trends-container {
-            margin-top: 20px;
+        /* --- Chart Section Styling --- */
+        .card#trendsSection {
+            /* FIX: Enforce a fixed height for the chart container on small screens */
+            height: 350px; 
+            display: flex; /* Helps center the chart content */
+            flex-direction: column;
+        }
+
+        #spendTrendsChart {
+            /* Ensure the canvas takes up the available space */
+            max-height: 100%; 
+        }
+
+        .chart-header {
+            text-align: center;
+            margin-bottom: 8px;
+            color: #34495e;
+            font-weight: 500;
         }
         
-        /* Modal and Floating Button Styles */
+        /* --- Modal and Floating Button Styles --- */
         .fab-container {
             position: fixed;
             bottom: 20px;
@@ -453,6 +478,7 @@
             cursor: pointer;
         }
         
+        /* --- Responsive Layout for larger screens (Tablet/Desktop) --- */
         @media (min-width: 600px) {
             .container {
                 display: grid;
@@ -469,7 +495,27 @@
             }
             .card.trends-container {
                 grid-column: 2 / 3;
+                grid-row: 1 / 2; 
+                /* On desktop, allow height to match the summary card */
+                height: auto; 
             }
+        }
+        
+        /* --- Smart Analysis Styling --- */
+        #anomalyAlert {
+            color: #e74c3c; /* Red color for warning */
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        .suggestion {
+            font-size: 12px;
+            color: #3498db;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 2px 0;
         }
     </style>
 </head>
@@ -516,10 +562,16 @@
         <div style="margin-top: 20px;" class="btn-group">
             <button class="btn-export" onclick="exportData()">Export Data</button>
             <button class="btn-import" onclick="document.getElementById('importFile').click()">Import Data</button>
+            <button class="btn-clear" onclick="clearAllData()">Clear All</button>
         </div>
         <input type="file" id="importFile" style="display: none" accept=".json" onchange="importData(event)">
     </div>
     
+    <div class="card trends-container" id="trendsSection">
+        <h3 id="chartTitle">Monthly Spend Trends</h3>
+        <canvas id="spendTrendsChart"></canvas>
+    </div>
+
     <div class="card transactions-list" id="transactionsSection">
         <h3>Transaction History</h3>
         <div class="search-and-filter">
@@ -542,11 +594,6 @@
         <div class="transactions" id="transactionList"></div>
         <button class="undo" id="undoBtn" onclick="undoDelete()">Undo</button>
     </div>
-
-    <div class="card" id="trendsSection">
-        <h3>Monthly Spend Trends</h3>
-        <canvas id="spendTrendsChart"></canvas>
-    </div>
 </div>
 
 <div class="fab-container">
@@ -558,11 +605,14 @@
         <span class="close-btn" onclick="closeModal()">&times;</span>
         <h2>Add Transaction</h2>
         <form onsubmit="return false;">
+            <div id="anomalyAlert" style="display: none;"></div>
             <div class="form-input-group">
                 <input type="number" id="amount" placeholder="Enter Amount" step="0.01">
                 <input type="text" id="description" placeholder="Description (Optional)">
-                <input type="text" id="category" placeholder="Category (e.g., Groceries)">
+                <input type="text" id="category" placeholder="Category (e.g., Groceries, Salary)">
+                <div id="categorySuggestion" class="suggestion" onclick="applySuggestion('category')"></div>
                 <input type="text" id="account" placeholder="From Account (e.g., Cash, PhonePe)">
+                <div id="accountSuggestion" class="suggestion" onclick="applySuggestion('account')"></div>
                 <input type="text" id="toAccount" placeholder="To Account (for transfers only)">
                 <input type="date" id="date">
             </div>
@@ -587,6 +637,8 @@
 
     const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
+    // --- Core Data Management and Initial Load ---
+
     function loadSavedData() {
         try {
             const savedTransactions = JSON.parse(localStorage.getItem("transactions"));
@@ -600,15 +652,170 @@
         }
         updateViews();
         resetForm();
+        initSmartAnalysisListeners(); // Initialize listeners for the new smart features
     }
     
+    function saveData() {
+        localStorage.setItem("transactions", JSON.stringify(transactions));
+    }
+
     function updateViews() {
         const filteredTransactions = getTransactionsByTimePeriod();
         updateSummary(filteredTransactions);
-        displayTransactions(filteredTransactions);
+        displayTransactions();
         renderChart(filteredTransactions);
         updateAccountBalances();
     }
+    
+    // --- Smart Analysis Implementation ---
+
+    function getStandardDeviation(array) {
+        if (array.length === 0) return { mean: 0, stdDev: 0 };
+        const mean = array.reduce((a, b) => a + b) / array.length;
+        const variance = array.map(n => Math.pow(n - mean, 2)).reduce((a, b) => a + b) / array.length;
+        return { mean, stdDev: Math.sqrt(variance) };
+    }
+
+    function checkAnomaly(amount, category) {
+        const pastExpenses = transactions
+            .filter(t => t.type === 'expense' && t.category === category)
+            .map(t => t.amount);
+        
+        // Need at least 5 past transactions in the category to establish a norm
+        if (pastExpenses.length < 5) {
+            return { isAnomaly: false, message: "" }; 
+        }
+        
+        const { mean, stdDev } = getStandardDeviation(pastExpenses);
+        
+        // Flag as anomaly if the amount is more than 2 standard deviations above the mean.
+        if (amount > (mean + 2 * stdDev)) {
+            const meanDisplay = mean.toFixed(2);
+            const stdDevDisplay = stdDev.toFixed(2);
+            const deviation = ((amount - mean) / stdDev).toFixed(1);
+            return { 
+                isAnomaly: true, 
+                message: `⚠️ **Anomaly Alert**: This is ${deviation} standard deviations above the average spend (₹${meanDisplay}) for '${category}'.`
+            };
+        }
+        
+        return { isAnomaly: false, message: "" };
+    }
+
+    function getSmartSuggestions(description) {
+        const cleanDesc = description.trim().toLowerCase();
+        // Require at least 3 characters to start suggesting
+        if (cleanDesc.length < 3) return { suggestedCategory: '', suggestedAccount: '' };
+
+        const history = transactions
+            .filter(t => t.type !== 'transfer' && t.description.toLowerCase().includes(cleanDesc));
+
+        if (history.length < 2) return { suggestedCategory: '', suggestedAccount: '' };
+
+        const categoryCounts = {};
+        const accountCounts = {};
+
+        history.forEach(t => {
+            const cat = t.category || 'Uncategorized';
+            const acc = t.account || 'Cash';
+            categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+            accountCounts[acc] = (accountCounts[acc] || 0) + 1;
+        });
+
+        const sortedCategories = Object.entries(categoryCounts).sort(([, a], [, b]) => b - a);
+        const sortedAccounts = Object.entries(accountCounts).sort(([, a], [, b]) => b - a);
+
+        // Suggest if the top suggestion has at least 60% confidence
+        const totalCategories = history.length;
+        const suggestedCategory = sortedCategories.length && sortedCategories[0][1] / totalCategories >= 0.6 
+                                ? sortedCategories[0][0] : '';
+        
+        const totalAccounts = history.length;
+        const suggestedAccount = sortedAccounts.length && sortedAccounts[0][1] / totalAccounts >= 0.6 
+                                ? sortedAccounts[0][0] : '';
+        
+        return { suggestedCategory, suggestedAccount };
+    }
+
+    function handleSmartAnalysis() {
+        const descriptionInput = document.getElementById("description");
+        const categoryInput = document.getElementById("category");
+        const accountInput = document.getElementById("account");
+        const amountInput = document.getElementById("amount");
+        const alertDiv = document.getElementById("anomalyAlert");
+        const catSuggestionDiv = document.getElementById("categorySuggestion");
+        const accSuggestionDiv = document.getElementById("accountSuggestion");
+        
+        const description = descriptionInput.value;
+        const amount = parseFloat(amountInput.value);
+
+        // --- 1. Auto-fill Suggestions ---
+        const { suggestedCategory, suggestedAccount } = getSmartSuggestions(description);
+
+        if (suggestedCategory && categoryInput.value.trim() === "") {
+            catSuggestionDiv.innerHTML = `Smart Suggestion: **${suggestedCategory}** (click to apply)`;
+            catSuggestionDiv.style.display = "block";
+            catSuggestionDiv.dataset.suggestion = suggestedCategory;
+        } else {
+            catSuggestionDiv.style.display = "none";
+            catSuggestionDiv.textContent = "";
+        }
+
+        if (suggestedAccount && accountInput.value.trim() === "") {
+            accSuggestionDiv.innerHTML = `Smart Suggestion: **${suggestedAccount}** (click to apply)`;
+            accSuggestionDiv.style.display = "block";
+            accSuggestionDiv.dataset.suggestion = suggestedAccount;
+        } else {
+            accSuggestionDiv.style.display = "none";
+            accSuggestionDiv.textContent = "";
+        }
+
+        // --- 2. Anomaly Detection ---
+        // Determine the category to check: either the one typed in, or the smart suggestion
+        const currentCategory = categoryInput.value.trim() || suggestedCategory;
+
+        // Only check if it's a valid amount and a category is present
+        if (!isNaN(amount) && amount > 0 && currentCategory) {
+            const anomalyResult = checkAnomaly(amount, currentCategory);
+            if (anomalyResult.isAnomaly) {
+                alertDiv.innerHTML = anomalyResult.message;
+                alertDiv.style.display = "block";
+            } else {
+                alertDiv.style.display = "none";
+                alertDiv.textContent = "";
+            }
+        } else {
+            alertDiv.style.display = "none";
+            alertDiv.textContent = "";
+        }
+    }
+
+    function applySuggestion(target) {
+        if (target === 'category') {
+            const catSuggestionDiv = document.getElementById("categorySuggestion");
+            document.getElementById("category").value = catSuggestionDiv.dataset.suggestion;
+            catSuggestionDiv.style.display = "none";
+            // Re-run analysis to check anomaly with the new category
+            handleSmartAnalysis();
+        } else if (target === 'account') {
+            const accSuggestionDiv = document.getElementById("accountSuggestion");
+            document.getElementById("account").value = accSuggestionDiv.dataset.suggestion;
+            accSuggestionDiv.style.display = "none";
+        }
+    }
+
+    function initSmartAnalysisListeners() {
+        const descriptionInput = document.getElementById("description");
+        const amountInput = document.getElementById("amount");
+        const categoryInput = document.getElementById("category");
+        
+        if (descriptionInput) descriptionInput.addEventListener('input', handleSmartAnalysis);
+        // Anomaly check should happen when amount or category changes
+        if (amountInput) amountInput.addEventListener('input', handleSmartAnalysis);
+        if (categoryInput) categoryInput.addEventListener('input', handleSmartAnalysis);
+    }
+
+    // --- Transaction Logic (Add/Edit/Delete/Undo) ---
 
     function addOrUpdateTransaction(type) {
         let amount = parseFloat(document.getElementById("amount").value);
@@ -622,42 +829,50 @@
             alert("Enter a valid amount!");
             return;
         }
-
-        if (type === 'transfer' && !toAccount) {
-            alert("Please specify a 'To Account' for transfers.");
-            return;
+        
+        // New Anomaly Confirmation for Expenses before saving
+        if (type === 'expense' && !editTransactionId) {
+            const currentCategory = category;
+            const anomalyResult = checkAnomaly(amount, currentCategory);
+            if (anomalyResult.isAnomaly) {
+                if (!confirm(`${anomalyResult.message.replace(/\*\*/g, '')}\n\nDo you still want to save this expense?`)) {
+                    // User chose NOT to save the anomaly
+                    return;
+                }
+            }
         }
 
-        let transaction;
         if (type === 'transfer') {
-            transaction = { 
-                id: Date.now(), 
-                amount, 
-                description: `Transfer to ${toAccount}`, 
-                category, 
-                account: fromAccount, 
-                toAccount, 
-                date, 
-                type: 'transfer' 
-            };
-        } else {
-            transaction = { 
-                id: Date.now(), 
-                amount, 
-                description, 
-                category, 
-                account: fromAccount, 
-                date, 
-                type: (type === 'income') ? 'income' : 'expense' 
-            };
+             // For transfers, 'From Account' and 'To Account' must be set and different
+            if (!fromAccount || !toAccount || fromAccount.toLowerCase() === toAccount.toLowerCase()) {
+                alert("For a Transfer, please specify two different accounts (From and To).");
+                return;
+            }
+            category = "Transfer"; // Override category for transfers
+            description = description || `Transfer to ${toAccount}`;
         }
         
+        let transaction;
+
         if (editTransactionId) {
+            // Update existing transaction
             let idx = transactions.findIndex(t => t.id === editTransactionId);
             if (idx !== -1) {
+                // Ensure the 'category' field is only present for Income/Expense for consistency
+                if (type === 'transfer') {
+                    transaction = { id: editTransactionId, amount, description, account: fromAccount, toAccount, date, type };
+                } else {
+                    transaction = { id: editTransactionId, amount, description, category, account: fromAccount, date, type };
+                }
                 transactions[idx] = transaction;
             }
         } else {
+            // Add new transaction
+             if (type === 'transfer') {
+                transaction = { id: Date.now(), amount, description, account: fromAccount, toAccount, date, type };
+            } else {
+                transaction = { id: Date.now(), amount, description, category, account: fromAccount, date, type };
+            }
             transactions.push(transaction);
         }
         
@@ -672,21 +887,7 @@
         let t = transactions.find(tx => tx.id === id);
         if (!t) return;
         
-        // Hide/Show fields based on type
-        if (t.type === 'transfer') {
-            document.getElementById("category").style.display = "none";
-            document.getElementById("toAccount").style.display = "block";
-            document.getElementById("incomeBtn").style.display = "none";
-            document.getElementById("spendBtn").style.display = "none";
-            document.getElementById("transferBtn").style.display = "block";
-        } else {
-            document.getElementById("category").style.display = "block";
-            document.getElementById("toAccount").style.display = "none";
-            document.getElementById("incomeBtn").style.display = "block";
-            document.getElementById("spendBtn").style.display = "block";
-            document.getElementById("transferBtn").style.display = "none";
-        }
-
+        // Populate fields
         document.getElementById("amount").value = t.amount;
         document.getElementById("description").value = t.description;
         document.getElementById("category").value = t.category || "";
@@ -696,11 +897,59 @@
         
         editTransactionId = t.id;
 
-        // Set the button text based on the transaction type
-        document.getElementById("incomeBtn").textContent = (t.type === 'income') ? "Update Income" : "Add Income";
-        document.getElementById("spendBtn").textContent = (t.type === 'expense') ? "Update Spend" : "Add Spend";
-        document.getElementById("transferBtn").textContent = (t.type === 'transfer') ? "Update Transfer" : "Transfer";
+        // Dynamic Field Visibility and Button Text
+        if (t.type === 'transfer') {
+            document.getElementById("category").style.display = "none";
+            document.getElementById("toAccount").style.display = "block";
+            document.getElementById("incomeBtn").style.display = "none";
+            document.getElementById("spendBtn").style.display = "none";
+            document.getElementById("transferBtn").style.display = "block";
+            document.getElementById("transferBtn").textContent = "Update Transfer";
+        } else {
+            document.getElementById("category").style.display = "block";
+            document.getElementById("toAccount").style.display = "none";
+            document.getElementById("incomeBtn").style.display = "block";
+            document.getElementById("spendBtn").style.display = "block";
+            document.getElementById("transferBtn").style.display = "none";
+
+            // Set the *relevant* button to 'Update' and the other to 'Add'
+            document.getElementById("incomeBtn").textContent = (t.type === 'income') ? "Update Income" : "Add Income";
+            document.getElementById("spendBtn").textContent = (t.type === 'expense') ? "Update Spend" : "Add Spend";
+        }
+        handleSmartAnalysis(); // Run analysis after populating form in edit mode
     }
+    
+    // Add event listeners to the modal buttons to manage field visibility when user switches
+    document.getElementById("incomeBtn").onclick = () => { manageModalFields('income'); addOrUpdateTransaction('income'); };
+    document.getElementById("spendBtn").onclick = () => { manageModalFields('expense'); addOrUpdateTransaction('expense'); };
+    document.getElementById("transferBtn").onclick = () => { manageModalFields('transfer'); addOrUpdateTransaction('transfer'); };
+
+    // Function to dynamically show/hide fields when clicking buttons in the modal
+    function manageModalFields(type) {
+        if (type === 'transfer') {
+            document.getElementById("category").style.display = "none";
+            document.getElementById("toAccount").style.display = "block";
+        } else {
+            document.getElementById("category").style.display = "block";
+            document.getElementById("toAccount").style.display = "none";
+        }
+        // Always reset button text to 'Add' when switching types in the modal
+        document.getElementById("incomeBtn").textContent = "Add Income";
+        document.getElementById("spendBtn").textContent = "Add Spend";
+        document.getElementById("transferBtn").textContent = "Transfer";
+        
+        // If we are in edit mode, ensure the *current* button is set to update
+        if (editTransactionId) {
+            let t = transactions.find(tx => tx.id === editTransactionId);
+            if(t && t.type === type) {
+                if (type === 'income') document.getElementById("incomeBtn").textContent = "Update Income";
+                if (type === 'expense') document.getElementById("spendBtn").textContent = "Update Spend";
+                if (type === 'transfer') document.getElementById("transferBtn").textContent = "Update Transfer";
+            }
+        }
+        handleSmartAnalysis(); // Run analysis after changing field visibility
+    }
+
 
     function resetForm() {
         document.getElementById("amount").value = "";
@@ -710,10 +959,19 @@
         document.getElementById("toAccount").value = "";
         document.getElementById("date").value = "";
 
-        // Reset button text and field visibility
+        // Reset smart analysis elements
+        document.getElementById("anomalyAlert").style.display = "none";
+        document.getElementById("anomalyAlert").textContent = "";
+        document.getElementById("categorySuggestion").style.display = "none";
+        document.getElementById("categorySuggestion").textContent = "";
+        document.getElementById("accountSuggestion").style.display = "none";
+        document.getElementById("accountSuggestion").textContent = "";
+
+        // Reset button text and field visibility to default (non-edit, full view)
         document.getElementById("incomeBtn").textContent = "Add Income";
         document.getElementById("spendBtn").textContent = "Add Spend";
         document.getElementById("transferBtn").textContent = "Transfer";
+        
         document.getElementById("category").style.display = "block";
         document.getElementById("toAccount").style.display = "none";
         document.getElementById("incomeBtn").style.display = "block";
@@ -750,9 +1008,16 @@
         }
     }
 
-    function saveData() {
-        localStorage.setItem("transactions", JSON.stringify(transactions));
+    function clearAllData() {
+        if (confirm("Are you sure you want to clear ALL transaction data? This action cannot be undone.")) {
+            transactions = [];
+            localStorage.removeItem("transactions");
+            updateViews();
+            alert("All transaction data has been cleared.");
+        }
     }
+
+    // --- Summary and Balance Calculations ---
 
     function updateSummary(filteredTransactions) {
         const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
@@ -767,9 +1032,9 @@
         const accounts = {};
         transactions.forEach(t => {
             const fromAccount = t.account || 'Cash';
-            if (!accounts[fromAccount]) {
-                accounts[fromAccount] = 0;
-            }
+            // Ensure both accounts are tracked, even if balance is 0
+            if (!accounts.hasOwnProperty(fromAccount)) accounts[fromAccount] = 0;
+            if (t.type === 'transfer' && t.toAccount && !accounts.hasOwnProperty(t.toAccount)) accounts[t.toAccount] = 0;
 
             if (t.type === 'income') {
                 accounts[fromAccount] += t.amount;
@@ -777,11 +1042,11 @@
                 accounts[fromAccount] -= t.amount;
             } else if (t.type === 'transfer') {
                 const toAccount = t.toAccount || 'Unspecified';
-                if (!accounts[toAccount]) {
-                    accounts[toAccount] = 0;
-                }
                 accounts[fromAccount] -= t.amount;
-                accounts[toAccount] += t.amount;
+                if (toAccount) {
+                    if (!accounts.hasOwnProperty(toAccount)) accounts[toAccount] = 0;
+                    accounts[toAccount] += t.amount;
+                }
             }
         });
 
@@ -797,6 +1062,8 @@
             accountsList.appendChild(div);
         }
     }
+
+    // --- Filtering Logic ---
 
     function getTransactionsByTimePeriod() {
         let tempTransactions = [...transactions];
@@ -927,7 +1194,7 @@
                     `;
                 } else if (t.type === 'transfer') {
                     amountDisplay = `₹${t.amount.toFixed(2)}`;
-                    descriptionDisplay = `Transfer to ${t.toAccount}`;
+                    descriptionDisplay = `${t.account} -> ${t.toAccount}`;
                     amountClass = 'amount-transfer';
                     iconHtml = `
                         <div class="t-icon icon-transfer">
@@ -940,8 +1207,8 @@
                     ${iconHtml}
                     <div class="t-desc">
                         <span class="main-desc">${t.description}</span>
-                        ${t.type !== 'transfer' ? `<span class="t-category">Category: ${t.category}</span>` : `<span class="t-account">From: ${t.account}</span>`}
-                        <span class="t-date">${formattedDate}</span>
+                        ${t.type === 'transfer' ? `<span class="t-category">Transfer</span>` : `<span class="t-category">Category: ${t.category}</span>`}
+                        <span class="t-date">${formattedDate} | From: ${t.account}</span>
                     </div>
                     <div class="t-amt ${amountClass}">${amountDisplay}</div>
                     <div class="t-actions">
@@ -956,67 +1223,136 @@
                 container.appendChild(row);
             });
         });
-
     }
 
+    // --- Chart Logic ---
+
     function renderChart(filteredTransactions) {
+        // 1. Filter for expenses and calculate unique months
         const expenseTransactions = filteredTransactions.filter(t => t.type === 'expense').sort((a, b) => new Date(a.date) - new Date(b.date));
         
-        const monthlyData = expenseTransactions.reduce((acc, t) => {
-            const month = t.date.slice(0, 7);
-            const category = t.category || "Uncategorized";
-            if (!acc[month]) {
-                acc[month] = {};
-            }
-            if (!acc[month][category]) {
-                acc[month][category] = 0;
-            }
-            acc[month][category] += t.amount;
-            return acc;
-        }, {});
+        const uniqueMonths = [...new Set(expenseTransactions.map(t => t.date.slice(0, 7)))];
+        const chartTitle = document.getElementById('chartTitle');
 
-        const months = Object.keys(monthlyData).sort();
-        const categories = [...new Set(expenseTransactions.map(t => t.category || "Uncategorized"))].sort();
-        
-        const datasets = categories.map(category => {
-            const data = months.map(month => {
-                return monthlyData[month][category] || 0;
+        let chartType;
+        let data;
+        let config;
+
+        // Check if data spans more than one month or is empty
+        if (uniqueMonths.length > 1) {
+            // Logic A: Monthly Trend (Bar Chart)
+            chartTitle.textContent = 'Monthly Expense Trend';
+            chartType = 'bar';
+
+            const monthlyTotals = uniqueMonths.map(month => {
+                const total = expenseTransactions
+                    .filter(t => t.date.startsWith(month))
+                    .reduce((sum, t) => sum + t.amount, 0);
+                return total;
             });
-            return {
-                label: category,
-                data: data,
-                backgroundColor: getRandomColor(),
+
+            const labels = uniqueMonths.map(month => {
+                const [year, monthIndex] = month.split('-');
+                return `${monthNames[parseInt(monthIndex)]} ${year}`;
+            });
+
+            data = {
+                labels: labels,
+                datasets: [{
+                    label: 'Total Monthly Spend (₹)',
+                    data: monthlyTotals,
+                    backgroundColor: '#e74c3c', // Red for expense
+                    borderRadius: 6,
+                }]
             };
-        });
 
-        const data = {
-            labels: months,
-            datasets: datasets
-        };
-
-        const config = {
-            type: 'bar',
-            data: data,
-            options: {
-                responsive: true,
-                scales: {
-                    x: {
-                        stacked: true,
-                        title: {
-                            display: true,
-                            text: 'Month'
+            config = {
+                type: chartType,
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // Key to fixing the scrolling issue
+                    scales: {
+                        x: {
+                            grid: { display: false }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Amount (₹)' }
                         }
                     },
-                    y: {
-                        stacked: true,
-                        title: {
-                            display: true,
-                            text: 'Total Spends (₹)'
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            };
+
+        } else if (uniqueMonths.length === 1) {
+            // Logic B: Category Breakdown (Doughnut Chart)
+            chartTitle.textContent = `Category Breakdown for ${monthNames[parseInt(uniqueMonths[0].split('-')[1])]} ${uniqueMonths[0].split('-')[0]}`;
+            chartType = 'doughnut';
+
+            const categoryData = expenseTransactions.reduce((acc, t) => {
+                const category = t.category || "Uncategorized";
+                acc[category] = (acc[category] || 0) + t.amount;
+                return acc;
+            }, {});
+
+            const labels = Object.keys(categoryData);
+            const amounts = Object.values(categoryData);
+            const colors = labels.map((_, index) => getRandomColor(index)); // Use index for deterministic color
+
+            data = {
+                labels: labels,
+                datasets: [{
+                    data: amounts,
+                    backgroundColor: colors,
+                    hoverOffset: 10
+                }]
+            };
+
+            config = {
+                type: chartType,
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // Key to fixing the scrolling issue
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += '₹' + context.parsed.toFixed(2);
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                        label += ' (' + percentage + '%)';
+                                    }
+                                    return label;
+                                }
+                            }
                         }
                     }
                 }
-            }
-        };
+            };
+
+        } else {
+            // No Expense Data
+            chartTitle.textContent = 'No Expense Data for Selected Period';
+            data = { labels: ['No Data'], datasets: [{ data: [1], backgroundColor: ['#ccc'] }] };
+            chartType = 'doughnut';
+            config = {
+                type: chartType,
+                data: data,
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+            };
+        }
 
         const ctx = document.getElementById('spendTrendsChart').getContext('2d');
         if (myChart) {
@@ -1025,14 +1361,16 @@
         myChart = new Chart(ctx, config);
     }
 
-    function getRandomColor() {
-        const letters = '0123456789ABCDEF';
-        let color = '#';
-        for (let i = 0; i < 6; i++) {
-            color += letters[Math.floor(Math.random() * 16)];
-        }
-        return color;
+    // Updated color function for better distinction in Doughnut chart
+    function getRandomColor(index) {
+        const standardColors = [
+            '#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#34495e',
+            '#1abc9c', '#e67e22', '#7f8c8d', '#d35400', '#2980b9', '#c0392b'
+        ];
+        return standardColors[index % standardColors.length];
     }
+
+    // --- Export, Import, and Utility Functions ---
 
     function exportData() {
         let blob = new Blob([JSON.stringify(transactions)], { type: "application/json" });
@@ -1068,7 +1406,7 @@
         const element = document.getElementById(sectionId);
         const checkbox = document.getElementById(checkboxId);
         if (checkbox.checked) {
-            element.style.display = "block";
+            element.style.display = "flex"; // Use flex since the chart container is flex
         } else {
             element.style.display = "none";
         }
@@ -1078,11 +1416,14 @@
     const modal = document.getElementById("myModal");
     function openModal() {
         modal.style.display = "flex";
-        resetForm();
+        resetForm(); // Ensure a fresh start
+        manageModalFields('expense'); // Default to expense/income view
+        document.getElementById("transferBtn").style.display = "block"; // Show all buttons on open
     }
 
     function closeModal() {
         modal.style.display = "none";
+        resetForm(); // Ensure form is cleaned up when closing
     }
 
     function closeModalOnOutsideClick(event) {
