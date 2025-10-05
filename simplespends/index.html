@@ -1306,7 +1306,7 @@
 
             const labels = uniqueMonths.map(month => {
                 const [year, monthIndex] = month.split('-');
-                return `${monthNames[parseInt(monthIndex)] - 1} ${year}`;
+                return `${monthNames[parseInt(monthIndex) - 1]} ${year}`;
             });
 
             data = {
