@@ -121,7 +121,9 @@
             padding: 20px;
             border-radius: 12px;
             text-align: center;
-            
+            /* FIX: Ensure the card itself doesn't cause overflow on small screens */
+            min-width: 0; 
+            overflow: hidden; 
         }
 
         .summary-card h4 {
@@ -131,31 +133,19 @@
             font-weight: 500;
         }
 
-        /*.summary-card p {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 700;
-            color: #2c3e50;
-        } */
-
+        /* FIX: Dynamic Font Sizing Target (No scrolling) */
         .summary-card p {
             margin: 0;
-            font-size: 24px;
+            font-size: 24px; /* Default size set in JS */
             font-weight: 700;
             color: #2c3e50;
-            /* --- FIX: Allows horizontal scrolling for large numbers --- */
+            
+            /* Key properties for dynamic sizing */
             white-space: nowrap; 
-            overflow-x: auto;   
-            -webkit-overflow-scrolling: touch; 
-            /* Optional: Hide scrollbar */
-            scrollbar-width: none; 
-            -ms-overflow-style: none;
+            overflow: hidden;    
+            text-overflow: ellipsis; 
+            transition: font-size 0.2s; 
         }
-
-        .summary-card p::-webkit-scrollbar {
-            display: none;
-        }
-        
 
         .summary-balances {
             margin-top: 15px;
@@ -255,6 +245,17 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
+        }
+        
+        /* New Filter Style */
+        .transaction-type-filter {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #dfe4e8;
+            font-size: 16px;
+            background: #fcfdfe;
+            box-sizing: border-box;
         }
 
         .date-filter-group label {
@@ -407,14 +408,12 @@
 
         /* --- Chart Section Styling --- */
         .card#trendsSection {
-            /* FIX: Enforce a fixed height for the chart container on small screens */
             height: 350px; 
-            display: flex; /* Helps center the chart content */
+            display: flex; 
             flex-direction: column;
         }
 
         #spendTrendsChart {
-            /* Ensure the canvas takes up the available space */
             max-height: 100%; 
         }
 
@@ -516,14 +515,13 @@
             .card.trends-container {
                 grid-column: 2 / 3;
                 grid-row: 1 / 2; 
-                /* On desktop, allow height to match the summary card */
                 height: auto; 
             }
         }
         
         /* --- Smart Analysis Styling --- */
         #anomalyAlert {
-            color: #e74c3c; /* Red color for warning */
+            color: #e74c3c; 
             font-weight: 600;
             font-size: 14px;
             margin-bottom: 5px;
@@ -547,17 +545,17 @@
         <h3>Balances</h3>
         <div class="summary-section">
             <div class="summary-card">
-                <h4>Total Income</h4>
+                <h4>Total Income (Filtered)</h4>
                 <p>₹<span id="totalIncome">0.00</span></p>
             </div>
             <div class="summary-card">
-                <h4>Total Spends</h4>
+                <h4>Total Spends (Filtered)</h4>
                 <p>₹<span id="totalExpense">0.00</span></p>
             </div>
         </div>
         <div class="summary-balances">
             <div class="account-balance">
-                <span class="account-name">Final Balance</span>
+                <span class="account-name">Final Balance (Overall)</span>
                 <span class="account-amount">₹<span id="finalBalance">0.00</span></span>
             </div>
             <h3>Account Balances</h3>
@@ -596,7 +594,7 @@
         <h3>Transaction History</h3>
         <div class="search-and-filter">
             <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Search by description, amount, or category" oninput="displayTransactions()">
+                <input type="text" id="searchInput" placeholder="Search by description, amount, or category" oninput="updateViews()">
                 <select id="filterByPeriod" onchange="updateViews()">
                     <option value="all">All Time</option>
                     <option value="week">Current Week</option>
@@ -604,6 +602,12 @@
                     <option value="year">Current Year</option>
                 </select>
             </div>
+             <select id="filterByType" class="transaction-type-filter" onchange="updateViews()">
+                <option value="all">Filter by Type: All Transactions</option>
+                <option value="income">Income Only</option>
+                <option value="expense">Spends Only</option>
+                <option value="transfer">Transfers Only</option>
+            </select>
             <div class="date-filter-group">
                 <label for="startDate">From:</label>
                 <input type="date" id="startDate" onchange="updateViews()">
@@ -672,7 +676,7 @@
         }
         updateViews();
         resetForm();
-        initSmartAnalysisListeners(); // Initialize listeners for the new smart features
+        initSmartAnalysisListeners();
     }
     
     function saveData() {
@@ -681,43 +685,16 @@
 
     function updateViews() {
         const filteredTransactions = getTransactionsByTimePeriod();
-        updateSummary(filteredTransactions);
+        
+        // Pass ALL transactions for the overall balance calculation
+        updateSummary(filteredTransactions, transactions);
+        
+        // NEW: Scale the fonts after updating summary
+        scaleSummaryAmounts();
+        
         displayTransactions();
         renderChart(filteredTransactions);
         updateAccountBalances();
-        scaleSummaryAmounts();
-    }
-
-    function scaleSummaryAmounts() {
-        // Select the three elements that display money totals
-        const amountElements = [
-            document.getElementById('totalIncome'),
-            document.getElementById('totalExpense'),
-            document.getElementById('finalBalance')
-        ];
-
-        amountElements.forEach(element => {
-            // Find the parent <p> element
-            const pTag = element.parentElement; 
-            
-            // Reset to default size before checking
-            pTag.style.fontSize = '24px';
-            
-            // Get the length of the text content (e.g., "₹1,234,567.89")
-            const textLength = element.textContent.length; 
-            
-            // Define scaling thresholds (adjust these numbers based on your exact layout)
-            if (textLength > 16) {
-                // For very long numbers (e.g., over 10 million)
-                pTag.style.fontSize = '14px';
-            } else if (textLength > 14) {
-                // For long numbers (e.g., over 1 million)
-                pTag.style.fontSize = '18px';
-            } else if (textLength > 12) {
-                // For medium-long numbers
-                pTag.style.fontSize = '20px';
-            }
-        });
     }
     
     // --- Smart Analysis Implementation ---
@@ -734,14 +711,12 @@
             .filter(t => t.type === 'expense' && t.category === category)
             .map(t => t.amount);
         
-        // Need at least 5 past transactions in the category to establish a norm
         if (pastExpenses.length < 5) {
             return { isAnomaly: false, message: "" }; 
         }
         
         const { mean, stdDev } = getStandardDeviation(pastExpenses);
         
-        // Flag as anomaly if the amount is more than 2 standard deviations above the mean.
         if (amount > (mean + 2 * stdDev)) {
             const meanDisplay = mean.toFixed(2);
             const stdDevDisplay = stdDev.toFixed(2);
@@ -757,7 +732,6 @@
 
     function getSmartSuggestions(description) {
         const cleanDesc = description.trim().toLowerCase();
-        // Require at least 3 characters to start suggesting
         if (cleanDesc.length < 3) return { suggestedCategory: '', suggestedAccount: '' };
 
         const history = transactions
@@ -778,7 +752,6 @@
         const sortedCategories = Object.entries(categoryCounts).sort(([, a], [, b]) => b - a);
         const sortedAccounts = Object.entries(accountCounts).sort(([, a], [, b]) => b - a);
 
-        // Suggest if the top suggestion has at least 60% confidence
         const totalCategories = history.length;
         const suggestedCategory = sortedCategories.length && sortedCategories[0][1] / totalCategories >= 0.6 
                                 ? sortedCategories[0][0] : '';
@@ -824,10 +797,8 @@
         }
 
         // --- 2. Anomaly Detection ---
-        // Determine the category to check: either the one typed in, or the smart suggestion
         const currentCategory = categoryInput.value.trim() || suggestedCategory;
 
-        // Only check if it's a valid amount and a category is present
         if (!isNaN(amount) && amount > 0 && currentCategory) {
             const anomalyResult = checkAnomaly(amount, currentCategory);
             if (anomalyResult.isAnomaly) {
@@ -848,7 +819,6 @@
             const catSuggestionDiv = document.getElementById("categorySuggestion");
             document.getElementById("category").value = catSuggestionDiv.dataset.suggestion;
             catSuggestionDiv.style.display = "none";
-            // Re-run analysis to check anomaly with the new category
             handleSmartAnalysis();
         } else if (target === 'account') {
             const accSuggestionDiv = document.getElementById("accountSuggestion");
@@ -863,7 +833,6 @@
         const categoryInput = document.getElementById("category");
         
         if (descriptionInput) descriptionInput.addEventListener('input', handleSmartAnalysis);
-        // Anomaly check should happen when amount or category changes
         if (amountInput) amountInput.addEventListener('input', handleSmartAnalysis);
         if (categoryInput) categoryInput.addEventListener('input', handleSmartAnalysis);
     }
@@ -883,35 +852,30 @@
             return;
         }
         
-        // New Anomaly Confirmation for Expenses before saving
         if (type === 'expense' && !editTransactionId) {
             const currentCategory = category;
             const anomalyResult = checkAnomaly(amount, currentCategory);
             if (anomalyResult.isAnomaly) {
                 if (!confirm(`${anomalyResult.message.replace(/\*\*/g, '')}\n\nDo you still want to save this expense?`)) {
-                    // User chose NOT to save the anomaly
                     return;
                 }
             }
         }
 
         if (type === 'transfer') {
-             // For transfers, 'From Account' and 'To Account' must be set and different
             if (!fromAccount || !toAccount || fromAccount.toLowerCase() === toAccount.toLowerCase()) {
                 alert("For a Transfer, please specify two different accounts (From and To).");
                 return;
             }
-            category = "Transfer"; // Override category for transfers
+            category = "Transfer"; 
             description = description || `Transfer to ${toAccount}`;
         }
         
         let transaction;
 
         if (editTransactionId) {
-            // Update existing transaction
             let idx = transactions.findIndex(t => t.id === editTransactionId);
             if (idx !== -1) {
-                // Ensure the 'category' field is only present for Income/Expense for consistency
                 if (type === 'transfer') {
                     transaction = { id: editTransactionId, amount, description, account: fromAccount, toAccount, date, type };
                 } else {
@@ -920,7 +884,6 @@
                 transactions[idx] = transaction;
             }
         } else {
-            // Add new transaction
              if (type === 'transfer') {
                 transaction = { id: Date.now(), amount, description, account: fromAccount, toAccount, date, type };
             } else {
@@ -940,7 +903,6 @@
         let t = transactions.find(tx => tx.id === id);
         if (!t) return;
         
-        // Populate fields
         document.getElementById("amount").value = t.amount;
         document.getElementById("description").value = t.description;
         document.getElementById("category").value = t.category || "";
@@ -950,7 +912,6 @@
         
         editTransactionId = t.id;
 
-        // Dynamic Field Visibility and Button Text
         if (t.type === 'transfer') {
             document.getElementById("category").style.display = "none";
             document.getElementById("toAccount").style.display = "block";
@@ -965,19 +926,16 @@
             document.getElementById("spendBtn").style.display = "block";
             document.getElementById("transferBtn").style.display = "none";
 
-            // Set the *relevant* button to 'Update' and the other to 'Add'
             document.getElementById("incomeBtn").textContent = (t.type === 'income') ? "Update Income" : "Add Income";
             document.getElementById("spendBtn").textContent = (t.type === 'expense') ? "Update Spend" : "Add Spend";
         }
-        handleSmartAnalysis(); // Run analysis after populating form in edit mode
+        handleSmartAnalysis();
     }
     
-    // Add event listeners to the modal buttons to manage field visibility when user switches
     document.getElementById("incomeBtn").onclick = () => { manageModalFields('income'); addOrUpdateTransaction('income'); };
     document.getElementById("spendBtn").onclick = () => { manageModalFields('expense'); addOrUpdateTransaction('expense'); };
     document.getElementById("transferBtn").onclick = () => { manageModalFields('transfer'); addOrUpdateTransaction('transfer'); };
 
-    // Function to dynamically show/hide fields when clicking buttons in the modal
     function manageModalFields(type) {
         if (type === 'transfer') {
             document.getElementById("category").style.display = "none";
@@ -986,12 +944,11 @@
             document.getElementById("category").style.display = "block";
             document.getElementById("toAccount").style.display = "none";
         }
-        // Always reset button text to 'Add' when switching types in the modal
+
         document.getElementById("incomeBtn").textContent = "Add Income";
         document.getElementById("spendBtn").textContent = "Add Spend";
         document.getElementById("transferBtn").textContent = "Transfer";
         
-        // If we are in edit mode, ensure the *current* button is set to update
         if (editTransactionId) {
             let t = transactions.find(tx => tx.id === editTransactionId);
             if(t && t.type === type) {
@@ -1000,7 +957,7 @@
                 if (type === 'transfer') document.getElementById("transferBtn").textContent = "Update Transfer";
             }
         }
-        handleSmartAnalysis(); // Run analysis after changing field visibility
+        handleSmartAnalysis();
     }
 
 
@@ -1012,7 +969,6 @@
         document.getElementById("toAccount").value = "";
         document.getElementById("date").value = "";
 
-        // Reset smart analysis elements
         document.getElementById("anomalyAlert").style.display = "none";
         document.getElementById("anomalyAlert").textContent = "";
         document.getElementById("categorySuggestion").style.display = "none";
@@ -1020,7 +976,6 @@
         document.getElementById("accountSuggestion").style.display = "none";
         document.getElementById("accountSuggestion").textContent = "";
 
-        // Reset button text and field visibility to default (non-edit, full view)
         document.getElementById("incomeBtn").textContent = "Add Income";
         document.getElementById("spendBtn").textContent = "Add Spend";
         document.getElementById("transferBtn").textContent = "Transfer";
@@ -1072,20 +1027,62 @@
 
     // --- Summary and Balance Calculations ---
 
-    function updateSummary(filteredTransactions) {
-        const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-        const totalExpense = filteredTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    function updateSummary(filteredTransactionsForDisplay, allTransactions) {
+        // Filtered totals (for the two main summary cards)
+        const totalIncome = filteredTransactionsForDisplay
+            .filter(t => t.type === 'income')
+            .reduce((sum, t) => sum + t.amount, 0);
+            
+        const totalExpense = filteredTransactionsForDisplay
+            .filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        // Overall totals (for the Final Balance)
+        const overallTotalIncome = allTransactions
+            .filter(t => t.type === 'income')
+            .reduce((sum, t) => sum + t.amount, 0);
+            
+        const overallTotalExpense = allTransactions
+            .filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + t.amount, 0);
+        
+        const overallFinalBalance = overallTotalIncome - overallTotalExpense;
 
         document.getElementById("totalIncome").textContent = totalIncome.toFixed(2);
         document.getElementById("totalExpense").textContent = totalExpense.toFixed(2);
-        document.getElementById("finalBalance").textContent = (totalIncome - totalExpense).toFixed(2);
+        document.getElementById("finalBalance").textContent = overallFinalBalance.toFixed(2);
+    }
+    
+    // NEW: Function to scale font size based on number length (fixes overflow)
+    function scaleSummaryAmounts() {
+        const amountElements = [
+            document.getElementById('totalIncome'),
+            document.getElementById('totalExpense'),
+            document.getElementById('finalBalance')
+        ];
+
+        amountElements.forEach(element => {
+            const pTag = element.parentElement; 
+            
+            pTag.style.fontSize = '24px'; // Reset to default size
+            
+            // Text content includes "₹" and commas/decimals. Use the full length.
+            const textLength = pTag.textContent.length; 
+            
+            if (textLength > 16) {
+                pTag.style.fontSize = '14px';
+            } else if (textLength > 14) {
+                pTag.style.fontSize = '18px';
+            } else if (textLength > 12) {
+                pTag.style.fontSize = '20px';
+            }
+        });
     }
 
     function updateAccountBalances() {
         const accounts = {};
         transactions.forEach(t => {
             const fromAccount = t.account || 'Cash';
-            // Ensure both accounts are tracked, even if balance is 0
             if (!accounts.hasOwnProperty(fromAccount)) accounts[fromAccount] = 0;
             if (t.type === 'transfer' && t.toAccount && !accounts.hasOwnProperty(t.toAccount)) accounts[t.toAccount] = 0;
 
@@ -1116,14 +1113,16 @@
         }
     }
 
-    // --- Filtering Logic ---
+    // --- Filtering Logic (Updated to include Type Filter) ---
 
     function getTransactionsByTimePeriod() {
         let tempTransactions = [...transactions];
         
+        // --- 1. Filter by Date Range/Period ---
         const startDate = document.getElementById("startDate").value;
         const endDate = document.getElementById("endDate").value;
-        
+        const filterPeriod = document.getElementById("filterByPeriod").value;
+
         if (startDate && endDate) {
             const start = new Date(startDate);
             const end = new Date(endDate);
@@ -1132,9 +1131,8 @@
                 const transactionDate = new Date(t.date);
                 return transactionDate >= start && transactionDate < end;
             });
-            document.getElementById("filterByPeriod").value = 'all';
+            document.getElementById("filterByPeriod").value = 'all'; // Reset dropdown
         } else {
-            const filterPeriod = document.getElementById("filterByPeriod").value;
             const today = new Date();
             let periodStartDate;
 
@@ -1149,22 +1147,24 @@
                     periodStartDate = new Date(today.getFullYear(), 0, 1);
                     break;
                 default:
-                    return transactions;
+                    // If 'all', do nothing
+                    break;
             }
-            tempTransactions = tempTransactions.filter(t => new Date(t.date) >= periodStartDate);
+            if (periodStartDate) {
+                tempTransactions = tempTransactions.filter(t => new Date(t.date) >= periodStartDate);
+            }
         }
-        return tempTransactions;
-    }
-
-    function displayTransactions() {
-        const container = document.getElementById("transactionList");
-        container.innerHTML = "";
         
-        let filteredTransactions = getTransactionsByTimePeriod();
+        // --- 2. Filter by Transaction Type (NEW) ---
+        const filterType = document.getElementById("filterByType").value;
+        if (filterType !== 'all') {
+            tempTransactions = tempTransactions.filter(t => t.type === filterType);
+        }
 
+        // --- 3. Filter by Search Term ---
         const searchTerm = document.getElementById("searchInput").value.trim().toLowerCase();
         if (searchTerm) {
-            filteredTransactions = filteredTransactions.filter(t => {
+            tempTransactions = tempTransactions.filter(t => {
                 const descriptionMatch = t.description.toLowerCase().includes(searchTerm);
                 const amountMatch = String(t.amount).includes(searchTerm);
                 const categoryMatch = (t.category || '').toLowerCase().includes(searchTerm);
@@ -1173,248 +1173,245 @@
                 return descriptionMatch || amountMatch || categoryMatch || accountMatch || toAccountMatch;
             });
         }
-
-        filteredTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
         
-        const transactionsByMonth = filteredTransactions.reduce((acc, transaction) => {
-            const date = new Date(transaction.date);
-            const monthYear = `${date.getFullYear()}-${date.getMonth()}`;
-            if (!acc[monthYear]) {
-                acc[monthYear] = {
-                    transactions: [],
-                    totalIncome: 0,
-                    totalExpense: 0
-                };
-            }
-            acc[monthYear].transactions.push(transaction);
-            if (transaction.type === 'income') acc[monthYear].totalIncome += transaction.amount;
-            else if (transaction.type === 'expense') acc[monthYear].totalExpense += transaction.amount;
-            return acc;
-        }, {});
-
-        const sortedMonths = Object.keys(transactionsByMonth).sort((a, b) => {
-            const [yearA, monthA] = a.split('-').map(Number);
-            const [yearB, monthB] = b.split('-').map(Number);
-            if (yearA !== yearB) return yearB - yearA;
-            return monthB - monthA;
-        });
-
-        sortedMonths.forEach(monthYear => {
-            const data = transactionsByMonth[monthYear];
-            const [year, month] = monthYear.split('-');
-            const monthName = monthNames[parseInt(month)];
-            const header = document.createElement('div');
-            header.className = 'monthly-group';
-            header.innerHTML = `
-                <div class="monthly-header">
-                    <span>${monthName} ${year}</span>
-                    <div class="monthly-summary">
-                        <span class="monthly-income">+ ₹${data.totalIncome.toFixed(2)}</span>
-                        <span class="monthly-expense">- ₹${data.totalExpense.toFixed(2)}</span>
-                    </div>
-                </div>
-            `;
-            container.appendChild(header);
-
-            data.transactions.forEach(t => {
-                const row = document.createElement("div");
-                row.className = "transaction-row";
-                const date = new Date(t.date);
-                const formattedDate = `${date.getDate()} ${monthNames[date.getMonth()]}`;
-
-                let amountDisplay;
-                let descriptionDisplay;
-                let amountClass;
-                let iconHtml;
-
-                if (t.type === 'income') {
-                    amountDisplay = `+₹${t.amount.toFixed(2)}`;
-                    descriptionDisplay = t.description;
-                    amountClass = 'amount-positive';
-                    iconHtml = `
-                        <div class="t-icon icon-income">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm6 13h-4v4h-4v-4h-4v-4h4v-4h4v4h4v4z"/></svg>
-                        </div>
-                    `;
-                } else if (t.type === 'expense') {
-                    amountDisplay = `-₹${t.amount.toFixed(2)}`;
-                    descriptionDisplay = t.description;
-                    amountClass = 'amount-negative';
-                    iconHtml = `
-                        <div class="t-icon icon-expense">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-6 13h12v-2h-12v2z"/></svg>
-                        </div>
-                    `;
-                } else if (t.type === 'transfer') {
-                    amountDisplay = `₹${t.amount.toFixed(2)}`;
-                    descriptionDisplay = `${t.account} -> ${t.toAccount}`;
-                    amountClass = 'amount-transfer';
-                    iconHtml = `
-                        <div class="t-icon icon-transfer">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M14.5 19h-5c-2.481 0-4.5-2.019-4.5-4.5v-2c0-.552.447-1 1-1h15c.553 0 1 .448 1 1v2c0 2.481-2.019 4.5-4.5 4.5zm-5-3h5c1.379 0 2.5-1.122 2.5-2.5v-1.5c0-.276-.224-.5-.5-.5h-15c-.276 0-.5.224-.5.5v1.5c0 1.378 1.121 2.5 2.5 2.5zm11.5-7h-12c-2.481 0-4.5-2.019-4.5-4.5v-2c0-.552.447-1 1-1h15c.553 0 1 .448 1 1v2c0 2.481-2.019 4.5-4.5 4.5zm-12-3h12c1.379 0 2.5-1.122 2.5-2.5v-1.5c0-.276-.224-.5-.5-.5h-15c-.276 0-.5.224-.5.5v1.5c0 1.378 1.121 2.5 2.5 2.5z"/></svg>
-                        </div>
-                    `;
-                }
-
-                row.innerHTML = `
-                    ${iconHtml}
-                    <div class="t-desc">
-                        <span class="main-desc">${t.description}</span>
-                        ${t.type === 'transfer' ? `<span class="t-category">Transfer</span>` : `<span class="t-category">Category: ${t.category}</span>`}
-                        <span class="t-date">${formattedDate} | From: ${t.account}</span>
-                    </div>
-                    <div class="t-amt ${amountClass}">${amountDisplay}</div>
-                    <div class="t-actions">
-                        <button class="action-btn edit-btn" onclick="editTransaction(${t.id})">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M7.127 22.569c-.149 0-.29-.033-.42-.098l-5.694-2.846c-.521-.261-.715-.892-.454-1.413l13.136-26.273c.261-.521.892-.715 1.413-.454l5.694 2.846c.521.261.715.892.454 1.413l-13.136 26.273c-.053.106-.118.196-.2.269-.082.074-.184.116-.293.116zm-3.003-4.576l4.249 2.124-11.233-5.617-4.249-2.124 11.233 5.617zm1.196 2.392l-2.392-1.196 10.778-21.556 2.392 1.196-10.778 21.556z"/></svg>
-                        </button>
-                        <button class="action-btn delete-btn" onclick="deleteTransaction(${t.id})">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.695 3.697 8.313 8.212-8.2 8.318 3.697 3.697 8.216-8.318 8.286 8.23z"/></svg>
-                        </button>
-                    </div>
-                `;
-                container.appendChild(row);
-            });
-        });
+        return tempTransactions;
     }
+
+    function displayTransactions() {
+		const container = document.getElementById("transactionList");
+		container.innerHTML = "";
+		
+		let filteredTransactions = getTransactionsByTimePeriod();
+
+		filteredTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+		
+		const transactionsByMonth = filteredTransactions.reduce((acc, transaction) => {
+			const date = new Date(transaction.date);
+			
+			// --- FIX START ---
+			// Get 0-indexed month and ensure it's formatted as two digits (00-11)
+			const monthIndex = date.getMonth(); 
+			const monthKey = String(monthIndex).padStart(2, '0'); // e.g., 0 to '00', 9 to '09'
+			const year = date.getFullYear();
+			
+			const monthYear = `${year}-${monthKey}`; // Key becomes: "2023-09"
+			// --- FIX END ---
+			
+			if (!acc[monthYear]) {
+				acc[monthYear] = {
+					transactions: [],
+					totalIncome: 0,
+					totalExpense: 0
+				};
+			}
+			acc[monthYear].transactions.push(transaction);
+			if (transaction.type === 'income') acc[monthYear].totalIncome += transaction.amount;
+			else if (transaction.type === 'expense') acc[monthYear].totalExpense += transaction.amount;
+			return acc;
+		}, {});
+
+		const sortedMonths = Object.keys(transactionsByMonth).sort((a, b) => b.localeCompare(a));
+
+		sortedMonths.forEach(monthYear => {
+			const data = transactionsByMonth[monthYear];
+			// The month part (e.g., '09') is now a string. Parse it back to an integer.
+			// It's already 0-indexed, so we don't subtract 1.
+			const [year, monthKey] = monthYear.split('-');
+			const monthIndex = parseInt(monthKey, 10);
+			const monthName = monthNames[monthIndex]; // Use 0-11 index to get month name
+			
+			const header = document.createElement('div');
+			header.className = 'monthly-group';
+			header.innerHTML = `
+				<div class="monthly-header">
+					<span>${monthName} ${year}</span>
+					<div class="monthly-summary">
+						<span class="monthly-income">+ ₹${data.totalIncome.toFixed(2)}</span>
+						<span class="monthly-expense">- ₹${data.totalExpense.toFixed(2)}</span>
+					</div>
+				</div>
+			`;
+			container.appendChild(header);
+
+			// ... (The rest of your transaction rendering loop is correct) ...
+			// ... (This part has been truncated for brevity but remains the same as your previous code) ...
+			
+			data.transactions.forEach(t => {
+				const row = document.createElement("div");
+				row.className = "transaction-row";
+				const date = new Date(t.date);
+				const formattedDate = `${date.getDate()} ${monthNames[date.getMonth()]}`;
+
+				let amountDisplay;
+				let descriptionDisplay;
+				let amountClass;
+				let iconHtml;
+
+				if (t.type === 'income') {
+					amountDisplay = `+₹${t.amount.toFixed(2)}`;
+					descriptionDisplay = t.description;
+					amountClass = 'amount-positive';
+					iconHtml = `<div class="t-icon icon-income"><svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm6 13h-4v4h-4v-4h-4v-4h4v-4h4v4h4v4z"/></svg></div>`;
+				} else if (t.type === 'expense') {
+					amountDisplay = `-₹${t.amount.toFixed(2)}`;
+					descriptionDisplay = t.description;
+					amountClass = 'amount-negative';
+					iconHtml = `<div class="t-icon icon-expense"><svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-6 13h12v-2h-12v2z"/></svg></div>`;
+				} else if (t.type === 'transfer') {
+					amountDisplay = `₹${t.amount.toFixed(2)}`;
+					descriptionDisplay = `${t.account} -> ${t.toAccount}`;
+					amountClass = 'amount-transfer';
+					iconHtml = `<div class="t-icon icon-transfer"><svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M14.5 19h-5c-2.481 0-4.5-2.019-4.5-4.5v-2c0-.552.447-1 1-1h15c.553 0 1 .448 1 1v2c0 2.481-2.019 4.5-4.5 4.5zm-5-3h5c1.379 0 2.5-1.122 2.5-2.5v-1.5c0-.276-.224-.5-.5-.5h-15c-.276 0-.5.224-.5.5v1.5c0 1.378 1.121 2.5 2.5 2.5zm11.5-7h-12c-2.481 0-4.5-2.019-4.5-4.5v-2c0-.552.447-1 1-1h15c.553 0 1 .448 1 1v2c0 2.481-2.019 4.5-4.5 4.5zm-12-3h12c1.379 0 2.5-1.122 2.5-2.5v-1.5c0-.276-.224-.5-.5-.5h-15c-.276 0-.5.224-.5.5v1.5c0 1.378 1.121 2.5 2.5 2.5z"/></svg></div>`;
+				}
+
+				row.innerHTML = `
+					${iconHtml}
+					<div class="t-desc">
+						<span class="main-desc">${t.description}</span>
+						${t.type === 'transfer' ? `<span class="t-category">Transfer</span>` : `<span class="t-category">Category: ${t.category}</span>`}
+						<span class="t-date">${formattedDate} | From: ${t.account}</span>
+					</div>
+					<div class="t-amt ${amountClass}">${amountDisplay}</div>
+					<div class="t-actions">
+						<button class="action-btn edit-btn" onclick="editTransaction(${t.id})">
+							<svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M7.127 22.569c-.149 0-.29-.033-.42-.098l-5.694-2.846c-.521-.261-.715-.892-.454-1.413l13.136-26.273c.261-.521.892-.715 1.413-.454l5.694 2.846c.521.261.715.892.454 1.413l-13.136 26.273c-.053.106-.118.196-.2.269-.082.074-.184.116-.293.116zm-3.003-4.576l4.249 2.124-11.233-5.617-4.249-2.124 11.233 5.617zm1.196 2.392l-2.392-1.196 10.778-21.556 2.392 1.196-10.778 21.556z"/></svg>
+						</button>
+						<button class="action-btn delete-btn" onclick="deleteTransaction(${t.id})">
+							<svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.695 3.697 8.313 8.212-8.2 8.318 3.697 3.697 8.216-8.318 8.286 8.23z"/></svg>
+						</button>
+					</div>
+				`;
+				container.appendChild(row);
+			});
+		});
+	}
 
     // --- Chart Logic ---
 
     function renderChart(filteredTransactions) {
-        // 1. Filter for expenses and calculate unique months
-        const expenseTransactions = filteredTransactions.filter(t => t.type === 'expense').sort((a, b) => new Date(a.date) - new Date(b.date));
-        
-        const uniqueMonths = [...new Set(expenseTransactions.map(t => t.date.slice(0, 7)))];
-        const chartTitle = document.getElementById('chartTitle');
+		const expenseTransactions = filteredTransactions.filter(t => t.type === 'expense').sort((a, b) => new Date(a.date) - new Date(b.date));
+		
+		// We use the full YYYY-MM string to get unique months and keep them sorted correctly
+		const uniqueMonths = [...new Set(expenseTransactions.map(t => t.date.slice(0, 7)))];
+		const chartTitle = document.getElementById('chartTitle');
 
-        let chartType;
-        let data;
-        let config;
+		let chartType;
+		let data;
+		let config;
 
-        // Check if data spans more than one month or is empty
-        if (uniqueMonths.length > 1) {
-            // Logic A: Monthly Trend (Bar Chart)
-            chartTitle.textContent = 'Monthly Expense Trend';
-            chartType = 'bar';
+		if (uniqueMonths.length > 1) {
+			chartTitle.textContent = 'Monthly Expense Trend';
+			chartType = 'bar';
 
-            const monthlyTotals = uniqueMonths.map(month => {
-                const total = expenseTransactions
-                    .filter(t => t.date.startsWith(month))
-                    .reduce((sum, t) => sum + t.amount, 0);
-                return total;
-            });
+			const monthlyTotals = uniqueMonths.map(month => {
+				const total = expenseTransactions
+					.filter(t => t.date.startsWith(month))
+					.reduce((sum, t) => sum + t.amount, 0);
+				return total;
+			});
 
-            const labels = uniqueMonths.map(month => {
-                const [year, monthIndex] = month.split('-');
-                return `${monthNames[parseInt(monthIndex) - 1]} ${year}`;
-            });
+			const labels = uniqueMonths.map(month => {
+				// month is in YYYY-MM format (e.g., '2023-10')
+				const monthNumberStr = month.split('-')[1]; // Extracts '10'
+				const year = month.split('-')[0];           // Extracts '2023'
+				
+				// CORE FIX: Convert 1-indexed month (1-12) to 0-indexed month (0-11)
+				const monthIndex = parseInt(monthNumberStr) - 1; 
 
-            data = {
-                labels: labels,
-                datasets: [{
-                    label: 'Total Monthly Spend (₹)',
-                    data: monthlyTotals,
-                    backgroundColor: '#e74c3c', // Red for expense
-                    borderRadius: 6,
-                }]
-            };
+				// Use the 0-indexed month to correctly fetch from the monthNames array
+				return `${monthNames[monthIndex]} ${year}`;
+			});
 
-            config = {
-                type: chartType,
-                data: data,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false, // Key to fixing the scrolling issue
-                    scales: {
-                        x: {
-                            grid: { display: false }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            title: { display: true, text: 'Amount (₹)' }
-                        }
-                    },
-                    plugins: {
-                        legend: { display: false }
-                    }
-                }
-            };
+			data = {
+				labels: labels,
+				datasets: [{
+					label: 'Total Monthly Spend (₹)',
+					data: monthlyTotals,
+					backgroundColor: '#e74c3c', 
+					borderRadius: 6,
+				}]
+			};
 
-        } else if (uniqueMonths.length === 1) {
-            // Logic B: Category Breakdown (Doughnut Chart)
-            chartTitle.textContent = `Category Breakdown for ${monthNames[parseInt(uniqueMonths[0].split('-')[1])]} ${uniqueMonths[0].split('-')[0]}`;
-            chartType = 'doughnut';
+			config = {
+				type: chartType,
+				data: data,
+				options: {
+					responsive: true,
+					maintainAspectRatio: false, 
+					scales: {
+						x: { grid: { display: false } },
+						y: { beginAtZero: true, title: { display: true, text: 'Amount (₹)' } }
+					},
+					plugins: { legend: { display: false } }
+				}
+			};
 
-            const categoryData = expenseTransactions.reduce((acc, t) => {
-                const category = t.category || "Uncategorized";
-                acc[category] = (acc[category] || 0) + t.amount;
-                return acc;
-            }, {});
+		} else if (uniqueMonths.length === 1) {
+			// ... (Doughnut Chart Logic - This part is fine) ...
+			chartTitle.textContent = `Category Breakdown for ${monthNames[parseInt(uniqueMonths[0].split('-')[1]) - 1]} ${uniqueMonths[0].split('-')[0]}`;
+			chartType = 'doughnut';
 
-            const labels = Object.keys(categoryData);
-            const amounts = Object.values(categoryData);
-            const colors = labels.map((_, index) => getRandomColor(index)); // Use index for deterministic color
+			const categoryData = expenseTransactions.reduce((acc, t) => {
+				const category = t.category || "Uncategorized";
+				acc[category] = (acc[category] || 0) + t.amount;
+				return acc;
+			}, {});
 
-            data = {
-                labels: labels,
-                datasets: [{
-                    data: amounts,
-                    backgroundColor: colors,
-                    hoverOffset: 10
-                }]
-            };
+			const labels = Object.keys(categoryData);
+			const amounts = Object.values(categoryData);
+			const colors = labels.map((_, index) => getRandomColor(index)); 
 
-            config = {
-                type: chartType,
-                data: data,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false, // Key to fixing the scrolling issue
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    if (context.parsed !== null) {
-                                        label += '₹' + context.parsed.toFixed(2);
-                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                        const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                        label += ' (' + percentage + '%)';
-                                    }
-                                    return label;
-                                }
-                            }
-                        }
-                    }
-                }
-            };
+			data = {
+				labels: labels,
+				datasets: [{ data: amounts, backgroundColor: colors, hoverOffset: 10 }]
+			};
 
-        } else {
-            // No Expense Data
-            chartTitle.textContent = 'No Expense Data for Selected Period';
-            data = { labels: ['No Data'], datasets: [{ data: [1], backgroundColor: ['#ccc'] }] };
-            chartType = 'doughnut';
-            config = {
-                type: chartType,
-                data: data,
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
-            };
-        }
+			config = {
+				type: chartType,
+				data: data,
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					plugins: {
+						legend: { position: 'bottom' },
+						tooltip: {
+							callbacks: {
+								label: function(context) {
+									let label = context.label || '';
+									if (label) { label += ': '; }
+									if (context.parsed !== null) {
+										label += '₹' + context.parsed.toFixed(2);
+										const total = context.dataset.data.reduce((a, b) => a + b, 0);
+										const percentage = ((context.parsed / total) * 100).toFixed(1);
+										label += ' (' + percentage + '%)';
+									}
+									return label;
+								}
+							}
+						}
+					}
+				}
+			};
 
-        const ctx = document.getElementById('spendTrendsChart').getContext('2d');
-        if (myChart) {
-            myChart.destroy();
-        }
-        myChart = new Chart(ctx, config);
-    }
+		} else {
+			// ... (No Data Logic - This part is fine) ...
+			chartTitle.textContent = 'No Expense Data for Selected Period';
+			data = { labels: ['No Data'], datasets: [{ data: [1], backgroundColor: ['#ccc'] }] };
+			chartType = 'doughnut';
+			config = {
+				type: chartType,
+				data: data,
+				options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+			};
+		}
 
-    // Updated color function for better distinction in Doughnut chart
+		const ctx = document.getElementById('spendTrendsChart').getContext('2d');
+		if (myChart) {
+			myChart.destroy();
+		}
+		myChart = new Chart(ctx, config);
+	}
+
     function getRandomColor(index) {
         const standardColors = [
             '#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#34495e',
@@ -1459,7 +1456,7 @@
         const element = document.getElementById(sectionId);
         const checkbox = document.getElementById(checkboxId);
         if (checkbox.checked) {
-            element.style.display = "flex"; // Use flex since the chart container is flex
+            element.style.display = "flex";
         } else {
             element.style.display = "none";
         }
@@ -1469,14 +1466,14 @@
     const modal = document.getElementById("myModal");
     function openModal() {
         modal.style.display = "flex";
-        resetForm(); // Ensure a fresh start
-        manageModalFields('expense'); // Default to expense/income view
-        document.getElementById("transferBtn").style.display = "block"; // Show all buttons on open
+        resetForm();
+        manageModalFields('expense');
+        document.getElementById("transferBtn").style.display = "block";
     }
 
     function closeModal() {
         modal.style.display = "none";
-        resetForm(); // Ensure form is cleaned up when closing
+        resetForm();
     }
 
     function closeModalOnOutsideClick(event) {
