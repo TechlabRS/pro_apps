@@ -111,41 +111,45 @@
 
         /* --- Summary Section Styling --- */
         .summary-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .summary-card {
-            background: #ecf0f1;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            /* FIX: Ensure the card itself doesn't cause overflow on small screens */
-            min-width: 0; 
-            overflow: hidden; 
-        }
-
-        .summary-card h4 {
-            margin: 0 0 8px 0;
-            font-size: 14px;
-            color: #7f8c8d;
-            font-weight: 500;
-        }
-
-        /* FIX: Dynamic Font Sizing Target (No scrolling) */
-        .summary-card p {
-            margin: 0;
-            font-size: 24px; /* Default size set in JS */
-            font-weight: 700;
-            color: #2c3e50;
-            
-            /* Key properties for dynamic sizing */
-            white-space: nowrap; 
-            overflow: hidden;    
-            text-overflow: ellipsis; 
-            transition: font-size 0.2s; 
-        }
+		    display: grid;
+		    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+		    gap: 15px;
+		}
+		
+		.summary-card {
+		    background: #ecf0f1;
+		    padding: 20px;
+		    border-radius: 12px;
+		    text-align: center;
+		    min-width: 0; /* prevents overflow from grid item */
+		    overflow: hidden;
+		    box-sizing: border-box;
+		}
+		
+		.summary-card h4 {
+		    margin: 0 0 8px 0;
+		    font-size: 14px;
+		    color: #7f8c8d;
+		    font-weight: 500;
+		    white-space: nowrap;
+		}
+		
+		/* --- Value Text Styling --- */
+		.summary-card p {
+		    margin: 0;
+		    font-weight: 700;
+		    color: #2c3e50;
+		    line-height: 1.2;
+		
+		    /* Responsive font scaling */
+		    font-size: clamp(14px, 2vw, 24px);
+		
+		    /* Handle long numbers gracefully */
+		    word-break: break-all;
+		    overflow-wrap: anywhere;
+		    white-space: normal; /* allow wrapping instead of ellipsis */
+		    transition: font-size 0.2s ease;
+		}
 
         .summary-balances {
             margin-top: 15px;
@@ -1430,27 +1434,74 @@
         a.click();
     }
 
-    function importData(event) {
-        let file = event.target.files[0];
-        if (!file) return;
-        let reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const importedData = JSON.parse(e.target.result);
-                if (Array.isArray(importedData)) {
-                    transactions = importedData;
-                    saveData();
-                    updateViews();
-                    resetForm();
-                } else {
-                    alert("Invalid JSON format in the file.");
-                }
-            } catch (error) {
-                alert("Error parsing file: " + error.message);
-            }
-        };
-        reader.readAsText(file);
-    }
+    // --- New Helper Function ---
+	function isDuplicate(newTx) {
+	    // Compare key content fields across all existing transactions
+	    // We check every field except the ID, as that will be new.
+	    return transactions.some(existingTx => (
+	        existingTx.amount === newTx.amount &&
+	        existingTx.description === newTx.description &&
+	        (existingTx.category || '') === (newTx.category || '') && // Handle potentially missing category
+	        existingTx.type === newTx.type &&
+	        existingTx.date === newTx.date &&
+	        (existingTx.account || '') === (newTx.account || '') && // Handle potentially missing account
+	        (existingTx.toAccount || '') === (newTx.toAccount || '') // Include toAccount for transfers
+	    ));
+	}
+	
+	// --- Updated importData Function ---
+	function importData(event) {
+	    let file = event.target.files[0];
+	    if (!file) return;
+	    let reader = new FileReader();
+	    reader.onload = function(e) {
+	        try {
+	            const importedData = JSON.parse(e.target.result);
+	            if (Array.isArray(importedData)) {
+	                
+	                let importedCount = 0;
+	                let skippedCount = 0; // Track skipped items
+	                
+	                importedData.forEach(importedTx => {
+	                    // Check if a transaction with the same content already exists
+	                    if (isDuplicate(importedTx)) {
+	                        skippedCount++;
+	                        return; // Skip this transaction (duplicate found)
+	                    }
+	
+	                    // Not a duplicate, so process it
+	                    const newTx = { ...importedTx };
+	                    
+	                    // Assign a NEW, unique ID before saving
+	                    newTx.id = Date.now() + Math.random(); 
+	                    
+	                    // Append the new transaction
+	                    transactions.push(newTx);
+	                    importedCount++;
+	                });
+	
+	                if (importedCount > 0 || skippedCount > 0) {
+	                    saveData();
+	                    updateViews();
+	                    resetForm();
+	                    let message = `Import complete: ${importedCount} transactions added.`;
+	                    if (skippedCount > 0) {
+	                        message += ` ${skippedCount} duplicates were skipped.`;
+	                    }
+	                    alert(message);
+	                } else {
+	                    alert("No new transactions were found in the file to import.");
+	                }
+	
+	            } else {
+	                alert("Invalid JSON format in the file.");
+	            }
+	        } catch (error) {
+	            alert("Error parsing file: " + error.message);
+	        }
+	    };
+	    reader.readAsText(file);
+	}
     
     function toggleVisibility(sectionId, checkboxId) {
         const element = document.getElementById(sectionId);
