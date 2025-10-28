@@ -1,0 +1,2390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmaRGht FinAI Tracker - Financial Manager</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Chart.js for charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <!-- Load Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <!-- Load Firebase (Required for Authentication and Firestore) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, serverTimestamp, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase variables exposed to the window object
+        window.firebase = { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, serverTimestamp, getDocs, writeBatch, setLogLevel };
+    </script>
+    
+    <style>
+	
+	.chart-container {
+            height: 300px; /* Fixed height for consistent chart rendering */
+        }
+        /* Custom light theme variables */
+        :root {
+            --primary-color: #4f46e5; /* Indigo */
+            --bg-color: #f3f4f6; /* Gray-100 */
+            --card-color: #ffffff; /* White */
+            --text-dark: #1f2937; /* Dark Gray */
+            --text-light: #f9fafb; /* Light Gray */
+            --transfer-color: #f59e0b; /* Amber */
+            --income-color: #10b981; /* Emerald */
+            --expense-color: #ef4444; /* Red */
+        }
+        body {
+            background-color: var(--bg-color);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-dark); /* Dark text on light background */
+        }
+        .tab-button {
+            color: var(--text-dark);
+            background-color: #e5e7eb; /* Gray-200 */
+        }
+        .tab-button.active {
+            background-color: var(--primary-color);
+            color: var(--text-light);
+        }
+        .card {
+            background-color: var(--card-color);
+            color: var(--text-dark); /* Dark text on card */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        /* Dashboard Cards */
+        #dashboard-net-balance-card {
+            background-color: var(--primary-color);
+            color: var(--text-light);
+        }
+        #dashboard-snapshot-card {
+            background-color: #2dd4bf; /* Teal-400 */
+            color: var(--text-dark);
+        }
+
+        .chip {
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: #e5e7eb; /* Gray-200 */
+            color: #374151; /* Gray-700 */
+            /* Add hover effect for visual feedback */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        .chip:hover {
+            background-color: #d1d5db; /* Darker Gray on hover */
+        }
+        .chip.active {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+        }
+        /* Custom Scrollbar for chips */
+        .chip-container::-webkit-scrollbar {
+            height: 4px;
+        }
+        .chip-container::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 2px;
+        }
+        .chip-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        /* Style for the dynamic summary chips */
+        .summary-chip {
+            font-weight: 600;
+        }
+        
+        /* Category Chip in Settings */
+        .category-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin: 4px;
+        }
+        .category-chip-delete {
+            margin-left: 8px;
+            cursor: pointer;
+            color: inherit;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .category-chip-delete:hover {
+            opacity: 1;
+        }
+
+        /* Account Chip in Settings */
+        .account-chip {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db; /* Gray-300 */
+            background-color: #f9fafb; /* Gray-50 */
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 transition-opacity duration-300 hidden">
+        <div class="text-white text-xl flex flex-col items-center">
+            <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+            <span id="loading-text">Loading Data...</span>
+        </div>
+    </div>
+
+    <!-- Custom Toast/Notification System for feedback -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Main Container -->
+    <div class="max-w-7xl mx-auto py-6 px-3 sm:px-6 lg:px-8">
+        <header class="mb-6 rounded-lg p-4 shadow-xl" style="background-color: var(--primary-color);">
+            <h1 class="text-xl sm:text-3xl font-extrabold text-white flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-chart-line mr-3"></i> SmaRGht FinAI Tracker
+                </div>
+                <span id="user-id-display" class="text-xs sm:text-sm ml-4 font-normal bg-white text-gray-800 px-2 py-1 rounded-full">
+                    User ID: Loading...
+                </span>
+            </h1>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="flex flex-wrap justify-center space-x-2 md:space-x-4 mb-8 bg-white p-2 rounded-lg shadow-md">
+            <button class="tab-button active flex items-center px-3 py-2 rounded-lg font-medium text-sm transition-colors" data-tab="dashboard">
+                <i class="fas fa-home mr-1 sm:mr-2"></i> Dashboard
+            </button>
+            <button class="tab-button flex items-center px-3 py-2 rounded-lg font-medium text-sm transition-colors" data-tab="transactions">
+                <i class="fas fa-exchange-alt mr-1 sm:mr-2"></i> Transactions
+            </button>
+            <button class="tab-button flex items-center px-3 py-2 rounded-lg font-medium text-sm transition-colors" data-tab="investments">
+                <i class="fas fa-piggy-bank mr-1 sm:mr-2"></i> Savings & Goals
+            </button>
+            <button class="tab-button flex items-center px-3 py-2 rounded-lg font-medium text-sm transition-colors" data-tab="charts">
+                <i class="fas fa-chart-pie mr-1 sm:mr-2"></i> Charts
+            </button>
+            <button class="tab-button flex items-center px-3 py-2 rounded-lg font-medium text-sm transition-colors" data-tab="settings">
+                <i class="fas fa-cog mr-1 sm:mr-2"></i> Settings
+            </button>
+        </div>
+
+        <!-- Main Content Area -->
+        <div id="content-area">
+            <!-- Dashboard Tab -->
+            <div id="tab-dashboard" class="tab-content space-y-6">
+                <h2 class="text-xl sm:text-2xl font-bold mb-4">Dashboard & Financial AI</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
+                    <!-- Total Net Balance Card -->
+                    <div id="dashboard-net-balance-card" class="card p-4 sm:p-6 rounded-xl transform transition duration-500 hover:scale-[1.02] shadow-2xl col-span-1 lg:col-span-2">
+                        <div class="flex justify-between items-start">
+                            <i class="fas fa-wallet fa-2x sm:fa-3x text-white opacity-70"></i>
+                            <h3 class="text-xl sm:text-2xl font-bold text-white">Total Net Balance (Visible Accounts)</h3>
+                        </div>
+                        <p id="total-net-balance" class="text-4xl sm:text-6xl font-extrabold mt-3 text-white">₹0.00</p>
+                        <p class="text-xs sm:text-sm mt-1 opacity-80 text-white">Sum of all active account balances.</p>
+                    </div>
+
+                    <!-- Monthly Snapshot Card -->
+                    <div id="dashboard-snapshot-card" class="card p-4 sm:p-6 rounded-xl transform transition duration-500 hover:scale-[1.02] shadow-2xl">
+                        <h3 class="text-lg sm:text-xl font-bold">Current Month Snapshot</h3>
+                        <p class="text-base sm:text-lg font-semibold mt-2 opacity-90">Income: <span id="monthly-income" class="font-bold">₹0.00</span></p>
+                        <p class="text-base sm:text-lg font-semibold opacity-90">Expenses: <span id="monthly-expense" class="font-bold">₹0.00</span></p>
+                        <p class="text-base sm:text-lg font-semibold opacity-90">Net Flow: <span id="monthly-net-flow" class="font-bold">₹0.00</span></p>
+                    </div>
+                </div>
+
+                <!-- Account Balances -->
+                <div class="bg-white card p-4 sm:p-6 rounded-xl shadow-lg mb-6">
+                    <h3 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-university mr-2 text-indigo-600"></i> Account Balances
+                    </h3>
+                    <div id="accounts-list" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+                        <!-- Account Cards will be rendered here -->
+                    </div>
+                    <!-- FIX: Moved this 'p' tag outside of the 'accounts-list' div -->
+                    <p class="col-span-full text-gray-500 hidden" id="no-accounts-message">No accounts configured. Check Settings.</p>
+                </div>
+
+                <!-- AI Analysis Section -->
+                <div class="bg-white card p-4 sm:p-6 rounded-xl shadow-lg mb-6">
+                    <h3 class="text-xl sm:text-2xl font-bold mb-4 flex items-center text-indigo-600">
+                        <i class="fas fa-robot mr-3"></i> Financial AI Analysis
+                    </h3>
+                    <button id="run-ai-analysis" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors mb-4 text-sm sm:text-base">
+                        <i class="fas fa-magic mr-2"></i> Generate Insight
+                    </button>
+                    <div id="ai-output" class="p-4 border border-gray-200 rounded-lg text-gray-700 min-h-[100px] text-sm bg-gray-50">
+                        Click 'Generate Insight' to receive a personalized financial analysis based on your data and current market rates.
+                    </div>
+                    <div id="ai-sources" class="text-xs text-gray-500 mt-3"></div>
+                </div>
+            </div>
+
+            <!-- Transactions Tab -->
+            <div id="tab-transactions" class="tab-content hidden space-y-6">
+                <h2 class="text-xl sm:text-2xl font-bold mb-4">New Transaction & History</h2>
+
+                <!-- Transaction Form -->
+                <div class="bg-white card p-4 sm:p-6 rounded-xl shadow-lg">
+                    <form id="transaction-form" class="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-4">
+                        <div class="md:col-span-1">
+                            <label for="transaction-type" class="block text-sm font-medium text-gray-700">Type</label>
+                            <select id="transaction-type" name="type" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 bg-gray-50 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="Expense">Expense</option>
+                                <option value="Income">Income</option>
+                                <option value="Transfer">Transfer</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-1">
+                            <label for="transaction-amount" class="block text-sm font-medium text-gray-700">Amount (₹)</label>
+                            <input type="number" id="transaction-amount" name="amount" required step="0.01" min="0.01" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div class="md:col-span-1">
+                            <label for="transaction-account" class="block text-sm font-medium text-gray-700">Account</label>
+                            <select id="transaction-account" name="account" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 bg-gray-50 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">Select Account</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-1">
+                            <label for="transaction-date" class="block text-sm font-medium text-gray-700">Date</label>
+                            <input type="date" id="transaction-date" name="date" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+
+                        <!-- Dynamic Category Chip Selector -->
+                        <div class="md:col-span-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                            <div id="category-chip-container" class="chip-container flex overflow-x-auto space-x-2 p-2 border border-gray-300 rounded-lg bg-gray-50">
+                                <!-- Chips will be populated here by JavaScript -->
+                                <p id="category-chip-placeholder" class="text-gray-500 text-sm">Select a transaction type to see categories.</p>
+                            </div>
+                            <!-- FIX: MOVED HIDDEN INPUT OUTSIDE OF DYNAMIC CONTAINER -->
+                            <input type="hidden" id="transaction-category" name="category" required>
+                        </div>
+
+                        <div class="md:col-span-4">
+                            <label for="transaction-description" class="block text-sm font-medium text-gray-700">Description / Notes</label>
+                            <input type="text" id="transaction-description" name="description" placeholder="e.g., Monthly Groceries" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+
+                        <div class="md:col-span-4 flex justify-start space-x-3">
+                            <button type="submit" id="save-transaction-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm sm:text-base">
+                                <i class="fas fa-plus mr-2"></i> Save Transaction
+                            </button>
+                            <button type="button" id="cancel-edit-btn" class="hidden bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm sm:text-base">
+                                <i class="fas fa-times mr-2"></i> Cancel Edit
+                            </button>
+                            <input type="hidden" id="transaction-id">
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Transaction Filters and Summary -->
+                <div class="bg-white card p-4 sm:p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-filter mr-2 text-indigo-600"></i> Transaction Filters
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-4 mb-4">
+                        <!-- Date Filter -->
+                        <div>
+                            <label for="filter-date-range" class="block text-sm font-medium text-gray-700">Date Range</label>
+                            <select id="filter-date-range" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 bg-gray-50 text-sm">
+                                <option value="all">All Time</option>
+                                <option value="current_week">Current Week</option>
+                                <option value="current_month" selected>Current Month</option>
+                                <option value="last_3_months">Last 3 Months</option>
+                                <option value="last_6_months">Last 6 Months</option>
+                                <option value="last_year">Last 1 Year</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                        </div>
+                        <!-- Type Filter -->
+                        <div>
+                            <label for="filter-type" class="block text-sm font-medium text-gray-700">Transaction Type</label>
+                            <select id="filter-type" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 bg-gray-50 text-sm">
+                                <option value="all">All Types</option>
+                                <option value="Income">Income</option>
+                                <option value="Expense">Spends (Expenses)</option>
+                                <option value="Savings">Savings/Investments</option>
+                                <option value="Transfer">Transfers</option>
+                            </select>
+                        </div>
+                        <!-- Amount Filters -->
+                        <div class="col-span-2 grid grid-cols-2 gap-2">
+                            <div>
+                                <label for="filter-min-amount" class="block text-sm font-medium text-gray-700">Min Amount (₹)</label>
+                                <input type="number" id="filter-min-amount" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 text-sm">
+                            </div>
+                            <div>
+                                <label for="filter-max-amount" class="block text-sm font-medium text-gray-700">Max Amount (₹)</label>
+                                <input type="number" id="filter-max-amount" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 text-sm">
+                            </div>
+                        </div>
+                        <!-- Custom Date Range Inputs -->
+                        <div id="custom-date-filters" class="col-span-2 grid grid-cols-2 gap-2 hidden">
+                            <div>
+                                <label for="filter-start-date" class="block text-sm font-medium text-gray-700">Start Date</label>
+                                <input type="date" id="filter-start-date" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 text-sm">
+                            </div>
+                            <div>
+                                <label for="filter-end-date" class="block text-sm font-medium text-gray-700">End Date</label>
+                                <input type="date" id="filter-end-date" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 text-sm">
+                            </div>
+                        </div>
+                        <!-- Description Search -->
+                        <div class="md:col-span-2">
+                            <label for="filter-description" class="block text-sm font-medium text-gray-700">Search Description / Year</label>
+                            <input type="text" id="filter-description" placeholder="e.g. rent or 2024" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Summary Chips -->
+                    <div id="summary-chips" class="flex flex-wrap gap-2 sm:gap-3 mt-4 text-sm">
+                        <div class="summary-chip flex items-center px-3 py-1 rounded-full text-white" style="background-color: var(--income-color);">
+                            Income: <span id="summary-income" class="ml-1 font-extrabold">₹0.00</span>
+                        </div>
+                        <div class="summary-chip flex items-center px-3 py-1 rounded-full text-white" style="background-color: var(--expense-color);">
+                            Expenses: <span id="summary-expense" class="ml-1 font-extrabold">₹0.00</span>
+                        </div>
+                        <div class="summary-chip flex items-center px-3 py-1 rounded-full text-white" style="background-color: var(--transfer-color);">
+                            Transfers: <span id="summary-transfer" class="ml-1 font-extrabold">₹0.00</span>
+                        </div>
+                        <div class="summary-chip flex items-center px-3 py-1 rounded-full text-white" style="background-color: var(--primary-color);">
+                            Net Flow: <span id="summary-net-flow" class="ml-1 font-extrabold">₹0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transaction History Table -->
+                <div class="bg-white card p-4 sm:p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold mb-4">History (<span id="transaction-count">0</span> Transactions)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr class="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th class="px-2 py-2 sm:px-3 sm:py-3">Date</th>
+                                    <th class="px-2 py-2 sm:px-3 sm:py-3">Type</th>
+                                    <th class="px-2 py-2 sm:px-3 sm:py-3">Category</th>
+                                    <th class="px-2 py-2 sm:px-3 sm:py-3">Amount</th>
+                                    <th class="px-2 py-2 sm:px-3 sm:py-3">Account</th>
+                                    <th class="px-2 py-2 sm:px-3 sm:py-3">Description</th>
+                                    <th class="px-2 py-2 sm:px-3 sm:py-3">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transaction-history" class="bg-white divide-y divide-gray-200 text-sm">
+                                <!-- Transactions will be rendered here -->
+                                <tr id="no-transactions-row">
+                                    <td colspan="7" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">No transactions found matching the current filters.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Savings/Investments Tab -->
+            <div id="tab-investments" class="tab-content hidden space-y-6">
+                <h2 class="text-xl sm:text-2xl font-bold mb-4">Savings Contributions & Goals</h2>
+
+                <!-- Investment Contributions Summary -->
+                <div class="bg-white card p-4 sm:p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold mb-4 flex items-center text-indigo-600">
+                        <i class="fas fa-chart-line mr-2"></i> Investment Contributions Summary (All Time)
+                    </h3>
+                    <div id="investment-summary-chips" class="flex flex-wrap gap-2 text-sm">
+                        <!-- Investment category totals will be rendered here -->
+                        <p class="text-gray-500">Log investment transactions (Stocks, SIP, MF, etc.) to see totals here.</p>
+                    </div>
+                </div>
+
+
+                <!-- Savings Goals Section -->
+                <div class="bg-white card p-4 sm:p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold mb-4 flex items-center text-indigo-600">
+                        <i class="fas fa-bullseye mr-2"></i> Set New Goal
+                    </h3>
+                    <form id="goal-form" class="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-4">
+                        <div class="md:col-span-1">
+                            <label for="goal-name" class="block text-sm font-medium text-gray-700">Goal Name</label>
+                            <input type="text" id="goal-name" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 text-sm">
+                        </div>
+                        <div class="md:col-span-1">
+                            <label for="goal-target" class="block text-sm font-medium text-gray-700">Target Amount (₹)</label>
+                            <input type="number" id="goal-target" required step="0.01" min="1" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 text-sm">
+                        </div>
+                        <div class="md:col-span-1">
+                            <label for="goal-current" class="block text-sm font-medium text-gray-700">Current Saved (₹)</label>
+                            <input type="number" id="goal-current" required step="0.01" min="0" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 text-sm">
+                        </div>
+                        <div class="md:col-span-1 flex items-end">
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors w-full text-sm sm:text-base">
+                                <i class="fas fa-plus mr-2"></i> Add Goal
+                            </button>
+                            <input type="hidden" id="goal-id">
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-white card p-4 sm:p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold mb-4">Active Goals</h3>
+                    <div id="goals-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <p id="no-goals-message" class="text-gray-500 col-span-full">No active savings goals found.</p>
+                        <!-- Goals will be rendered here -->
+                    </div>
+                </div>
+            </div>
+<div id="tab-charts" class="tab-content hidden">
+            <!-- Charts Tab -->
+            <div class="grid md:grid-cols-3 gap-6 mt-6">
+              <div class="bg-white p-4 rounded-lg shadow-md">
+                <h2 class="text-lg font-semibold mb-2 text-indigo-700">Monthly Spend</h2>
+                <div class="chart-container" style="position: relative; height: 300px;">
+                  <canvas id="monthly-spend-chart"></canvas>
+                </div>
+              </div>
+
+              <div class="bg-white p-4 rounded-lg shadow-md">
+                <h2 class="text-lg font-semibold mb-2 text-indigo-700">Category Spend</h2>
+                <div class="chart-container" style="position: relative; height: 300px;">
+                  <canvas id="category-spend-chart"></canvas>
+                </div>
+              </div>
+
+              <div class="bg-white p-4 rounded-lg shadow-md">
+                <h2 class="text-lg font-semibold mb-2 text-indigo-700">Investment Breakdown</h2>
+                <div class="chart-container" style="position: relative; height: 300px;">
+                  <canvas id="investment-breakdown-chart"></canvas>
+                </div>
+              </div>
+            </div>
+            </div>
+
+
+            <!-- Settings Tab -->
+            <div id="tab-settings" class="tab-content hidden space-y-6">
+                <h2 class="text-xl sm:text-2xl font-bold mb-4">Application Settings & Data Management</h2>
+
+                <!-- Account Management -->
+                <div class="bg-white card p-4 sm:p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold mb-4 flex items-center text-indigo-600">
+                        <i class="fas fa-university mr-2"></i> Account Management
+                    </h3>
+                    <form id="account-form" class="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-4 mb-4">
+                        <div class="md:col-span-1">
+                            <label for="account-name" class="block text-sm font-medium text-gray-700">Account Name (e.g., Bank, Cash)</label>
+                            <input type="text" id="account-name" required class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 text-sm">
+                        </div>
+                        <div class="md:col-span-1">
+                            <label for="initial-balance" class="block text-sm font-medium text-gray-700">Initial Balance (₹)</label>
+                            <input type="number" id="initial-balance" required step="0.01" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 text-sm">
+                        </div>
+                        <div class="md:col-span-1">
+                            <label for="account-id-input" class="block text-sm font-medium text-gray-700">Short ID (e.g., 'BankS')</label>
+                            <input type="text" id="account-id-input" required placeholder="Unique, no spaces" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-2 text-sm">
+                        </div>
+                        <div class="md:col-span-1 flex items-end">
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors w-full text-sm sm:text-base">
+                                <i class="fas fa-plus mr-2"></i> Add Account
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="current-accounts" class="border-t border-gray-200 pt-4">
+                        <h4 class="font-semibold mb-2">Current Accounts:</h4>
+                        <div id="accounts-settings-list" class="space-y-2">
+                            <p class="text-gray-500">No accounts added yet.</p>
+                            <!-- Existing account chips will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Category Management -->
+                <div class="bg-white card p-4 sm:p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold mb-4 flex items-center text-indigo-600">
+                        <i class="fas fa-list-alt mr-2"></i> Custom Category Management
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Expense Categories -->
+                        <div>
+                            <h4 class="font-semibold mb-2 text-red-600">Expense Categories (Type: Expense/Saving)</h4>
+                            <div id="expense-category-chips" class="flex flex-wrap gap-2 mb-3 border p-2 rounded-lg text-sm bg-gray-50 min-h-[50px]">
+                                <!-- Expense chips will render here -->
+                            </div>
+                            <form id="add-expense-category-form" class="flex space-x-2">
+                                <input type="text" id="new-expense-category" placeholder="Add New Expense Category" required class="flex-grow border-gray-300 rounded-lg shadow-sm p-2 text-sm">
+                                <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-3 rounded-lg text-sm"><i class="fas fa-plus"></i></button>
+                            </form>
+                        </div>
+
+                        <!-- Income Categories -->
+                        <div>
+                            <h4 class="font-semibold mb-2 text-green-600">Income Categories (Type: Income)</h4>
+                            <div id="income-category-chips" class="flex flex-wrap gap-2 mb-3 border p-2 rounded-lg text-sm bg-gray-50 min-h-[50px]">
+                                <!-- Income chips will render here -->
+                            </div>
+                            <form id="add-income-category-form" class="flex space-x-2">
+                                <input type="text" id="new-income-category" placeholder="Add New Income Category" required class="flex-grow border-gray-300 rounded-lg shadow-sm p-2 text-sm">
+                                <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded-lg text-sm"><i class="fas fa-plus"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Backup and Sync -->
+                <div class="bg-white card p-4 sm:p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold mb-4 flex items-center text-indigo-600">
+                        <i class="fas fa-database mr-2"></i> Data Backup and Synchronization
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Export/Import -->
+                        <div class="border p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2">Local File Management</h4>
+                            <button id="export-data-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg w-full mb-2 text-sm sm:text-base">
+                                <i class="fas fa-download mr-2"></i> Export Data (JSON)
+                            </button>
+                            <label class="block text-sm font-medium text-gray-700">Import Data (Saves Locally)</label>
+                            <input type="file" id="import-file" accept=".json" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        </div>
+
+                        <!-- Sync Controls -->
+                        <div class="border p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2">Cloud Synchronization (Firebase)</h4>
+                            <button id="sync-to-firebase-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg w-full mb-2 text-sm sm:text-base">
+                                <i class="fas fa-cloud-upload-alt mr-2"></i> Sync Local Data TO Firebase (OVERWRITE)
+                            </button>
+                            <button id="sync-from-firebase-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg w-full text-sm sm:text-base">
+                                <i class="fas fa-sync-alt mr-2"></i> Sync Data FROM Firebase (Refresh)
+                            </button>
+                            <p class="text-xs text-gray-500 mt-2">Use OVERWRITE with caution. Refresh pulls all current cloud data.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Clear Data -->
+                    <div class="border p-4 rounded-lg mt-4 border-red-300 bg-red-50">
+                        <h4 class="font-semibold mb-2 text-red-700">Danger Zone</h4>
+                        <button id="clear-all-data-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg w-full text-sm sm:text-base">
+                            <i class="fas fa-trash-alt mr-2"></i> Clear ALL Cloud Data
+                        </button>
+                        <p class="text-xs text-red-600 mt-2">**Warning:** This will delete all transactions, goals, and settings permanently from Firebase. USE WITH CAUTION.</p>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script type="module">
+        // Check for required global variables from the Canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ?
+         JSON.parse(__firebase_config) :
+         {
+            // This is a placeholder config for local testing if __firebase_config is not injected
+            apiKey: "AIzaSyDUFHGYqLKxKHg8dxSlABM_A3LIlcEExl8",
+            authDomain: "goforgreenr.firebaseapp.com",
+            databaseURL: "https://goforgreenr-default-rtdb.firebaseio.com",
+            projectId: "goforgreenr",
+            storageBucket: "goforgreenr.firebasestorage.app",
+            messagingSenderId: "582465732909",
+            appId: "1:582465732909:web:6a8bff78c4cb06793b13a4"
+        };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // --- Firebase Globals ---
+        let db, auth, userId = null;
+        let unsubscribeTransactions, unsubscribeGoals, unsubscribeConfig;
+
+        // --- Local Data State ---
+        let allTransactions = [];
+        let allGoals = [];
+        let allAccountSettings = []; // { id: 'BankS', name: 'Bank S', initialBalance: 1000, visible: true }
+        let allIncomeCategories = [];
+        let allExpenseCategories = [];
+        let charts = {};
+        
+        // --- App Configuration ---
+
+        // User's new category lists
+        const DEFAULT_INCOME_CATEGORIES = ['Salary', 'In-hand Cash', 'Withdraw', 'Earnings', 'Investment Income'];
+        const DEFAULT_EXPENSE_CATEGORIES = [
+            'Bills & Recharges', 'CC Bills', 'Cloths', 'Education', 'Entertainment', 'EMI', 'Foods & Drinks' ,'Fuel', 'Gifts', 'Groceries', 'Homes & Utilities', 'Health & Medicine', 'Insurance', 'Investment Expense', 'Labs & Tests', 'Maintenance', 'Travel', 'Shopping', 'Parties', 'Vacation', 'Personal Care', 'Rent', 'Subscriptions', 'Others'
+        ];
+        
+        // Categories to be treated as "Savings" for filtering and charts
+        // This allows separating "Spends" from "Savings"
+        const SAVINGS_CATEGORIES = [
+            'EMI', 
+            'Insurance', 
+            'Investment Expense', 
+            'Rent', // Often treated as a fixed "expense" but good to separate
+            'Subscriptions'
+        ];
+
+        // Categories for the "Transfer" type
+        const TRANSFER_CATEGORIES = [
+            'Self-Transfer (A/C to A/C)', 
+            'Cash Deposit/Withdrawal',
+            'P2P Loan Out (Sent)', 
+            'P2P Repayment Due'
+        ];
+
+        
+        // --- UI Feedback (Toast) ---
+        const showToast = (message, type = 'success') => {
+            const toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) return;
+            
+            let colorClass = 'bg-green-600';
+            if (type === 'error') colorClass = 'bg-red-600';
+            if (type === 'warning') colorClass = 'bg-yellow-500 text-black';
+
+            const toast = document.createElement('div');
+            toast.className = `p-3 rounded-lg text-white shadow-lg ${colorClass} max-w-xs transition-all duration-300 opacity-0 transform translate-x-10`;
+            toast.textContent = message;
+            
+            toastContainer.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('opacity-0', 'translate-x-10');
+            }, 10);
+            
+            // Animate out
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                toast.style.transform = 'translateX(10px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        };
+
+        // --- Core Utility Functions (Including Backoff) ---
+
+        /**
+         * Generic fetch wrapper with exponential backoff for API robustness.
+         */
+        const exponentialBackoffFetch = async (url, options, retries = 0) => {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response;
+            } catch (error) {
+                if (retries < 5) {
+                    const delay = Math.pow(2, retries) * 1000;
+                    // console.warn(`Request failed. Retrying in ${delay / 1000}s...`, error.message);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return exponentialBackoffFetch(url, options, retries + 1);
+                } else {
+                    console.error("Fetch failed after multiple retries:", error);
+                    throw new Error("API request failed due to throttling or network error.");
+                }
+            }
+        };
+
+        // --- Firebase Initialization and Auth ---
+
+        const initFirebase = async () => {
+            try {
+                if (!firebaseConfig || !window.firebase) {
+                    throw new Error("Firebase configuration not available.");
+                }
+
+                const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, setLogLevel } = window.firebase;
+
+                // setLogLevel('debug'); // Uncomment for detailed Firebase logs
+
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                showLoading('Authenticating...');
+
+                return new Promise((resolve) => {
+                    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+                        unsubscribe(); 
+                        if (user) {
+                            userId = user.uid;
+                        } else {
+                            try {
+                                if (initialAuthToken) {
+                                    await signInWithCustomToken(auth, initialAuthToken);
+                                    userId = auth.currentUser.uid;
+                                } else {
+                                    await signInAnonymously(auth);
+                                    userId = auth.currentUser.uid;
+                                }
+                            } catch (authError) {
+                                console.error("Firebase Auth Error:", authError);
+                                showToast("Authentication failed. Using local mode.", 'error');
+                                userId = 'local-user'; // Fallback for local testing
+                            }
+                        }
+
+                        document.getElementById('user-id-display').textContent = `User ID: ${userId.substring(0, 10)}...`;
+                        console.log("Firebase initialized. User ID:", userId);
+                        resolve();
+                    });
+                });
+
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+                document.getElementById('user-id-display').textContent = `User ID: (Local/Demo Mode)`;
+                userId = crypto.randomUUID();
+                hideLoading();
+            }
+        };
+
+        // --- Account Balance Calculation Logic ---
+
+        const calculateAccountBalances = () => {
+            const currentBalances = {};
+
+            allAccountSettings.forEach(acc => {
+                currentBalances[acc.id] = acc.initialBalance || 0;
+            });
+
+            // Create a sorted list of transactions to process in chronological order
+            const sortedTransactions = [...allTransactions].sort((a, b) => (a.date || 0) - (b.date || 0));
+
+            sortedTransactions.forEach(t => {
+                const accountId = t.accountId;
+                const amount = t.amount;
+                const type = t.type;
+                
+                if (!currentBalances.hasOwnProperty(accountId)) {
+                    return; 
+                }
+
+                if (type === 'Income') {
+                    currentBalances[accountId] += amount;
+                } else if (type === 'Expense') {
+                    currentBalances[accountId] -= amount;
+                } else if (type === 'Transfer') {
+                    // P2P Loan Out is debit, P2P Repayment Due (or received) is credit
+                    const isDebit = t.category.includes('Loan Out');
+                    const isCredit = t.category.includes('Repayment Due');
+
+                    // If it's a P2P Loan Out (Sent)
+                    if (isDebit && t.category === 'P2P Loan Out (Sent)') {
+                        currentBalances[accountId] -= amount;
+                    } 
+                    // If it's a P2P Repayment Due that is NOT PENDING (i.e., received)
+                    else if (isCredit && t.category === 'P2P Repayment Due' && !t.isPending) {
+                         currentBalances[accountId] += amount;
+                    } 
+                    // General Transfers (Self-transfer, general loan paid/received)
+                    else {
+                        // This logic is simplified: assumes self-transfer debits the selected account
+                        // A true self-transfer would need a "To Account"
+                        if (t.category === 'Self-Transfer (A/C to A/C)') {
+                             currentBalances[accountId] -= amount;
+                             // Note: To be accurate, this would require a second entry (or field)
+                             // to credit the destination account. For now, it's a debit.
+                        } else if (t.category === 'Cash Deposit/Withdrawal') {
+                            // Assuming 'Withdrawal' is a debit, 'Deposit' is a credit
+                            // This is ambiguous. Let's assume 'Withdrawal'
+                             currentBalances[accountId] -= amount;
+                        }
+                    }
+                }
+            });
+
+            return currentBalances;
+        };
+
+
+        // --- Data Management (Firestore Listeners) ---
+
+        const setupFirestoreListeners = () => {
+            if (!db || !userId) {
+                showToast("Database not ready.", 'error');
+                hideLoading();
+                return;
+            }
+
+            const { collection, query, onSnapshot, doc, setDoc } = window.firebase;
+            
+            // --- Unsubscribe from old listeners if they exist ---
+            if (unsubscribeConfig) unsubscribeConfig();
+            if (unsubscribeTransactions) unsubscribeTransactions();
+            if (unsubscribeGoals) unsubscribeGoals();
+            
+            showLoading('Syncing data from Firebase...');
+
+            // --- CONFIG LISTENER (Accounts & Categories) ---
+            const configRef = doc(db, `/artifacts/${appId}/users/${userId}/config`, 'main');
+            unsubscribeConfig = onSnapshot(configRef, (docSnapshot) => {
+                if (docSnapshot.exists() && docSnapshot.data()) {
+                    const data = docSnapshot.data();
+                    allAccountSettings = data.accounts || [];
+                    allIncomeCategories = data.incomeCategories || [...DEFAULT_INCOME_CATEGORIES];
+                    allExpenseCategories = data.expenseCategories || [...DEFAULT_EXPENSE_CATEGORIES];
+                } else {
+                    // --- Create Initial Config Document ---
+                    allAccountSettings = []; // Start with no accounts
+                    allIncomeCategories = [...DEFAULT_INCOME_CATEGORIES];
+                    allExpenseCategories = [...DEFAULT_EXPENSE_CATEGORIES];
+                    
+                    // FIX: Guard the initial saveConfig call to prevent potential premature DOM interaction
+                    // Now calling saveConfig() only once when config doesn't exist
+                    if (!docSnapshot.exists()) {
+                         saveConfig(); 
+                    }
+                }
+                
+                // Re-render all components that depend on config
+                populateAccountSelectors();
+                renderAccountSettingsList();
+                renderCategoryChips();
+                // FIX: Check if elements exist before populating categories, 
+                // as this can fire before the transaction form is fully rendered.
+                if(document.getElementById('transaction-type')) {
+                    populateCategoryChips(); 
+                }
+                renderDashboard(); 
+                
+            }, (error) => {
+                console.error("Error listening to config:", error);
+                showToast("Error loading settings.", 'error');
+                hideLoading();
+            });
+
+
+            // --- TRANSACTIONS LISTENER ---
+            const txQuery = query(collection(db, `/artifacts/${appId}/users/${userId}/transactions`));
+            unsubscribeTransactions = onSnapshot(txQuery, (snapshot) => {
+                allTransactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // Default sort: newest first
+                allTransactions.sort((a, b) => (b.date || 0) - (a.date || 0)); 
+                
+                applyFilters(); // Re-render transaction list with filters
+                renderDashboard(); 
+                renderInvestmentSummary(); 
+                updateCharts();
+                hideLoading(); // Hide loading once transactions are loaded
+            }, (error) => {
+                console.error("Error listening to transactions:", error);
+                showToast("Error loading transactions.", 'error');
+                hideLoading();
+            });
+
+            // --- GOALS LISTENER ---
+            const goalQuery = query(collection(db, `/artifacts/${appId}/users/${userId}/goals`));
+            unsubscribeGoals = onSnapshot(goalQuery, (snapshot) => {
+                allGoals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderGoals();
+                updateCharts();
+            }, (error) => {
+                console.error("Error listening to goals:", error);
+                showToast("Error loading goals.", 'error');
+                hideLoading();
+            });
+        };
+        
+        // --- Save Config (Accounts & Categories) ---
+        const saveConfig = async () => {
+             if (!db || !userId) { return; }
+             try {
+                const { doc, setDoc } = window.firebase;
+                const configRef = doc(db, `/artifacts/${appId}/users/${userId}/config`, 'main');
+                await setDoc(configRef, { 
+                    accounts: allAccountSettings,
+                    incomeCategories: allIncomeCategories,
+                    expenseCategories: allExpenseCategories
+                });
+                return true;
+             } catch (e) {
+                console.error("Error saving config:", e);
+                showToast("Error saving settings.", 'error');
+                return false;
+             }
+        };
+
+
+        // --- AI Functionality (Gemini API Integration) ---
+
+        const fetchAIAnalysis = async () => {
+            showLoading('Analyzing data...');
+            const outputElement = document.getElementById('ai-output');
+            const sourcesElement = document.getElementById('ai-sources');
+            
+            if (!outputElement) {
+                hideLoading();
+                return;
+            }
+            outputElement.innerHTML = `Click 'Generate Insight' to receive a personalized financial analysis based on your data and current market rates.`;
+            sourcesElement.innerHTML = '';
+
+            const nonTransferTransactions = allTransactions.filter(t => t.type !== 'Transfer');
+
+            const transactionData = nonTransferTransactions.slice(0, 50).map(t =>
+                `${new Date(t.date || 0).toLocaleDateString()}, ₹${t.amount.toFixed(2)}, ${t.category}, ${t.description}`
+            ).join('\n');
+
+            const goalData = allGoals.map(g =>
+                `Goal: ${g.name}, Target: ₹${g.targetAmount.toFixed(2)}, Current: ₹${g.currentContribution.toFixed(2)}`
+            ).join('\n');
+
+            const userQuery = `Analyze the following data:
+                \n--- Transactions ---\n${transactionData}
+                \n--- Goals ---\n${goalData || 'No active goals defined.'}`;
+
+            const systemPrompt = "You are a world-class, unbiased Financial Analysis AI. Your user's goal is to optimize spending and increase savings. Given the transaction data and savings goals, provide a single, three-point analysis. 1. Top Saving Opportunity: Identify the single largest category or habit where the user can realistically reduce spending immediately. Suggest a specific monthly reduction amount in ₹. 2. Risk/Goal Check: Based on their current spending trend, predict if they will reach their savings goal on time. 3. Actionable Tip: Provide one specific, novel, and highly actionable financial tip (not generic advice) based on their data. Use Google Search to find current average interest rates for common savings vehicles in India (like high-yield savings accounts or short-term bond rates) to ground your analysis where necessary.";
+
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                tools: [{ "google_search": {} }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            try {
+                const response = await exponentialBackoffFetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const text = candidate.content.parts[0].text;
+                    // Format text with line breaks
+                    outputElement.innerHTML = `<div class_:"prose prose-sm">${text.replace(/\n/g, '<br>')}</div>`;
+
+                    const groundingMetadata = candidate.groundingMetadata;
+                    let sourcesHtml = '';
+                    if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                        const sources = groundingMetadata.groundingAttributions
+                            .map(attribution => ({ uri: attribution.web?.uri, title: attribution.web?.title }))
+                            .filter(source => source.uri && source.title);
+
+                        if (sources.length > 0) {
+                            sourcesHtml = '<p class="text-xs text-gray-500 font-semibold mt-3">Sources:</p><ul class="list-disc ml-5 text-xs text-gray-400 space-y-1">';
+                            sources.forEach(s => {
+                                sourcesHtml += `<li><a href="${s.uri}" target="_blank" class="text-indigo-600 hover:text-indigo-500">${s.title}</a></li>`;
+                            });
+                            sourcesHtml += '</ul>';
+                        }
+                    }
+                    sourcesElement.innerHTML = sourcesHtml;
+
+                } else {
+                    outputElement.innerHTML = '<p class="text-red-400">Analysis failed. Check console for details.</p>';
+                    console.error("Gemini API response was empty or malformed:", result);
+                }
+
+            } catch (error) {
+                outputElement.innerHTML = `<p class="text-red-400">Analysis Error: ${error.message}</p>`;
+                console.error("Fatal API Error:", error);
+            } finally {
+                hideLoading();
+            }
+        };
+        
+        // --- Date Range Logic ---
+
+        const toggleCustomDates = () => {
+            const period = document.getElementById('filter-date-range')?.value;
+            const customControls = document.getElementById('custom-date-filters');
+            if (customControls) {
+                if (period === 'custom') {
+                    customControls.classList.remove('hidden');
+                } else {
+                    customControls.classList.add('hidden');
+                }
+            }
+        };
+
+        const calculateDateRange = () => {
+            const period = document.getElementById('filter-date-range')?.value;
+            const now = new Date();
+            let startDate = 0; 
+            let endDate = Infinity; 
+
+            const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+            const endOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999).getTime();
+
+            switch (period) {
+                case 'current_week':
+                    // Go back to Monday (assuming week starts Monday)
+                    let dayOfWeek = now.getDay(); 
+                    let diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); 
+                    let startOfWeek = new Date(now.setDate(diff));
+                    startDate = startOfDay(startOfWeek);
+                    endDate = endOfDay(new Date()); 
+                    break;
+
+                case 'current_month':
+                    startDate = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
+                    endDate = endOfDay(new Date());
+                    break;
+
+                case 'last_3_months':
+                    startDate = startOfDay(new Date(now.getFullYear(), now.getMonth() - 2, 1));
+                    endDate = endOfDay(new Date());
+                    break;
+
+                case 'last_6_months':
+                    startDate = startOfDay(new Date(now.getFullYear(), now.getMonth() - 5, 1));
+                    endDate = endOfDay(new Date());
+                    break;
+
+                case 'last_year':
+                    startDate = startOfDay(new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()));
+                    endDate = endOfDay(new Date());
+                    break;
+
+                case 'custom':
+                    const startInput = document.getElementById('filter-start-date')?.value;
+                    const endInput = document.getElementById('filter-end-date')?.value;
+                    
+                    if (startInput) {
+                        startDate = startOfDay(new Date(startInput));
+                    }
+                    if (endInput) {
+                        const endDateObj = new Date(endInput);
+                        endDate = endOfDay(endDateObj);
+                    }
+                    break;
+                    
+                case 'all':
+                default:
+                    break;
+            }
+            
+            return { start: startDate, end: endDate };
+        };
+
+
+        // --- Filtering and Search Logic ---
+
+        /**
+         * Filters the transactions array based on current DOM filter values.
+         * Returns an array of filtered transactions.
+         */
+        const getFilteredTransactions = () => {
+            const filterType = document.getElementById('filter-type')?.value || 'all';
+            const searchDescription = document.getElementById('filter-description')?.value.toLowerCase() || '';
+            const searchMinAmount = parseFloat(document.getElementById('filter-min-amount')?.value) || 0;
+            const searchMaxAmount = parseFloat(document.getElementById('filter-max-amount')?.value);
+
+            let filteredTxs = allTransactions;
+            const { start: dateStart, end: dateEnd } = calculateDateRange();
+
+            // 0. Date Filter (Applied first for efficiency)
+            filteredTxs = filteredTxs.filter(t => {
+                const txDate = t.date || 0;
+                return txDate >= dateStart && txDate <= dateEnd;
+            });
+
+            // 1. Type Filter (Income, Spends, Savings, Transfer)
+            if (filterType !== 'all') {
+                filteredTxs = filteredTxs.filter(t => {
+                    if (filterType === 'Savings') {
+                        // Match transactions that are Expense AND categorized as investment
+                        return t.type === 'Expense' && SAVINGS_CATEGORIES.includes(t.category);
+                    } else if (filterType === 'Expense') {
+                        // Match regular spends (Expense excluding investment categories)
+                        return t.type === 'Expense' && !SAVINGS_CATEGORIES.includes(t.category);
+                    }
+                    return t.type === filterType; // Income or Transfer
+                });
+            }
+
+            // 2. Description Search (Match description, category, OR year)
+            if (searchDescription) {
+                filteredTxs = filteredTxs.filter(t => {
+                    const txYear = new Date(t.date || 0).getFullYear().toString();
+                    return (t.description && t.description.toLowerCase().includes(searchDescription)) || 
+                           (t.category && t.category.toLowerCase().includes(searchDescription)) ||
+                           txYear.includes(searchDescription); // Allow searching by year (e.g., '2024')
+                });
+            }
+
+            // 3. Amount Search
+            filteredTxs = filteredTxs.filter(t => {
+                let isAboveMin = t.amount >= searchMinAmount;
+                let isBelowMax = isNaN(searchMaxAmount) || t.amount <= searchMaxAmount;
+                return isAboveMin && isBelowMax;
+            });
+
+            return filteredTxs;
+        };
+        
+        // --- Summary Logic ---
+
+        const renderTransactionSummary = (transactions) => {
+            const summaryIncomeEl = document.getElementById('summary-income');
+            const summaryExpenseEl = document.getElementById('summary-expense');
+            const summaryTransferEl = document.getElementById('summary-transfer');
+            const summaryNetFlowEl = document.getElementById('summary-net-flow');
+            
+            if (!summaryIncomeEl) return;
+
+            let totalIncome = 0;
+            let totalExpense = 0; // Regular Spends
+            let totalTransfer = 0;
+            let totalSavings = 0;
+
+            transactions.forEach(t => {
+                if (t.type === 'Income') {
+                    totalIncome += t.amount;
+                } else if (t.type === 'Transfer') {
+                    // Only count NON-PENDING transfers in the total summary
+                    if (!t.isPending) { 
+                        totalTransfer += t.amount;
+                    }
+                } else if (t.type === 'Expense') {
+                    if (SAVINGS_CATEGORIES.includes(t.category)) {
+                        totalSavings += t.amount;
+                    } else {
+                        totalExpense += t.amount; // Regular Spends
+                    }
+                }
+            });
+            
+            const netFlow = totalIncome - totalExpense - totalSavings;
+
+            summaryIncomeEl.textContent = `₹${totalIncome.toFixed(2)}`;
+            summaryExpenseEl.textContent = `₹${totalExpense.toFixed(2)}`;
+            summaryTransferEl.textContent = `₹${totalTransfer.toFixed(2)}`;
+            summaryNetFlowEl.textContent = `₹${netFlow.toFixed(2)}`;
+            
+            const netFlowElParent = summaryNetFlowEl.parentElement;
+            if (netFlowElParent) {
+                netFlowElParent.style.backgroundColor = netFlow >= 0 ? 'var(--primary-color)' : 'var(--expense-color)';
+            }
+        };
+
+
+        // --- Rendering Functions ---
+        
+        const showLoading = (message = 'Loading Data...') => {
+            const loadingTextEl = document.getElementById('loading-text');
+            const loadingOverlayEl = document.getElementById('loading-overlay');
+            if (loadingTextEl) loadingTextEl.textContent = message;
+            if (loadingOverlayEl) loadingOverlayEl.classList.remove('hidden', 'opacity-0');
+        };
+        
+        const hideLoading = () => {
+            const loadingOverlayEl = document.getElementById('loading-overlay');
+            if (loadingOverlayEl) loadingOverlayEl.classList.add('opacity-0', 'hidden');
+        };
+
+        const switchTab = (tabName) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            const tab = document.getElementById(`tab-${tabName}`);
+            if(tab) tab.classList.remove('hidden');
+
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                if (btn.dataset.tab === tabName) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // Re-initialize charts if switching to charts tab
+            if (tabName === 'charts') {
+                 setTimeout(updateCharts, 50);
+            }
+        };
+
+        // --- Settings Tab Rendering ---
+        
+        const renderAccountSettingsList = () => {
+            const listEl = document.getElementById('accounts-settings-list');
+            if (!listEl) return;
+            
+            listEl.innerHTML = '';
+            
+            if (allAccountSettings.length === 0) {
+                listEl.innerHTML = '<p class="text-gray-500">No accounts added yet.</p>';
+                return;
+            }
+            
+            allAccountSettings.forEach(acc => {
+                const html = `
+                    <div class="account-chip">
+                        <div class="flex-grow">
+                            <p class="font-bold text-gray-800">${acc.name} <span class="text-sm font-normal text-gray-500">(${acc.id})</span></p>
+                            <p class="text-sm text-gray-600">Initial Balance: ₹${acc.initialBalance.toFixed(2)}</p>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                             <label class="flex items-center text-sm text-gray-600">
+                                <input type="checkbox" data-id="${acc.id}" ${acc.visible ? 'checked' : ''} class="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 mr-1 account-visibility-toggle">
+                                Visible
+                            </label>
+                            <button data-id="${acc.id}" class="text-red-500 hover:text-red-700 delete-account-btn">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                listEl.innerHTML += html;
+            });
+            
+            // Add event listeners for new elements
+            document.querySelectorAll('.delete-account-btn').forEach(btn => {
+                btn.addEventListener('click', () => deleteAccount(btn.dataset.id));
+            });
+            document.querySelectorAll('.account-visibility-toggle').forEach(toggle => {
+                toggle.addEventListener('change', () => toggleAccountVisibility(toggle.dataset.id, toggle.checked));
+            });
+        };
+        
+        const renderCategoryChips = () => {
+            const expenseContainer = document.getElementById('expense-category-chips');
+            const incomeContainer = document.getElementById('income-category-chips');
+            
+            if (!expenseContainer || !incomeContainer) return;
+
+            expenseContainer.innerHTML = '';
+            allExpenseCategories.forEach(cat => {
+                expenseContainer.innerHTML += `
+                    <div class="category-chip bg-red-100 text-red-800">
+                        <span>${cat}</span>
+                        <i class="fas fa-times category-chip-delete" data-type="Expense" data-name="${cat}"></i>
+                    </div>
+                `;
+            });
+            
+            incomeContainer.innerHTML = '';
+            allIncomeCategories.forEach(cat => {
+                incomeContainer.innerHTML += `
+                    <div class="category-chip bg-green-100 text-green-800">
+                        <span>${cat}</span>
+                        <i class="fas fa-times category-chip-delete" data-type="Income" data-name="${cat}"></i>
+                    </div>
+                `;
+            });
+            
+            // Add event listeners for new chips
+            document.querySelectorAll('.category-chip-delete').forEach(btn => {
+                btn.addEventListener('click', () => deleteCustomCategory(btn.dataset.name, btn.dataset.type));
+            });
+        };
+        
+        // --- Transaction Form Rendering ---
+        
+        // FIX: Added this missing function
+        const populateAccountSelectors = () => {
+            const accountSelect = document.getElementById('transaction-account');
+            if (!accountSelect) return; // Guard clause
+            
+            accountSelect.innerHTML = ''; // Clear existing
+            
+            if (allAccountSettings.length === 0) {
+                 accountSelect.innerHTML = '<option value="" disabled selected>No accounts set (See Settings)</option>';
+                 return;
+            }
+            
+            accountSelect.innerHTML = '<option value="" disabled selected>Select an Account</option>';
+            allAccountSettings.forEach(acc => {
+                accountSelect.innerHTML += `<option value="${acc.id}">${acc.name}</option>`;
+            });
+        };
+        
+        const populateCategoryChips = () => {
+            const typeEl = document.getElementById('transaction-type');
+            const container = document.getElementById('category-chip-container');
+            const placeholder = document.getElementById('category-chip-placeholder');
+            const hiddenInput = document.getElementById('transaction-category');
+            
+            // FIX: Added guards for null elements
+            if (!typeEl || !container || !hiddenInput) return;
+
+            const type = typeEl.value;
+            container.innerHTML = ''; // Clear existing chips
+            hiddenInput.value = ''; // Clear selected value 
+            
+            let categories = [];
+            if (type === 'Expense') {
+                categories = allExpenseCategories;
+            } else if (type === 'Income') {
+                categories = allIncomeCategories;
+            } else if (type === 'Transfer') {
+                categories = TRANSFER_CATEGORIES;
+            }
+
+            if (categories.length === 0) {
+                if(placeholder) {
+                    container.appendChild(placeholder);
+                    placeholder.classList.remove('hidden');
+                }
+            } else {
+                if (placeholder) placeholder.classList.add('hidden');
+                categories.forEach(cat => {
+                    const chip = document.createElement('div');
+                    chip.className = 'chip px-3 py-1.5 rounded-full text-sm font-medium';
+                    chip.textContent = cat;
+                    chip.dataset.value = cat;
+                    // Note: selectCategoryChip must be global or scoped correctly to be called here
+                    chip.addEventListener('click', () => selectCategoryChip(chip));
+                    container.appendChild(chip);
+                });
+            }
+        };
+        
+        const selectCategoryChip = (chipElement) => {
+            // FIX: The hidden input is now outside the container, so this should reliably find it.
+            const hiddenInput = document.getElementById('transaction-category');
+            
+            if (!hiddenInput) {
+                // Console error will now only happen if the element is completely missing from the HTML
+                console.error("Hidden category input not found."); 
+                return;
+            }
+            
+            // Remove 'active' from all siblings
+            chipElement.parentElement.querySelectorAll('.chip').forEach(chip => {
+                chip.classList.remove('active');
+            });
+            
+            // Add 'active' to the clicked chip
+            chipElement.classList.add('active');
+            
+            // Set the hidden input value
+            hiddenInput.value = chipElement.dataset.value;
+        };
+
+        // --- Investment Tab Rendering ---
+        const renderInvestmentSummary = () => {
+            const summaryEl = document.getElementById('investment-summary-chips');
+            if (!summaryEl) return;
+
+            const investmentTotals = {};
+            let totalInvested = 0;
+
+            allTransactions.forEach(t => {
+                if (t.type === 'Expense' && SAVINGS_CATEGORIES.includes(t.category)) {
+                    investmentTotals[t.category] = (investmentTotals[t.category] || 0) + t.amount;
+                    totalInvested += t.amount;
+                }
+            });
+
+            summaryEl.innerHTML = '';
+            
+            if (totalInvested === 0) {
+                 summaryEl.innerHTML = '<p class="text-gray-500">Log transactions in "Savings" categories (like EMI, Insurance, Investment Expense) to see totals here.</p>';
+                 return;
+            }
+            
+            // Add a total chip first
+            summaryEl.innerHTML += `
+                <div class="summary-chip flex items-center px-3 py-1 rounded-full text-white" style="background-color: var(--primary-color);">
+                    Total Saved: <span class="ml-1 font-extrabold">₹${totalInvested.toFixed(2)}</span>
+                </div>
+            `;
+            
+            const sortedInvestments = Object.entries(investmentTotals).sort(([, a], [, b]) => b - a);
+
+            sortedInvestments.forEach(([cat, amount]) => {
+                if (amount > 0) {
+                    summaryEl.innerHTML += `
+                        <div class="summary-chip flex items-center px-3 py-1 rounded-full text-gray-800" style="background-color: #e5e7eb;">
+                            ${cat}: <span class="ml-1 font-extrabold">₹${amount.toFixed(2)}</span>
+                        </div>
+                    `;
+                }
+            });
+        };
+        
+        // --- Dashboard Tab Rendering ---
+        const renderDashboard = () => {
+            let totalIncome = 0;
+            let totalExpense = 0;
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+
+            allTransactions.forEach(t => {
+                if (t.type === 'Transfer') return; 
+                
+                // Ensure date is valid
+                if (!t.date) return;
+
+                const date = new Date(t.date);
+                if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+                    if (t.type === 'Income') {
+                        totalIncome += t.amount;
+                    } else if (t.type === 'Expense') {
+                        totalExpense += t.amount;
+                    }
+                }
+            });
+
+            const netBalanceMoM = totalIncome - totalExpense;
+
+            // Monthly Snapshot Card
+            const monthlyIncomeEl = document.getElementById('monthly-income');
+            const monthlyExpenseEl = document.getElementById('monthly-expense');
+            const monthlyNetFlowEl = document.getElementById('monthly-net-flow');
+
+            if (monthlyIncomeEl) monthlyIncomeEl.textContent = `₹${totalIncome.toFixed(2)}`;
+            if (monthlyExpenseEl) monthlyExpenseEl.textContent = `₹${totalExpense.toFixed(2)}`;
+            
+            if (monthlyNetFlowEl) {
+                monthlyNetFlowEl.textContent = `₹${netBalanceMoM.toFixed(2)}`;
+                monthlyNetFlowEl.classList.toggle('text-red-600', netBalanceMoM < 0);
+                monthlyNetFlowEl.classList.toggle('text-green-700', netBalanceMoM >= 0);
+            }
+
+            // Account Balances
+            const balances = calculateAccountBalances();
+            let totalNetBalance = 0;
+            const accountSummaryEl = document.getElementById('accounts-list');
+            
+            // FIX: Check for the element existence before modifying
+            const noAccountsEl = document.getElementById('no-accounts-message');
+
+            if (accountSummaryEl) {
+                accountSummaryEl.innerHTML = '';
+            }
+
+            if (allAccountSettings.length === 0) {
+                if (noAccountsEl) noAccountsEl.classList.remove('hidden');
+            } else {
+                 if (noAccountsEl) noAccountsEl.classList.add('hidden');
+            }
+
+            allAccountSettings.forEach(acc => {
+                const currentBalance = balances[acc.id] || 0;
+                
+                if (acc.visible && accountSummaryEl) {
+                    totalNetBalance += currentBalance;
+                    
+                    const balanceClass = currentBalance >= 0 ? 'text-green-600' : 'text-red-600';
+                    const cardHtml = `
+                        <div class="p-3 rounded-lg border border-gray-200 shadow-sm bg-gray-50">
+                            <p class="text-sm font-medium text-gray-500 truncate">${acc.name}</p>
+                            <p class="text-xl font-bold ${balanceClass} truncate">₹${currentBalance.toFixed(2)}</p>
+                        </div>
+                    `;
+                    accountSummaryEl.innerHTML += cardHtml;
+                }
+            });
+
+            // Total Net Balance Card
+            const totalNetBalanceEl = document.getElementById('total-net-balance');
+            if (totalNetBalanceEl) {
+                totalNetBalanceEl.textContent = `₹${totalNetBalance.toFixed(2)}`;
+            }
+        };
+
+        // --- Transaction List Rendering ---
+        const editTransaction = (docId) => {
+            const tx = allTransactions.find(t => t.id === docId);
+            if (!tx) return;
+            
+            const transactionDateEl = document.getElementById('transaction-date');
+            if (!transactionDateEl) return;
+            
+            // If it's a P2P Repayment Due, prepare for completion
+            if (tx.category === 'P2P Repayment Due' && tx.isPending) {
+                showToast(`Repayment Due! Please confirm the receiving account and date below.`, 'warning');
+                transactionDateEl.valueAsDate = new Date(); // Set date to today
+                
+                // Keep the original Tx date for tracking purposes in a separate field
+                transactionDateEl.setAttribute('data-original-date', new Date(tx.date || 0).toISOString().split('T')[0]);
+                
+            } else {
+                 transactionDateEl.valueAsDate = new Date(tx.date || 0);
+                 transactionDateEl.removeAttribute('data-original-date');
+            }
+
+            // Set editing state
+            document.getElementById('transaction-id').value = docId;
+
+            // Populate fields
+            document.getElementById('transaction-type').value = tx.type;
+            
+            // Trigger category chip population based on type
+            populateCategoryChips(); 
+            
+            document.getElementById('transaction-amount').value = tx.amount.toFixed(2);
+            document.getElementById('transaction-account').value = tx.accountId;
+            document.getElementById('transaction-description').value = tx.description;
+            
+            // Find and select the correct category chip
+            // Use a slight delay to ensure chips have rendered after populateCategoryChips()
+            setTimeout(() => {
+                const chipToSelect = document.querySelector(`.chip[data-value="${tx.category}"]`);
+                if (chipToSelect) {
+                    selectCategoryChip(chipToSelect);
+                }
+            }, 50);
+
+
+            // Update UI buttons
+            const saveBtn = document.getElementById('save-transaction-btn');
+            const cancelBtn = document.getElementById('cancel-edit-btn');
+            
+            if (saveBtn) {
+                saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i> Update Transaction';
+                saveBtn.classList.replace('bg-indigo-600', 'bg-green-600');
+            }
+            if (cancelBtn) {
+                cancelBtn.classList.remove('hidden');
+            }
+
+            switchTab('transactions');
+            window.scrollTo(0, 0); // Scroll to top to see the form
+        };
+        
+        const cancelEdit = () => {
+            document.getElementById('transaction-id').value = '';
+            document.getElementById('transaction-form').reset();
+            
+            const transactionDateEl = document.getElementById('transaction-date');
+            if (transactionDateEl) {
+                transactionDateEl.valueAsDate = new Date();
+                transactionDateEl.removeAttribute('data-original-date');
+            }
+            
+            populateCategoryChips(); // Reset category chips
+
+            // Reset UI buttons
+            const saveBtn = document.getElementById('save-transaction-btn');
+            const cancelBtn = document.getElementById('cancel-edit-btn');
+            
+            if (saveBtn) {
+                saveBtn.innerHTML = '<i class="fas fa-plus mr-2"></i> Save Transaction';
+                saveBtn.classList.replace('bg-green-600', 'bg-indigo-600');
+            }
+            if (cancelBtn) {
+                cancelBtn.classList.add('hidden');
+            }
+        };
+
+        // NEW: Function to handle P2P Repayment completion
+        const recordRepayment = (docId) => {
+            const tx = allTransactions.find(t => t.id === docId);
+            if (!tx || !tx.isPending || tx.category !== 'P2P Repayment Due') {
+                showToast("Invalid P2P Repayment transaction.", 'error');
+                return;
+            }
+
+            // Use the existing edit flow, which triggers specific logic in editTransaction
+            editTransaction(docId);
+        };
+
+        // Main function to render the transaction list
+        const renderTransactions = (transactions) => {
+            const listEl = document.getElementById('transaction-history');
+            const noTxRow = document.getElementById('no-transactions-row');
+            
+            if (!listEl) return;
+            
+            listEl.innerHTML = ''; // Clear old transactions
+            
+            const accountMap = allAccountSettings.reduce((map, acc) => { map[acc.id] = acc.name; return map; }, {});
+
+            if (transactions.length === 0) {
+                if(noTxRow) {
+                    listEl.appendChild(noTxRow); // Show the "no transactions" message
+                }
+                return;
+            }
+
+            transactions.forEach(t => {
+                const date = new Date(t.date || 0).toLocaleDateString();
+
+                let amountClass;
+                let sign;
+                let rowClass = 'transaction-row';
+                let actionButton = `<button onclick="window.editTransaction('${t.id}')" class="text-indigo-600 hover:text-indigo-500 text-sm font-medium">Edit</button>`;
+
+
+                if (t.type === 'Income') {
+                    amountClass = 'text-green-600';
+                    sign = '+';
+                } else if (t.type === 'Expense') {
+                    amountClass = 'text-red-600';
+                    sign = '-';
+                } else { 
+                    amountClass = 'text-yellow-600';
+                    sign = t.category.includes('Loan Out') ? '<-' : (t.category.includes('Repayment Due') ? '->' : '---');
+
+                    if (t.isPending && t.category === 'P2P Repayment Due') {
+                        rowClass = 'bg-yellow-100';
+                        amountClass = 'text-yellow-700 font-extrabold';
+                        sign = '!!!';
+                        actionButton = `<button onclick="window.recordRepayment('${t.id}')" class="text-green-600 hover:text-green-500 text-sm font-bold bg-gray-100 px-2 py-1 rounded-lg">RECORD RETURN</button>`;
+                    }
+                }
+                
+                // Add Delete button if not pending repayment.
+                const deleteButton = !t.isPending || t.category !== 'P2P Repayment Due' 
+                    ? `<button onclick="window.deleteTransaction('${t.id}')" class="text-red-500 hover:text-red-400 text-sm font-medium">Delete</button>`
+                    : '';
+
+                const accountName = accountMap[t.accountId] || t.accountId;
+
+                const row = document.createElement('tr');
+                row.className = rowClass;
+                row.innerHTML = `
+                    <td class="px-2 py-3 sm:px-3 whitespace-nowrap">${date}</td>
+                    <td class="px-2 py-3 sm:px-3 whitespace-nowrap font-medium">${t.type}</td>
+                    <td class="px-2 py-3 sm:px-3 whitespace-nowrap">${t.category}</td>
+                    <td class="px-2 py-3 sm:px-3 whitespace-nowrap font-bold text-right ${amountClass}">
+                        ${sign}₹${t.amount.toFixed(2)}
+                    </td>
+                    <td class="px-2 py-3 sm:px-3 whitespace-nowrap text-gray-700">${accountName}</td>
+                    <td class="px-2 py-3 sm:px-3 whitespace-nowrap truncate max-w-[150px]">${t.description || ''}</td>
+                    <td class="px-2 py-3 sm:px-3 whitespace-nowrap text-right space-x-2">
+                        ${actionButton}
+                        ${deleteButton}
+                    </td>
+                `;
+                listEl.appendChild(row);
+            });
+        };
+        
+        // --- Goal Rendering ---
+        const renderGoals = () => {
+            const listEl = document.getElementById('goals-list');
+            const noGoalsEl = document.getElementById('no-goals-message');
+            
+            if (!listEl) return;
+
+            listEl.innerHTML = '';
+
+            if (allGoals.length === 0) {
+                if(noGoalsEl) noGoalsEl.classList.remove('hidden');
+                return;
+            }
+            
+            if(noGoalsEl) noGoalsEl.classList.add('hidden');
+
+            allGoals.forEach(g => {
+                const progress = (g.currentContribution / g.targetAmount) * 100;
+                const progressPercentage = Math.min(100, progress).toFixed(0);
+                const progressColor = progress >= 100 ? 'bg-green-500' : 'bg-indigo-500';
+
+                const html = `
+                    <div class="card p-4 rounded-xl shadow-lg border border-gray-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="text-lg font-bold text-indigo-600">${g.name}</h4>
+                            <button onclick="window.deleteGoal('${g.id}')" class="text-sm text-red-500 hover:text-red-400">
+                                <i class="fas fa-trash-alt"></i> Delete
+                            </button>
+                        </div>
+                        <div class="text-sm text-gray-600 mb-3">
+                            Current: <span class="font-semibold text-gray-900">₹${g.currentContribution.toFixed(2)}</span> /
+                            Target: <span class="font-semibold text-gray-900">₹${g.targetAmount.toFixed(2)}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="${progressColor} h-2.5 rounded-full" style="width: ${progressPercentage}%"></div>
+                        </div>
+                        <p class="text-xs mt-1 text-right text-gray-500">${progressPercentage}% Complete</p>
+                    </div>
+                `;
+                listEl.innerHTML += html;
+            });
+        };
+
+        // --- Chart Generation ---
+        const getChartData = () => {
+            const monthlyData = {};
+            const categoryData = {};
+            const savingsCategoryData = {}; 
+            
+            const last6Months = [];
+            const today = new Date();
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                last6Months.push(key);
+                monthlyData[key] = { income: 0, expense: 0, net: 0 };
+            }
+
+            allTransactions.forEach(t => {
+                if (t.type === 'Transfer' && t.category === 'P2P Repayment Due' && t.isPending) return;
+                if (!t.date) return;
+
+                const date = new Date(t.date);
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                
+                // Only consider non-transfer data for monthly spend chart
+                if (t.type !== 'Transfer') {
+                    if (monthlyData[monthKey]) {
+                        if (t.type === 'Income') {
+                            monthlyData[monthKey].income += t.amount;
+                        } else if (t.type === 'Expense') {
+                            monthlyData[monthKey].expense += t.amount;
+                        }
+                    }
+                    
+                    // Category charts based on Current Year
+                    if (date.getFullYear() === today.getFullYear() && t.type === 'Expense') {
+                         categoryData[t.category] = (categoryData[t.category] || 0) + t.amount;
+                    }
+                }
+                
+                // Savings/Investment Breakdown (All Time)
+                if (t.type === 'Expense' && SAVINGS_CATEGORIES.includes(t.category)) {
+                    savingsCategoryData[t.category] = (savingsCategoryData[t.category] || 0) + t.amount;
+                }
+            });
+
+            const monthlyLabels = last6Months.map(key => key.slice(5) + '/' + key.slice(2, 4));
+            const monthlyIncome = last6Months.map(key => monthlyData[key].income);
+            const monthlyExpense = last6Months.map(key => monthlyData[key].expense);
+            last6Months.forEach(key => {
+                monthlyData[key].net = monthlyData[key].income - monthlyData[key].expense;
+            });
+            const monthlyNet = last6Months.map(key => monthlyData[key].net);
+
+            const categoryLabels = Object.keys(categoryData);
+            const categoryAmounts = Object.values(categoryData);
+            
+            const savingsLabels = Object.keys(savingsCategoryData);
+            const savingsAmounts = Object.values(savingsCategoryData);
+
+            return { monthlyLabels, monthlyIncome, monthlyExpense, monthlyNet, categoryLabels, categoryAmounts, savingsLabels, savingsAmounts };
+        };
+
+        const createChart = (ctx, type, data, options) => {
+            if (!ctx) return;
+            const chartId = typeof ctx === 'string' ? ctx : ctx.id;
+            if (charts[chartId]) {
+                charts[chartId].destroy(); // <-- CRITICAL: Destroy old chart instance
+            }
+            charts[chartId] = new Chart(ctx, { type, data, options });
+        };
+
+        const updateCharts = () => {
+            const data = getChartData();
+            
+            // 1. Monthly Spend Chart (Bar)
+            createChart(document.getElementById('monthly-spend-chart'), 'bar', {
+                labels: data.monthlyLabels,
+                datasets: [
+                    { 
+                        label: 'Net Flow', 
+                        data: data.monthlyNet, 
+                        backgroundColor: data.monthlyNet.map(v => v >= 0 ? 'rgba(79, 70, 229, 0.8)' : 'rgba(239, 68, 68, 0.8)'),
+                        borderColor: data.monthlyNet.map(v => v >= 0 ? 'rgb(79, 70, 229)' : 'rgb(239, 68, 68)'),
+                        borderWidth: 1,
+                        borderRadius: 4 
+                    }
+                ]
+            }, {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#4b5563' } },
+                    y: { grid: { color: '#e5e7eb' }, ticks: { color: '#4b5563' } }
+                }
+            });
+
+            // 2. Category Spend Chart (Pie)
+            createChart(document.getElementById('category-spend-chart'), 'pie', {
+                labels: data.categoryLabels,
+                datasets: [{
+                    data: data.categoryAmounts,
+                    backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e'],
+                    hoverOffset: 4
+                }]
+            }, {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'right', labels: { color: '#374151', boxWidth: 12, padding: 15 } } }
+            });
+            
+            // 3. Savings/Investment Breakdown Chart (Doughnut)
+            createChart(document.getElementById('investment-breakdown-chart'), 'doughnut', {
+                labels: data.savingsLabels,
+                datasets: [{
+                    data: data.savingsAmounts,
+                    backgroundColor: ['#6366f1', '#a855f7', '#3b82f6', '#06b6d4', '#10b981'],
+                    hoverOffset: 8
+                }]
+            }, {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'right', labels: { color: '#374151', boxWidth: 12, padding: 15 } } }
+            });
+        };
+
+
+        // --- Firestore Interaction Functions (Settings) ---
+
+        const addAccount = async (event) => {
+            event.preventDefault();
+            const nameEl = document.getElementById('account-name');
+            const idEl = document.getElementById('account-id-input');
+            const balanceEl = document.getElementById('initial-balance');
+
+            const name = nameEl?.value?.trim();
+            const id = idEl?.value?.trim();
+            const initialBalance = parseFloat(balanceEl?.value) || 0;
+            
+            if (!name || !id) {
+                showToast("Account Name and Short ID are required.", 'error');
+                return;
+            }
+            if (/\s/.test(id)) {
+                 showToast("Short ID must not contain spaces.", 'error');
+                return;
+            }
+            if (allAccountSettings.find(acc => acc.id === id)) {
+                showToast("Account ID already exists. Please use a unique one.", 'error');
+                return;
+            }
+            
+            allAccountSettings.push({
+                id: id,
+                name: name,
+                initialBalance: initialBalance,
+                visible: true
+            });
+            
+            const success = await saveConfig();
+            if (success) {
+                showToast("Account added successfully.", 'success');
+                event.target.reset();
+                // Handled by listener: renderAccountSettingsList(); 
+                // Handled by listener: populateAccountSelectors();
+            }
+        };
+        
+        const deleteAccount = async (id) => {
+            // Note: This does not delete transactions, only the account.
+            // Transactions will remain but won't be editable.
+            // A more robust app would check for transactions first.
+            if (!confirm(`Are you sure you want to delete account '${id}'? This cannot be undone.`)) return;
+            
+            allAccountSettings = allAccountSettings.filter(acc => acc.id !== id);
+            const success = await saveConfig();
+            if (success) {
+                showToast("Account deleted.", 'success');
+                // Handled by listener: renderAccountSettingsList();
+                // Handled by listener: populateAccountSelectors();
+                // Handled by listener: renderDashboard();
+            }
+        };
+        
+        const toggleAccountVisibility = async (id, isVisible) => {
+            const acc = allAccountSettings.find(acc => acc.id === id);
+            if (acc) {
+                acc.visible = isVisible;
+                await saveConfig();
+                // Handled by listener: renderDashboard();
+            }
+        };
+
+        const addCustomCategory = async (event, type) => {
+            event.preventDefault();
+            
+            const inputId = type === 'Expense' ? 'new-expense-category' : 'new-income-category';
+            const input = document.getElementById(inputId);
+            const name = input?.value?.trim();
+            
+            if (!name) return;
+            
+            if (type === 'Expense') {
+                if (allExpenseCategories.includes(name)) {
+                    showToast("Category already exists.", 'warning');
+                    return;
+                }
+                allExpenseCategories.push(name);
+            } else {
+                 if (allIncomeCategories.includes(name)) {
+                    showToast("Category already exists.", 'warning');
+                    return;
+                }
+                allIncomeCategories.push(name);
+            }
+            
+            const success = await saveConfig();
+            if (success) {
+                showToast("Category added.", 'success');
+                if (input) input.value = '';
+                // Handled by listener: renderCategoryChips();
+                // Handled by listener: populateCategoryChips();
+            }
+        };
+        
+        const deleteCustomCategory = async (name, type) => {
+             if (type === 'Expense') {
+                allExpenseCategories = allExpenseCategories.filter(cat => cat !== name);
+            } else {
+                allIncomeCategories = allIncomeCategories.filter(cat => cat !== name);
+            }
+            
+            const success = await saveConfig();
+            if (success) {
+                showToast("Category removed.", 'success');
+                // Handled by listener: renderCategoryChips();
+                // Handled by listener: populateCategoryChips();
+            }
+        };
+
+        // --- Firestore Interaction Functions (Transactions) ---
+
+        const saveTransaction = async (event) => {
+            event.preventDefault();
+            
+            // FIX: Added null checks here
+            const docId = document.getElementById('transaction-id')?.value;
+            const isEditing = !!docId;
+
+            const amount = parseFloat(document.getElementById('transaction-amount')?.value);
+            const type = document.getElementById('transaction-type')?.value;
+            const category = document.getElementById('transaction-category')?.value;
+            const accountId = document.getElementById('transaction-account')?.value; 
+            const dateInput = document.getElementById('transaction-date')?.value;
+            const description = document.getElementById('transaction-description')?.value?.trim();
+
+            if (!db || !userId) { showToast("Database not ready.", 'error'); return; }
+            // FIX: Added more robust checks for required fields
+            if (!category) { showToast("Please select a category.", 'warning'); return; }
+            if (!accountId) { showToast("Account must be selected.", 'warning'); return; }
+            if (!dateInput) { showToast("Please select a date.", 'warning'); return; }
+            if (isNaN(amount) || amount <= 0) { showToast("Amount must be a positive number.", 'warning'); return; }
+
+
+            const transactionData = {
+                amount: amount,
+                type: type,
+                category: category,
+                accountId: accountId, 
+                date: new Date(dateInput).getTime(), 
+                description: description || '',
+                userId: userId,
+                // These fields may exist only on pending transactions
+                isPending: false, 
+                linkedTxId: null 
+            };
+            
+            // Fetch the existing transaction data if editing
+            const existingTx = allTransactions.find(t => t.id === docId);
+
+            try {
+                const { collection, addDoc, doc, setDoc } = window.firebase;
+                
+                if (isEditing) {
+                    // --- Handle Editing/Completing P2P Repayment ---
+                    if (existingTx && existingTx.isPending && existingTx.category === 'P2P Repayment Due') {
+                        // When a pending repayment is updated, we mark it as completed.
+                        const updatedData = {
+                            ...transactionData,
+                            isPending: false,
+                            type: 'Transfer', // Ensure it's a transfer type
+                            category: 'P2P Repayment Due',
+                            accountId: accountId,
+                            date: new Date(dateInput).getTime(),
+                            linkedTxId: existingTx.linkedTxId 
+                        };
+                        await setDoc(doc(db, `/artifacts/${appId}/users/${userId}/transactions`, docId), updatedData, { merge: true });
+                        showToast(`P2P Repayment of ₹${amount.toFixed(2)} recorded!`, 'success');
+                    } else {
+                        // Standard update logic
+                        await setDoc(doc(db, `/artifacts/${appId}/users/${userId}/transactions`, docId), transactionData, { merge: true });
+                        showToast("Transaction updated successfully.", 'success');
+                    }
+                } else {
+                    // --- Handle NEW Transaction and P2P Loan Out Creation ---
+                    transactionData.timestamp = window.firebase.serverTimestamp();
+                    
+                    // 1. Save the main transaction (Loan Out)
+                    const mainTxRef = await addDoc(collection(db, `/artifacts/${appId}/users/${userId}/transactions`), transactionData);
+                    const mainTxId = mainTxRef.id;
+
+                    // 2. If it's a P2P Loan Out, create a corresponding PENDING repayment transaction
+                    if (category === 'P2P Loan Out (Sent)') {
+                        const pendingRepaymentData = {
+                            amount: amount,
+                            type: 'Transfer', 
+                            category: 'P2P Repayment Due',
+                            accountId: 'None', // Placeholder for pending transaction
+                            date: transactionData.date + 1, // Set one ms later
+                            description: `[PENDING] Repayment for loan: ${description}`,
+                            userId: userId,
+                            isPending: true,
+                            linkedTxId: mainTxId, // Link back to the original loan out
+                            timestamp: window.firebase.serverTimestamp()
+                        };
+                        await addDoc(collection(db, `/artifacts/${appId}/users/${userId}/transactions`), pendingRepaymentData);
+                        showToast("P2P Loan Out saved, and Repayment Due alert created!", 'success');
+                    } else {
+                        showToast("Transaction saved successfully.", 'success');
+                    }
+                }
+                
+                cancelEdit(); 
+            } catch (e) {
+                console.error("Error saving/updating document: ", e);
+                showToast("Error saving transaction.", 'error');
+            }
+        };
+
+        const deleteTransaction = async (docId) => {
+            if (!db || !userId) { showToast("Database not ready.", 'error'); return; }
+            if (!confirm("Are you sure you want to delete this transaction? This may delete a linked pending repayment.")) return;
+            
+            const txToDelete = allTransactions.find(t => t.id === docId);
+            if (!txToDelete) return;
+
+            try {
+                const { doc, deleteDoc, collection, query, where, getDocs, writeBatch } = window.firebase;
+                const batch = writeBatch(db);
+
+                // Start batch with the primary delete
+                batch.delete(doc(db, `/artifacts/${appId}/users/${userId}/transactions`, docId));
+
+                // If deleting a Loan Out, delete the pending repayment
+                if (txToDelete.category === 'P2P Loan Out (Sent)') {
+                    const linkedQuery = query(
+                        collection(db, `/artifacts/${appId}/users/${userId}/transactions`),
+                        where('linkedTxId', '==', docId),
+                        where('isPending', '==', true)
+                    );
+                    const linkedDocs = await getDocs(linkedQuery);
+                    linkedDocs.forEach(d => batch.delete(d.ref));
+                }
+                
+                // If deleting a pending Repayment, warn about the original Loan Out
+                if (txToDelete.category === 'P2P Repayment Due' && txToDelete.isPending) {
+                    showToast("Warning: The original 'Loan Out' transaction is still tracked.", 'warning');
+                }
+
+                await batch.commit();
+                showToast("Transaction(s) deleted.", 'success');
+            } catch (e) {
+                console.error("Error deleting document: ", e);
+                showToast("Error deleting transaction.", 'error');
+            }
+        };
+        
+        // --- Firestore Interaction Functions (Goals) ---
+
+        const saveGoal = async (event) => {
+            event.preventDefault();
+            const form = event.target;
+            const nameEl = document.getElementById('goal-name');
+            const targetEl = document.getElementById('goal-target');
+            const currentEl = document.getElementById('goal-current');
+            
+            const name = nameEl?.value?.trim();
+            const targetAmount = parseFloat(targetEl?.value);
+            const currentContribution = parseFloat(currentEl?.value);
+
+            if (!db || !userId) { showToast("Database not ready.", 'error'); return; }
+            if (!name || isNaN(targetAmount) || targetAmount <= 0) { showToast("Please enter a valid goal name and target amount.", 'warning'); return; }
+            if (isNaN(currentContribution) || currentContribution < 0) { showToast("Please enter a valid current contribution.", 'warning'); return; }
+
+
+            const newGoal = {
+                name: name,
+                targetAmount: targetAmount,
+                currentContribution: currentContribution,
+                timestamp: window.firebase.serverTimestamp(),
+                userId: userId
+            };
+
+            try {
+                const { collection, addDoc } = window.firebase;
+                await addDoc(collection(db, `/artifacts/${appId}/users/${userId}/goals`), newGoal);
+                form.reset();
+                showToast("Goal saved successfully.", 'success');
+            } catch (e) {
+                console.error("Error adding goal: ", e);
+                showToast("Error saving goal.", 'error');
+            }
+        };
+
+        const deleteGoal = async (docId) => {
+            if (!db || !userId) { showToast("Database not ready.", 'error'); return; }
+            if (!confirm("Are you sure you want to delete this goal?")) return;
+            try {
+                const { doc, deleteDoc } = window.firebase;
+                await deleteDoc(doc(db, `/artifacts/${appId}/users/${userId}/goals`, docId));
+                showToast("Goal deleted.", 'success');
+            } catch (e) {
+                console.error("Error deleting goal: ", e);
+                showToast("Error deleting goal.", 'error');
+            }
+        };
+        
+        // --- Sync and Backup Functions ---
+
+        const exportData = () => {
+            const data = {
+                transactions: allTransactions,
+                goals: allGoals,
+                config: {
+                    accounts: allAccountSettings,
+                    incomeCategories: allIncomeCategories,
+                    expenseCategories: allExpenseCategories
+                }
+            };
+
+            const jsonString = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `SmaRGht_FinAI_Tracker_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("Data exported successfully.", 'success');
+        };
+
+        const importData = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    if (!importedData.transactions || !importedData.goals || !importedData.config) {
+                        throw new Error("Invalid file structure. Missing transactions, goals, or config.");
+                    }
+                    
+                    // Store data temporarily for sync control
+                    localStorage.setItem('imported_data', JSON.stringify(importedData));
+                    showToast("Data imported! Use 'Sync Local Data TO Firebase (OVERWRITE)' to save it.", 'warning');
+                    console.log("Imported data ready for sync:", importedData);
+
+                } catch (error) {
+                    console.error("Error reading or parsing import file:", error);
+                    showToast(`Import failed: ${error.message}`, 'error');
+                } finally {
+                    event.target.value = null; // Reset file input
+                }
+            };
+            reader.readAsText(file);
+        };
+        
+        const syncLocalToFirebase = async () => {
+            if (!db || !userId) { showToast("Database not ready.", 'error'); return; }
+            
+            const rawData = localStorage.getItem('imported_data');
+            // If data was imported, use it. Otherwise, use the current in-memory state.
+            let dataToSync = rawData ? JSON.parse(rawData) : {
+                transactions: allTransactions,
+                goals: allGoals,
+                config: {
+                    accounts: allAccountSettings,
+                    incomeCategories: allIncomeCategories,
+                    expenseCategories: allExpenseCategories
+                }
+            };
+            
+            if (!confirm(`WARNING: Sync TO Firebase will DELETE all ${rawData ? 'cloud' : 'local'} data and replace it with ${rawData ? 'imported file' : 'current app'} data. Continue?`)) return;
+
+            
+            showLoading("Overwriting cloud data...");
+
+            try {
+                const { collection, doc, setDoc, writeBatch, getDocs } = window.firebase;
+                const batch = writeBatch(db);
+
+                // --- 1. Transactions Collection ---
+                const txCollectionRef = collection(db, `/artifacts/${appId}/users/${userId}/transactions`);
+                const existingTxDocs = await getDocs(txCollectionRef);
+                existingTxDocs.forEach(d => batch.delete(d.ref)); 
+
+                dataToSync.transactions.forEach(t => {
+                    const txRef = doc(txCollectionRef, t.id || crypto.randomUUID()); 
+                    const { id, ...rest } = t;
+                    batch.set(txRef, { 
+                        ...rest, 
+                        userId, 
+                        date: t.date || Date.now()
+                    });
+                });
+
+                // --- 2. Goals Collection ---
+                const goalCollectionRef = collection(db, `/artifacts/${appId}/users/${userId}/goals`);
+                const existingGoalDocs = await getDocs(goalCollectionRef);
+                existingGoalDocs.forEach(d => batch.delete(d.ref)); 
+                dataToSync.goals.forEach(g => {
+                    const goalRef = doc(goalCollectionRef, g.id || crypto.randomUUID());
+                    const { id, ...rest } = g;
+                    batch.set(goalRef, { ...rest, userId });
+                });
+
+                // --- 3. Config (single document) ---
+                const configRef = doc(db, `/artifacts/${appId}/users/${userId}/config`, 'main');
+                batch.set(configRef, dataToSync.config);
+
+                await batch.commit();
+                localStorage.removeItem('imported_data'); // Clear local storage flag
+                showToast("Data successfully synced TO Firebase.", 'success');
+                
+                // Listeners will automatically refresh the UI
+                
+            } catch (error) {
+                console.error("Error during sync to Firebase:", error);
+                showToast("Sync TO Firebase failed.", 'error');
+            } finally {
+                hideLoading();
+            }
+        };
+
+        const syncFirebaseToLocal = () => {
+            // This is the safe method: re-establish listeners, which pulls ALL cloud data
+            if (db && userId) {
+                setupFirestoreListeners(); 
+                showToast("Data refreshed FROM Firebase.", 'success');
+            } else {
+                 showToast("Database not initialized.", 'error');
+            }
+        };
+
+        const confirmClearAllData = () => {
+            if (!db || !userId) { showToast("Database not ready.", 'error'); return; }
+            if (confirm("DANGER: This action will permanently delete ALL transactions, goals, and settings from Firebase and cannot be undone. Are you absolutely sure?")) {
+                if (confirm("FINAL WARNING: Click OK to permanently delete all data from the cloud.")) {
+                    clearAllData();
+                }
+            }
+        };
+
+        const clearAllData = async () => {
+            if (!db || !userId) { showToast("Database not ready.", 'error'); return; }
+            
+            showLoading("Deleting all cloud data...");
+            
+            try {
+                const { collection, getDocs, writeBatch, doc } = window.firebase;
+                const batch = writeBatch(db);
+
+                const txCollectionRef = collection(db, `/artifacts/${appId}/users/${userId}/transactions`);
+                const goalCollectionRef = collection(db, `/artifacts/${appId}/users/${userId}/goals`);
+                
+                const txDocs = await getDocs(txCollectionRef);
+                txDocs.forEach(doc => batch.delete(doc.ref));
+
+                const goalDocs = await getDocs(goalCollectionRef);
+                goalDocs.forEach(doc => batch.delete(doc.ref));
+
+                const configRef = doc(db, `/artifacts/${appId}/users/${userId}/config`, 'main');
+                batch.delete(configRef);
+
+                await batch.commit();
+                
+                // Clear local state
+                allTransactions = [];
+                allGoals = [];
+                allAccountSettings = [];
+                allIncomeCategories = [];
+                allExpenseCategories = [];
+                localStorage.removeItem('imported_data');
+                
+                // Re-initialize listeners to get fresh empty state (which will create a new default config)
+                setupFirestoreListeners(); 
+
+                showToast("All data successfully deleted from Firebase.", 'success');
+
+            } catch (e) {
+                console.error("Error during full data deletion:", e);
+                showToast("Failed to delete all data.", 'error');
+            } finally {
+                hideLoading();
+            }
+        };
+        
+        // --- Filter Application ---
+        const applyFilters = () => {
+            const filteredTxs = getFilteredTransactions();
+            renderTransactions(filteredTxs);
+            renderTransactionSummary(filteredTxs);
+            const txCountEl = document.getElementById('transaction-count');
+            if(txCountEl) txCountEl.textContent = filteredTxs.length;
+        };
+
+        // --- Initial Setup and Event Binding ---
+
+        const setupEventListeners = () => {
+            // Tab Navigation
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    switchTab(button.dataset.tab);
+                });
+            });
+            
+            // AI Analysis
+            document.getElementById('run-ai-analysis')?.addEventListener('click', fetchAIAnalysis);
+
+            // Transaction Form
+            document.getElementById('transaction-form')?.addEventListener('submit', saveTransaction);
+            document.getElementById('cancel-edit-btn')?.addEventListener('click', cancelEdit);
+            // FIX: Ensure this listener runs whenever the type is changed
+            document.getElementById('transaction-type')?.addEventListener('change', populateCategoryChips); 
+            
+            // FIX: Changed ID from 'date' to 'transaction-date' and added null check
+            const transactionDateEl = document.getElementById('transaction-date');
+            if (transactionDateEl) {
+                transactionDateEl.valueAsDate = new Date(); // Set default date
+            }
+            
+            // Transaction Filters
+            document.getElementById('filter-date-range')?.addEventListener('change', () => {
+                toggleCustomDates();
+                applyFilters();
+            });
+            ['filter-type', 'filter-start-date', 'filter-end-date'].forEach(id => {
+                document.getElementById(id)?.addEventListener('change', applyFilters);
+            });
+            ['filter-min-amount', 'filter-max-amount', 'filter-description'].forEach(id => {
+                document.getElementById(id)?.addEventListener('input', applyFilters);
+            });
+
+            // Goals Form
+            document.getElementById('goal-form')?.addEventListener('submit', saveGoal);
+            
+            // Settings - Accounts
+            document.getElementById('account-form')?.addEventListener('submit', addAccount);
+            
+            // Settings - Categories
+            document.getElementById('add-expense-category-form')?.addEventListener('submit', (e) => addCustomCategory(e, 'Expense'));
+            document.getElementById('add-income-category-form')?.addEventListener('submit', (e) => addCustomCategory(e, 'Income'));
+            
+            // Settings - Data
+            document.getElementById('export-data-btn')?.addEventListener('click', exportData);
+            document.getElementById('import-file')?.addEventListener('change', importData);
+            document.getElementById('sync-to-firebase-btn')?.addEventListener('click', syncLocalToFirebase);
+            document.getElementById('sync-from-firebase-btn')?.addEventListener('click', syncFirebaseToLocal);
+            document.getElementById('clear-all-data-btn')?.addEventListener('click', confirmClearAllData);
+            
+            // Expose functions to global window for onclick attributes (like delete buttons)
+            window.editTransaction = editTransaction;
+            window.deleteTransaction = deleteTransaction;
+            window.recordRepayment = recordRepayment;
+            window.deleteGoal = deleteGoal;
+            window.selectCategoryChip = selectCategoryChip; // Ensure this is accessible globally
+        };
+
+        // Initialize the application
+        window.onload = async () => {
+            setupEventListeners();
+            await initFirebase();
+            // populateCategoryChips(); // Initial call is now handled inside setupFirestoreListeners for safety
+            setupFirestoreListeners(); 
+            switchTab('dashboard');
+        };
+    </script>
+</body>
+</html>
