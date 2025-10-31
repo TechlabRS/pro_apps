@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR/Task Management System</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --cyan-500: #06b6d4;
+            --gray-900: #0f172a;
+            --gray-800: #1f2937;
+            --gray-700: #374151;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--gray-900);
+            color: white;
+            min-height: 100vh;
+        }
+        /* Custom styling for date input to ensure visibility in dark mode */
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+        .tab-button {
+            transition: border-bottom-width 0.15s, color 0.15s;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main Application Container -->
+    <div id="app-container">
+        
+        <!-- Header -->
+        <header class="bg-gray-800 shadow-md border-b border-gray-700">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-start md:items-center">
+                <div class="flex items-center">
+                    <i data-lucide="check-square" class="text-cyan-500 mr-3 w-8 h-8"></i>
+                    <h1 class="text-2xl font-bold text-white">HR/Task Manager</h1>
+                </div>
+                <div class="mt-3 md:mt-0 text-xs text-gray-400 flex items-center bg-gray-700 px-3 py-1 rounded-full">
+                    <i data-lucide="user" class="mr-2 text-cyan-400 w-4 h-4"></i>
+                    Manager ID: <span id="user-id" class="font-mono text-white ml-1 break-all">Loading...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="bg-gray-800 border-b border-gray-700 sticky top-0 z-10">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex space-x-4">
+                    <button class="tab-button flex items-center space-x-2 py-2 px-4 font-medium border-b-4 border-cyan-500 text-white" data-tab="tasks">
+                        <i data-lucide="check-square" class="w-5 h-5"></i>
+                        <span>Task Dashboard</span>
+                    </button>
+                    <button class="tab-button flex items-center space-x-2 py-2 px-4 font-medium text-gray-400 hover:text-white hover:border-b-4 border-gray-500" data-tab="employees">
+                        <i data-lucide="users" class="w-5 h-5"></i>
+                        <span>Employees</span>
+                    </button>
+                    <button class="tab-button flex items-center space-x-2 py-2 px-4 font-medium text-gray-400 hover:text-white hover:border-b-4 border-gray-500" data-tab="attendance">
+                        <i data-lucide="clock" class="w-5 h-5"></i>
+                        <span>Attendance</span>
+                    </button>
+                    <button class="tab-button flex items-center space-x-2 py-2 px-4 font-medium text-gray-400 hover:text-white hover:border-b-4 border-gray-500" data-tab="payroll">
+                        <i data-lucide="wallet" class="w-5 h-5"></i>
+                        <span>Payroll</span>
+                    </button>
+                    <button class="tab-button flex items-center space-x-2 py-2 px-4 font-medium text-gray-400 hover:text-white hover:border-b-4 border-gray-500" data-tab="reports">
+                        <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+                        <span>Reports</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main id="main-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Content will be rendered here by JavaScript -->
+            <div id="loader-screen" class="flex flex-col items-center justify-center min-h-[50vh] text-white">
+                <i data-lucide="loader" class="w-12 h-12 animate-spin text-cyan-500"></i>
+                <p class="mt-4 text-lg">Loading Application Data...</p>
+            </div>
+            <div id="tasks-view" class="space-y-6 hidden"></div>
+            <div id="employees-view" class="space-y-6 hidden"></div>
+            <div id="attendance-view" class="space-y-6 hidden"></div>
+            <div id="payroll-view" class="space-y-6 hidden"></div>
+            <div id="reports-view" class="space-y-6 hidden"></div>
+        </main>
+        
+    </div>
+
+    <!-- Universal Modal Structure (Hidden by default) -->
+    <div id="app-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 hidden">
+        <div id="modal-content-wrapper" class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg p-6">
+            <div class="flex justify-between items-center border-b border-gray-700 pb-3 mb-4">
+                <h2 id="modal-title" class="text-xl font-semibold text-white">Modal Title</h2>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white transition duration-150">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div id="modal-body">
+                <!-- Form or Confirmation content injected here -->
+            </div>
+        </div>
+    </div>
+
+
+    <!-- JavaScript Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // --- Global Variable Initialization (MANDATORY) ---
+        const appId = typeof __app_id !== 'undefined' ?
+        __app_id : 'hr-task-manager-default';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ?
+         JSON.parse(__firebase_config) :
+         {
+            // This is a placeholder config for local testing if __firebase_config is not injected
+            apiKey: "AIzaSyDUFHGYqLKxKHg8dxSlABM_A3LIlcEExl8",
+            authDomain: "goforgreenr.firebaseapp.com",
+            databaseURL: "https://goforgreenr-default-rtdb.firebaseio.com",
+            projectId: "goforgreenr",
+            storageBucket: "goforgreenr.firebasestorage.app",
+            messagingSenderId: "582465732909",
+            appId: "1:582465732909:web:6a8bff78c4cb06793b13a4"
+        };
+        //const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // --- END Global Variable Initialization ---
+        
+        // --- Core Firebase and App State ---
+        let db;
+        let auth;
+        let currentUserId = null;
+        let currentTab = 'tasks';
+        
+        let employees = [];
+        let tasks = [];
+        let attendance = [];
+        let payments = []; 
+        
+        let confirmationCallback = null; 
+        let selectedEmployeeFilter = 'all';
+        // Default filter for reports
+        let currentReportsSort = { field: 'paid_at', direction: 'desc' };
+        // Utility to get the public collection reference
+        const getCollectionRef = (collectionName) => {
+            if (!db) return null;
+            return collection(db, 'artifacts', appId, 'public', 'data', collectionName);
+        };
+
+        // --- TIME & PAYROLL UTILITIES ---
+
+        // Function to calculate total hours worked from attendance logs
+        const calculateHours = (employeeId, attendanceLogs, startDate, endDate) => {
+            const employeeLogs = attendanceLogs
+                .filter(log => log.employee_id === employeeId)
+                .sort((a, b)=> a.timestamp.getTime() - b.timestamp.getTime());
+
+            let totalSeconds = 0;
+            let checkInTime = null;
+            for (const log of employeeLogs) {
+                const logTime = log.timestamp.getTime();
+                // Check if the log is within the current period
+                if (logTime >= startDate.getTime() && logTime <= endDate.getTime()) {
+                    if (log.type === 'check-in') {
+                        checkInTime = log.timestamp;
+                    } else if (log.type === 'check-out' && checkInTime) {
+                        const durationMs = log.timestamp.getTime() - checkInTime.getTime();
+                        // Only count positive shifts up to a 16 hour sanity limit
+                        if (durationMs > 0 && durationMs < 16 * 60 * 60 * 1000) {
+                            totalSeconds += durationMs / 1000;
+                        }
+                        checkInTime = null;
+                        // Reset for the next shift
+                    }
+                } else if (logTime > endDate.getTime()) {
+                    // Optimization: stop checking if we passed the end date
+                    break;
+                }
+            }
+
+            return totalSeconds / 3600;
+            // Return total hours
+        };
+        const getCurrentMonthRange = () => {
+            const now = new Date();
+            const start = new Date(now.getFullYear(), now.getMonth(), 1);
+            const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            // Last day of the month
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            return { start, end, monthKey };
+        };
+
+        const formatCurrency = (amount) => {
+            // Ensure amount is a number before formatting
+            const numAmount = Number(amount) ||
+                0; 
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+            }).format(numAmount);
+        };
+
+        // --- UI UTILITIES ---
+
+        const getIconHtml = (name, className = 'w-4 h-4') => {
+            return `<i data-lucide="${name}" class="${className}"></i>`;
+        };
+
+        const setActiveTab = (tabName) => {
+            currentTab = tabName;
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                const isActive = btn.getAttribute('data-tab') === tabName;
+                btn.className = `tab-button flex items-center space-x-2 py-2 px-4 font-medium ${
+                    isActive
+                        ? 'border-b-4 border-cyan-500 text-white'
+     
+                    : 'text-gray-400 hover:text-white hover:border-b-4 border-gray-500'
+                }`;
+            });
+            document.getElementById('tasks-view').classList.add('hidden');
+            document.getElementById('employees-view').classList.add('hidden');
+            document.getElementById('attendance-view').classList.add('hidden');
+            document.getElementById('payroll-view').classList.add('hidden'); 
+            document.getElementById('reports-view').classList.add('hidden'); 
+            document.getElementById(`${tabName}-view`).classList.remove('hidden');
+
+            // Render content for the active tab
+            if (tabName === 'tasks') renderTaskDashboard();
+            else if (tabName === 'employees') renderEmployeesTable();
+            else if (tabName === 'attendance') renderAttendanceTracker();
+            else if (tabName === 'payroll') renderPayrollSummary();
+            else if (tabName === 'reports') renderReports(); 
+
+            // Refresh lucide icons on the new content
+            lucide.createIcons();
+        };
+
+        const openModal = (type, item = null) => {
+            const modal = document.getElementById('app-modal');
+            const titleElement = document.getElementById('modal-title');
+            const bodyElement = document.getElementById('modal-body');
+
+            titleElement.textContent = item ?
+            `Edit ${type.charAt(0).toUpperCase() + type.slice(1)}` : `Add New ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+            bodyElement.innerHTML = '';
+            if (type === 'employee') {
+                bodyElement.appendChild(createEmployeeForm(item));
+            } else if (type === 'task') {
+                bodyElement.appendChild(createTaskForm(item));
+            } else if (type === 'pay') { 
+                bodyElement.appendChild(createPaymentForm(item));
+            } else {
+                return;
+            }
+
+            modal.classList.remove('hidden');
+            lucide.createIcons(); 
+        };
+        const closeModal = () => {
+            document.getElementById('app-modal').classList.add('hidden');
+            confirmationCallback = null; 
+        };
+        
+        // Custom Confirmation Modal
+        const showConfirmationModal = (title, message, onConfirm) => {
+            const modal = document.getElementById('app-modal');
+            const titleElement = document.getElementById('modal-title');
+            const bodyElement = document.getElementById('modal-body');
+
+            confirmationCallback = onConfirm;
+
+            titleElement.textContent = title;
+            bodyElement.innerHTML = `
+                <p class="text-gray-300 mb-6">${message}</p>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal()" class="flex items-center justify-center space-x-2 px-4 py-2 font-semibold rounded-lg transition duration-200 transform active:scale-95 bg-gray-600 hover:bg-gray-700 text-white shadow-md shadow-gray-500/30">
+                      
+                    Cancel
+                    </button>
+                    <button type="button" onclick="handleConfirmationClick(true)" class="flex items-center justify-center space-x-2 px-4 py-2 font-semibold rounded-lg transition duration-200 transform active:scale-95 bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-500/30">
+                        Confirm
+               
+                    </button>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        window.handleConfirmationClick = (isConfirmed) => {
+            closeModal();
+            if (isConfirmed && confirmationCallback) {
+                confirmationCallback();
+            }
+            confirmationCallback = null;
+        };
+        const showLoading = (show) => {
+            const loader = document.getElementById('loader-screen');
+            if (show) {
+                loader.classList.remove('hidden');
+            } else {
+                loader.classList.add('hidden');
+            }
+        };
+
+
+        // --- FIREBASE INIT & LISTENERS ---
+        window.onload = async () => {
+            showLoading(true);
+            if (Object.keys(firebaseConfig).length === 0) {
+                console.error("Firebase config is missing.");
+                showLoading(false);
+                document.getElementById('main-content').innerHTML = '<p class="text-red-500 text-center py-10">Firebase configuration is missing or invalid.</p>';
+                return;
+            }
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                const signPromise = initialAuthToken 
+                    ?
+                signInWithCustomToken(auth, initialAuthToken) 
+                    : signInAnonymously(auth);
+                await signPromise.catch(error => {
+                    console.error("Firebase sign-in failed:", error);
+                });
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUserId = user.uid;
+                        document.getElementById('user-id').textContent = currentUserId;
+                    } else {
+ 
+                        document.getElementById('user-id').textContent = 'N/A (Anon)';
+                    }
+                    setupListeners(); 
+                    showLoading(false);
+             
+                    setActiveTab(currentTab);
+                });
+            } catch (e) {
+                console.error("Error initializing Firebase:", e);
+                showLoading(false);
+                document.getElementById('main-content').innerHTML = `<p class="text-red-500 text-center py-10">Error initializing Firebase: ${e.message}</p>`;
+            }
+        };
+        const setupListeners = () => {
+            if (!db) return;
+            // Employees Listener
+            onSnapshot(query(getCollectionRef('employees')), (snapshot) => {
+                employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (currentTab === 'employees') renderEmployeesTable();
+                if (currentTab === 'tasks') renderTaskDashboard();
+                if (currentTab === 
+                'payroll') renderPayrollSummary(); 
+                if (currentTab === 'reports') renderReports();
+            }, (error) => console.error("Error fetching employees:", error));
+            // Tasks Listener
+            onSnapshot(query(getCollectionRef('tasks')), (snapshot) => {
+                tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (currentTab === 'tasks') renderTaskDashboard();
+                if (currentTab === 'reports') renderReports();
+            }, (error) => console.error("Error fetching tasks:", error));
+            // Attendance Listener
+            onSnapshot(query(getCollectionRef('attendance')), (snapshot) => {
+                let list = snapshot.docs.map(doc => ({ 
+                    id: doc.id, 
+                    ...doc.data(), 
+                  
+                    timestamp: doc.data().created_at?.toDate() || doc.data().timestamp?.toDate()
+                }));
+                attendance = list.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
+                if (currentTab === 'attendance') renderAttendanceTracker();
+                if (currentTab === 'payroll') renderPayrollSummary(); 
+           
+            }, (error) => console.error("Error fetching attendance:", error));
+
+            // Payments Listener
+            onSnapshot(query(getCollectionRef('payments')), (snapshot) => {
+                payments = snapshot.docs.map(doc => ({ 
+                    id: doc.id, 
+                    ...doc.data(),
+            
+                    paid_at: doc.data().paid_at?.toDate() || null 
+                }));
+                if (currentTab === 'payroll') renderPayrollSummary();
+                if (currentTab === 'reports') renderReports();
+            }, (error) => console.error("Error fetching payments:", error));
+            // Setup tab button event listeners
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.onclick = () => setActiveTab(btn.getAttribute('data-tab'));
+            });
+        };
+
+
+        // --- CRUD OPERATIONS ---
+
+        const saveEmployee = async (formData) => {
+            if (!db || !currentUserId) return console.error("DB or User ID not ready.");
+            const employeesRef = getCollectionRef('employees');
+            try {
+                const data = {
+                    name: formData.get('name'),
+                    role: formData.get('role'),
+                    wage: Number(formData.get('wage')),
+             
+                    is_active: formData.get('is_active') === 'on',
+                };
+                const id = formData.get('id');
+
+                if (id) {
+                    await updateDoc(doc(employeesRef, id), data);
+                } else {
+                    await addDoc(employeesRef, { ...data, created_by_uid: currentUserId, created_at: serverTimestamp() });
+                }
+                closeModal();
+            } catch (error) {
+                console.error("Error saving employee:", error);
+            }
+        };
+        
+        const deleteEmployee = (id) => {
+            if (!db) return;
+            showConfirmationModal(
+                "Confirm Deletion",
+                "Are you sure you want to permanently delete this employee? This action cannot be undone.",
+                async () => {
+                    try {
+             
+                        await deleteDoc(doc(getCollectionRef('employees'), id));
+                        console.log("Employee deleted.");
+                    } catch (error) {
+                        console.error("Error deleting employee:", error);
+            
+                    }
+                }
+            );
+        };
+
+        const saveTask = async (formData) => {
+            if (!db || !currentUserId) return console.error("DB or User ID not ready.");
+            const tasksRef = getCollectionRef('tasks');
+            try {
+                const assignedIds = formData.getAll('assigned_to_ids');
+                const id = formData.get('id');
+                const progressValue = Number(formData.get('progress') || 0);
+                const data = {
+                    title: formData.get('title'),
+                    description: formData.get('description'),
+                    assigned_to_ids: assignedIds,
+                    eta: formData.get('eta'),
+             
+                    status: formData.get('status') ||
+                    'To Do',
+                    progress: progressValue,
+                    // NEW: Profit/Loss Fields
+                    estimated_hours: Number(formData.get('estimated_hours')) ||
+                    0,
+                    estimated_revenue: Number(formData.get('estimated_revenue')) ||
+                    0,
+                    // NEW: Material Cost Field
+                    material_cost: Number(formData.get('material_cost')) || 0,
+                };
+                if (id) {
+                    await updateDoc(doc(tasksRef, id), data);
+                } else {
+                    await addDoc(tasksRef, { ...data, status: 'To Do', progress: 0, created_by_uid: currentUserId, created_at: serverTimestamp() });
+                }
+                closeModal();
+            } catch (error) {
+                console.error("Error saving task:", error);
+            }
+        };
+
+        const deleteTask = (id) => {
+            if (!db) return;
+            showConfirmationModal(
+                "Confirm Deletion",
+                "Are you sure you want to permanently delete this task? This action cannot be undone.",
+                async () => {
+                    try {
+             
+                        await deleteDoc(doc(getCollectionRef('tasks'), id));
+                        console.log("Task deleted.");
+                    } catch (error) {
+                        console.error("Error deleting task:", error);
+            
+                    }
+                }
+            );
+        };
+
+        const updateTaskStatus = async (id, status, progress) => {
+            if (!db) return;
+            try {
+                await updateDoc(doc(getCollectionRef('tasks'), id), { status, progress });
+            } catch (error) {
+                console.error("Error updating task status:", error);
+            }
+        };
+        
+        const logAttendance = async (employeeId, type) => {
+            if (!db || !currentUserId) return;
+            const employee = employees.find(e => e.id === employeeId);
+            if (!employee) return console.error("Employee not found for attendance log.");
+            
+            // --- FIX: Check for duplicate consecutive log ---
+            const lastLog = attendance.find(log => log.employee_id === employeeId);
+            if (lastLog && lastLog.type === type) {
+                showConfirmationModal(
+                    "Duplicate Action",
+                    `Employee ${employee.name} already has a **${type}** record as the last entry. Please log a **${type === 'check-in' ? 'check-out' : 'check-in'}** first, or use the manual time input for a past log.`,
+                    () => {} // No action on confirm, just close modal
+                );
+                return; 
+            }
+            // --- END FIX ---
+            
+            // Get the manual date/time input value from the UI
+            const dateTimeInput = document.getElementById('logDateTime');
+            const customDateTimeValue = dateTimeInput ? dateTimeInput.value : null;
+
+            let timestamp;
+            if (customDateTimeValue) {
+                // Use a manually created Date object if provided (for past logging)
+                timestamp = new Date(customDateTimeValue);
+            } else {
+                // Default to server timestamp if no date is manually set (for current logging)
+                timestamp = serverTimestamp();
+            }
+            
+            try {
+                await addDoc(getCollectionRef('attendance'), {
+                    employee_id: employeeId,
+                    employee_name: employee.name,
+               
+                    type: type, // 'check-in' or 'check-out'
+                    created_at: timestamp, // Use the determined timestamp
+                    logged_by_uid: currentUserId,
+                });
+                console.log(`${employee.name} ${type} logged. Timestamp used: ${customDateTimeValue ? new Date(customDateTimeValue).toLocaleString() : 'Server Timestamp'}`);
+                // Clear the manual date input after successful logging
+                if (dateTimeInput) dateTimeInput.value = '';
+            } catch (error) {
+                console.error(`Error logging ${type}:`, error);
+            }
+        };
+        
+        const recordPayment = async (formData) => {
+            if (!db || !currentUserId) return console.error("DB or User ID not ready.");
+            const paymentsRef = getCollectionRef('payments');
+
+            try {
+                const employeeId = formData.get('employee_id');
+                const monthKey = formData.get('month_key');
+                const totalHours = Number(formData.get('total_hours'));
+                const amountOwed = Number(formData.get('amount_owed'));
+                const amountPaid = Number(formData.get('amount_paid'));
+                const paidDateValue = formData.get('paid_at');
+                // Determine paid_at timestamp
+                const paidAtTimestamp = paidDateValue ?
+                new Date(paidDateValue) : serverTimestamp();
+                
+                // Note: This logic assumes one payroll record per employee per month (month_key)
+                const existingPayment = payments.find(p => p.employee_id === employeeId && p.month_key === monthKey);
+                // Data to save
+                const paymentData = {
+                    employee_id: employeeId,
+                    month_key: monthKey,
+                    total_hours: totalHours,
+               
+                    amount_owed: amountOwed,
+                    amount_paid: amountPaid, 
+                    status: amountPaid >= amountOwed ?
+                    'Paid' : 'Partial',
+                    paid_at: paidAtTimestamp,
+                    updated_at: serverTimestamp(),
+                };
+                if (existingPayment) {
+                     // Update existing payment
+                    await updateDoc(doc(paymentsRef, existingPayment.id), paymentData);
+                } else {
+                    // Create new payment record
+                    await addDoc(paymentsRef, { ...paymentData, created_by_uid: currentUserId, created_at: serverTimestamp() });
+                }
+                closeModal();
+            } catch (error) {
+                console.error("Error recording payment:", error);
+            }
+        };
+        
+        // --- NEW: WhatsApp Integration Placeholder ---
+        const sendInvoiceViaWhatsApp = (employeeName, amountOwed, monthKey) => {
+            showConfirmationModal(
+                "WhatsApp Integration (Server Required)",
+                `To send the invoice for **${employeeName}** (${monthKey}, ${formatCurrency(amountOwed)}) via WhatsApp, you would need a **server-side component** (e.g., a Firebase Function or external API) configured with the **WhatsApp Business API** to send a message template and attach a document (like a PDF invoice). This is a client-side placeholder.`,
+                () => {} // Close modal
+            );
+        };
+        // --- END NEW ---
+
+        // --- FORM RENDERING FUNCTIONS (MODALS) ---
+
+        const createEmployeeForm = (item) => {
+            const form = document.createElement('form');
+            form.className = 'space-y-4';
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                saveEmployee(new FormData(form));
+            };
+
+            const isEditing = !!item;
+
+            form.innerHTML = `
+                <input type="hidden" name="id" value="${item?.id || ''}">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300">Name</label>
+                    <input type="text" name="name" value="${item?.name || ''}" required 
+   
+                        class="mt-1 block w-full rounded-lg bg-gray-700 border border-gray-600 text-white px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300">Role/Title</label>
+           
+                    <input type="text" name="role" value="${item?.role || ''}" required 
+                           class="mt-1 block w-full rounded-lg bg-gray-700 border border-gray-600 text-white px-3 py-2">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+             
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Hourly Wage ($)</label>
+                        <input type="number" name="wage" value="${item?.wage ||
+                            0}" min="0" required 
+                               class="mt-1 block w-full rounded-lg bg-gray-700 border border-gray-600 text-white px-3 py-2">
+                    </div>
+                    ${isEditing ? `
+               
+                    <div class="flex items-center pt-5">
+                        <input id="is_active" type="checkbox" name="is_active" ${item?.is_active ? 'checked' : ''}
+                               class="w-4 h-4 text-cyan-600 bg-gray-700 border-gray-600 rounded focus:ring-cyan-500">
+                       
+                        <label for="is_active" class="ml-2 text-sm font-medium text-gray-300">
+                            Is Active
+                        </label>
+                    </div>
+                    ` 
+                    : ''}
+                </div>
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeModal()" class="flex items-center justify-center space-x-2 px-4 py-2 font-semibold rounded-lg transition duration-200 transform active:scale-95 bg-gray-600 hover:bg-gray-700 text-white shadow-md shadow-gray-500/30">
+                        
+                    Cancel
+                    </button>
+                    <button type="submit" class="flex items-center justify-center space-x-2 px-4 py-2 font-semibold rounded-lg transition duration-200 transform active:scale-95 bg-cyan-600 hover:bg-cyan-700 text-white shadow-md shadow-cyan-500/30">
+                        ${isEditing ?
+                        'Save Changes' : 'Add Employee'}
+                    </button>
+                </div>
+            `;
+            return form;
+        };
+        
+        const createTaskForm = (item) => {
+            const form = document.createElement('form');
+            form.className = 'space-y-4';
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                saveTask(new FormData(form));
+            };
+
+            const isEditing = !!item;
+
+            const employeeOptions = employees.map(e => `
+                <button
+                    type="button"
+                    class="px-3 py-1 text-sm rounded-full transition duration-150 ${item?.assigned_to_ids?.includes(e.id) ? 'bg-cyan-600 text-white hover:bg-cyan-700' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'}"
+                  
+                    onclick="this.classList.toggle('bg-cyan-600'); this.classList.toggle('text-white'); this.classList.toggle('hover:bg-cyan-700'); this.classList.toggle('bg-gray-600'); this.classList.toggle('text-gray-300'); this.classList.toggle('hover:bg-gray-500'); this.querySelector('input').checked = !this.querySelector('input').checked;"
+                >
+                    ${e.name}
+                    <input type="checkbox" name="assigned_to_ids" value="${e.id}" ${item?.assigned_to_ids?.includes(e.id) ? 'checked' : ''} class="hidden">
+                </button>
+         
+            `).join('');
+
+            form.innerHTML = `
+                <input type="hidden" name="id" value="${item?.id || ''}">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300">Title</label>
+                    <input type="text" name="title" value="${item?.title || ''}" required 
+      
+                        class="mt-1 block w-full rounded-lg bg-gray-700 border border-gray-600 text-white px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300">Description</label>
+              
+                    <textarea name="description" rows="3" class="mt-1 block w-full rounded-lg bg-gray-700 border border-gray-600 text-white px-3 py-2">${item?.description ||
+                    ''}</textarea>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Estimated 
+                    Revenue ($)</label>
+                        <input type="number" name="estimated_revenue" value="${item?.estimated_revenue || 0}" min="0" 
+                               class="mt-1 block w-full rounded-lg bg-gray-700 border border-gray-600 text-white px-3 py-2">
+                    </div>
+        
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Estimated Hours (Labor Budget)</label>
+                        <input type="number" name="estimated_hours" value="${item?.estimated_hours || 0}" min="0" 
+                           
+                        class="mt-1 block w-full rounded-lg bg-gray-700 border border-gray-600 text-white px-3 py-2">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-300">Material Cost ($)</label>
+                    <input type="number" name="material_cost" value="${item?.material_cost || 0}" min="0" 
+                           class="mt-1 block w-full rounded-lg bg-gray-700 border border-gray-600 text-white px-3 py-2">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    ${isEditing ?
+                    `
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Status</label>
+                        <select name="status" class="mt-1 block w-full rounded-lg bg-gray-700 border border-gray-600 text-white px-3 py-2">
+                 
+                            ${['To Do', 'In Progress', 'Complete'].map(status => 
+                                `<option value="${status}" ${item?.status === status ? 'selected' : ''}>${status}</option>`
+                            ).join('')}
+               
+                            </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Progress (0-100)</label>
+                      
+                        <input type="number" name="progress" value="${item?.progress || 0}" min="0" max="100"
+                               class="mt-1 block w-full rounded-lg bg-gray-700 border border-gray-600 text-white px-3 py-2">
+                    </div>
+                    ` : ''}
+         
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">ETA</label>
+                        <input type="date" name="eta" value="${item?.eta ||
+                        ''}"
+                               class="mt-1 block w-full rounded-lg bg-gray-700 border border-gray-600 text-white px-3 py-2 appearance-none">
+                    </div>
+                </div>
+                
+       
+                <div class="pt-2">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Assign to Employees (Click to select multiple)</label>
+                    <div class="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 bg-gray-700 rounded-lg border border-gray-600">
+                        ${employees.length === 0 ? '<p class="text-gray-400 text-sm">No employees available. Add employees first.</p>' : employeeOptions}
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-4">
+                    
+                    <button type="button" onclick="closeModal()" class="flex items-center justify-center space-x-2 px-4 py-2 font-semibold rounded-lg transition duration-200 transform active:scale-95 bg-gray-600 hover:bg-gray-700 text-white shadow-md shadow-gray-500/30">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex items-center justify-center space-x-2 px-4 py-2 font-semibold rounded-lg transition duration-200 transform active:scale-95 bg-cyan-600 hover:bg-cyan-700 text-white 
+                    shadow-md shadow-cyan-500/30">
+                        ${isEditing ?
+                        'Save Changes' : 'Create Task'}
+                    </button>
+                </div>
+            `;
+            return form;
+        };
+
+        const createPaymentForm = (data) => {
+            const { employee, totalHours, totalOwed, monthKey, existingPayment } = data;
+            const form = document.createElement('form');
+            form.className = 'space-y-4';
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                recordPayment(new FormData(form));
+            };
+
+            // Set default values for the form
+            const defaultPaidAmount = existingPayment?.amount_paid ||
+            totalOwed;
+            
+            // Format existing date to local datetime format for input value
+            let defaultPaidDate = '';
+            if (existingPayment?.paid_at instanceof Date) {
+                 defaultPaidDate = new Date(existingPayment.paid_at.getTime() - (existingPayment.paid_at.getTimezoneOffset() * 60000)).toISOString().substring(0, 16);
+            } else {
+                 // Default to current time if no date exists (FIXED: ensures we use current time for new/updated payment timestamp)
+                 defaultPaidDate = new Date(Date.now() - (new Date().getTimezoneOffset() * 60000)).toISOString().substring(0, 16);
+            }
+
+            form.innerHTML = `
+                <input type="hidden" name="employee_id" value="${employee.id}">
+                <input type="hidden" name="month_key" value="${monthKey}">
+                <input type="hidden" name="total_hours" value="${totalHours}">
+                <input type="hidden" name="amount_owed" value="${totalOwed}">
+
+          
+                <div class="p-4 bg-gray-600 rounded-lg">
+                    <p class="text-xl font-bold text-cyan-400">${employee.name}</p>
+                    <p class="text-sm text-gray-300">For Payroll Period: <span class="font-semibold">${monthKey}</span></p>
+                </div>
+                <div class="space-y-2 text-white">
+        
+                    <p class="flex justify-between border-b border-gray-700 pb-1">
+                        <span class="font-medium">Total Hours Worked:</span>
+                        <span>${totalHours.toFixed(2)} hrs</span>
+                    </p>
+           
+                    <p class="flex justify-between border-b border-gray-700 pb-1 text-lg font-bold">
+                        <span>Total Owed:</span>
+                        <span class="text-red-400">${formatCurrency(totalOwed)}</span>
+                    </p>
+              
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Amount Paid ($)</label>
+             
+                        <input type="number" name="amount_paid" step="0.01" value="${defaultPaidAmount.toFixed(2)}" required 
+                               class="mt-1 block w-full rounded-lg bg-gray-700 border border-gray-600 text-white px-3 py-2">
+                    </div>
+                    <div>
+   
+                        <label class="block text-sm font-medium text-gray-300">Payment Date/Time</label>
+                        <input type="datetime-local" name="paid_at" value="${defaultPaidDate}" 
+                               class="mt-1 block w-full rounded-lg bg-gray-700 border border-gray-600 text-white px-3 py-2 appearance-none">
+     
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeModal()" class="flex items-center justify-center space-x-2 px-4 py-2 font-semibold rounded-lg transition duration-200 transform active:scale-95 bg-gray-600 hover:bg-gray-700 text-white shadow-md shadow-gray-500/30">
+          
+                    Cancel
+                    </button>
+                    <button type="submit" class="flex items-center justify-center space-x-2 px-4 py-2 font-semibold rounded-lg transition duration-200 transform active:scale-95 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/30">
+                        ${existingPayment ?
+                        'Update Payment' : 'Record Payment'}
+                    </button>
+                </div>
+            `;
+            return form;
+        };
+
+
+        // --- VIEW RENDERING FUNCTIONS ---
+        
+        const renderTaskDashboard = () => {
+            const container = document.getElementById('tasks-view');
+            const stats = {
+                totalTasks: tasks.length,
+                tasksToDo: tasks.filter(t => t.status === 'To Do').length,
+                tasksInProgress: tasks.filter(t => t.status === 'In Progress').length,
+                tasksComplete: tasks.filter(t => t.status === 'Complete').length,
+            };
+            const getStatCard = (icon, title, value, color) => `
+                <div class="p-5 rounded-xl shadow-xl ${color} text-white flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium opacity-80">${title}</p>
+                     
+                    <p class="text-3xl font-bold mt-1">${value}</p>
+                    </div>
+                    ${getIconHtml(icon, 'w-9 h-9 opacity-60')}
+                </div>
+            `;
+            const getProgressBar = (progress) => {
+                const color = progress === 100 ?
+                'bg-emerald-500' : progress > 50 ? 'bg-yellow-500' : 'bg-cyan-500';
+                return `
+                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                        <div class="${color} h-2.5 rounded-full transition-all duration-500" style="width: ${progress}%" title="${progress}% Complete"></div>
+                    </div>
+             
+                `;
+            };
+
+            const getTaskCard = (task) => {
+                const assignedNames = task.assigned_to_ids?.map(id => employees.find(e => e.id === id)?.name || 'Unknown').join(', ') ||
+                'Unassigned';
+                let statusClass = 'text-cyan-400';
+                if (task.status === 'Complete') statusClass = 'text-emerald-400';
+                else if (task.status === 'In Progress') statusClass = 'text-yellow-400';
+
+                return `
+                    <div class="bg-gray-700 p-4 rounded-xl shadow-lg border border-gray-600 hover:bg-gray-600/70 transition duration-150 flex flex-col">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-lg font-bold 
+                            text-white leading-tight">${task.title}</h3>
+                            <div class="flex space-x-2">
+                                <button onclick="openModal('task', ${JSON.stringify(task).replace(/"/g, '&quot;')})" class="text-cyan-400 hover:text-cyan-300">
+                                
+                                    ${getIconHtml('edit', 'w-[18px] h-[18px]')}
+                                </button>
+                                <button onclick="deleteTask('${task.id}')" class="text-red-400 hover:text-red-300">
+                           
+                                    ${getIconHtml('trash-2', 'w-[18px] h-[18px]')}
+                                </button>
+                            </div>
+                        </div>
+     
+                        
+                        <p class="text-sm text-gray-300 mb-3 line-clamp-2">${task.description}</p>
+                        
+                        <div class="text-xs text-gray-400 space-y-1 mb-4 
+                        flex-grow">
+                            <p class="flex items-center">${getIconHtml('user', 'w-[14px] h-[14px] mr-2 text-cyan-400')} Assigned: <span class="font-medium ml-1 text-white">${assignedNames}</span></p>
+                            <p class="flex items-center">${getIconHtml('calendar', 'w-[14px] h-[14px] mr-2 text-yellow-400')} ETA: <span class="font-medium ml-1 text-white">${task.eta ||
+                            'N/A'}</span></p>
+                            <p class="flex items-center">${getIconHtml('target', 'w-[14px] h-[14px] mr-2')}<span class="font-medium ml-1 ${statusClass}">${task.status}</span></p>
+                        </div>
+
+                        <div class="mt-auto">
+               
+                            <p class="text-xs font-semibold text-gray-300 mb-1">Progress: ${task.progress}%</p>
+                            ${getProgressBar(task.progress)}
+                            
+                          
+                            <div class="mt-3 flex space-x-2 text-xs">
+                                <button onclick="updateTaskStatus('${task.id}', 'In Progress', 50)" class="flex items-center justify-center space-x-2 px-2 py-1 text-xs font-semibold rounded-lg transition duration-200 transform active:scale-95 bg-gray-600 hover:bg-gray-700 text-white shadow-md shadow-gray-500/30">
+                                    Start
+    
+                                </button>
+                                <button onclick="updateTaskStatus('${task.id}', 'Complete', 100)" class="flex items-center justify-center space-x-2 px-2 py-1 text-xs font-semibold rounded-lg transition duration-200 transform active:scale-95 bg-cyan-600 hover:bg-cyan-700 text-white shadow-md shadow-cyan-500/30">
+                   
+                                    Complete
+                                </button>
+                            </div>
+                       
+                        </div>
+                    </div>
+                `;
+            };
+
+            container.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    ${getStatCard('check-square', 'Total Tasks', stats.totalTasks, 'bg-cyan-600')}
+                    ${getStatCard('loader', 'To Do', stats.tasksToDo, 'bg-red-600')}
+                    ${getStatCard('clock', 'In Progress', stats.tasksInProgress, 'bg-yellow-600')}
+     
+                    ${getStatCard('target', 'Completed', stats.tasksComplete, 'bg-emerald-600')}
+                </div>
+
+                <div class="flex justify-end">
+                    <button onclick="openModal('task')" class="flex items-center justify-center space-x-2 px-4 py-2 font-semibold rounded-lg transition duration-200 transform active:scale-95 bg-cyan-600 hover:bg-cyan-700 text-white shadow-md shadow-cyan-500/30">
+          
+                        ${getIconHtml('plus', 'w-[18px] h-[18px]')}
+                        <span>Add New Task</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 
+                    gap-4">
+                    ${tasks.length === 0 ?
+                    '<p class="text-gray-400 col-span-full text-center py-10">No tasks currently defined. Add a new task above!</p>' : tasks.map(getTaskCard).join('')}
+                </div>
+            `;
+            lucide.createIcons(); 
+        };
+        
+        const renderEmployeesTable = () => {
+            const container = document.getElementById('employees-view');
+            const getEmployeeRow = (employee) => `
+                <tr class="hover:bg-gray-600/50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${employee.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300 hidden sm:table-cell">${employee.role}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300 
+                    hidden md:table-cell">${formatCurrency(employee.wage)}/hr</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${employee.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}">
+                            ${employee.is_active ?
+                            'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                        <button onclick="openModal('employee', ${JSON.stringify(employee).replace(/"/g, 
+                        '&quot;')})" class="text-cyan-400 hover:text-cyan-300">
+                            ${getIconHtml('edit', 'w-[18px] h-[18px]')}
+                        </button>
+                        <button onclick="deleteEmployee('${employee.id}')" class="text-red-400 hover:text-red-300">
+                 
+                            ${getIconHtml('trash-2', 'w-[18px] h-[18px]')}
+                        </button>
+                    </td>
+                </tr>
+            `;
+
+            container.innerHTML = `
+ 
+                <div class="flex justify-end">
+                    <button onclick="openModal('employee')" class="flex items-center justify-center space-x-2 px-4 py-2 font-semibold rounded-lg transition duration-200 transform active:scale-95 bg-cyan-600 hover:bg-cyan-700 text-white shadow-md shadow-cyan-500/30">
+                        ${getIconHtml('plus', 'w-[18px] h-[18px]')}
+                   
+                        <span>Add New Employee</span>
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto bg-gray-700 rounded-xl shadow-lg border border-gray-600">
+                   
+                    <table class="min-w-full divide-y divide-gray-600">
+                        <thead class="bg-gray-600">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Name</th>
+   
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider hidden sm:table-cell">Role</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider hidden md:table-cell">Wage/hr</th>
+                   
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
+                            </tr>
+           
+                            </thead>
+                        <tbody class="divide-y divide-gray-600 text-white">
+                            ${employees.length === 0 ?
+                            '<tr><td colspan="5" class="text-center py-4 text-gray-400">No employees added yet.</td></tr>' : employees.map(getEmployeeRow).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            lucide.createIcons();
+        };
+
+        const renderAttendanceTracker = () => {
+            const container = document.getElementById('attendance-view');
+            const employeeOptionsHtml = employees.map(e => `<option value="${e.id}">${e.name} (${e.role})</option>`).join('');
+            const firstEmployeeId = employees[0]?.id || '';
+            const getLogRow = (log) => `
+                <tr class="hover:bg-gray-600/50">
+                    <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-300">
+                        ${log.timestamp ?
+                        log.timestamp.toLocaleString() : 'Loading...'}
+                    </td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm">${log.employee_name}</td>
+                    <td class="px-6 py-3 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                        ${log.type === 'check-in' ? 'bg-cyan-100 text-cyan-800' : 'bg-red-100 text-red-800'}">
+                            ${log.type.toUpperCase()}
+                        </span>
+                    </td>
+                </tr>
+    
+            `;
+            
+            container.innerHTML = `
+                <div class="bg-gray-700 p-6 rounded-xl shadow-lg border border-gray-600">
+                    <h3 class="text-xl font-semibold text-white mb-4">Log Attendance</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                 
+                        <div class="col-span-1 sm:col-span-3">
+                            <label for="employeeSelect" class="block text-sm font-medium text-gray-300 mb-2">Select Employee</label>
+                            <select 
+                           
+                                id="employeeSelect"
+                                class="block w-full px-4 py-2 rounded-lg bg-gray-600 border border-gray-500 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-colors cursor-pointer"
+                            >
+                       
+                                ${employeeOptionsHtml}
+                                ${employees.length === 0 ?
+                                '<option value="">No Employees Added</option>' : ''}
+                            </select>
+                            <p id="selected-employee-info" class="mt-2 text-sm text-gray-400"></p>
+                        </div>
+
+           
+                        <div class="col-span-1 sm:col-span-3">
+                            <label for="logDateTime" class="block text-sm font-medium text-gray-300 mb-2">Date & Time of Action (Optional: for back-logging)</label>
+                            <input type="datetime-local" id="logDateTime" class="block w-full px-4 py-2 rounded-lg bg-gray-600 border border-gray-500 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-colors appearance-none">
+ 
+                        </div>
+
+                        <button id="check-in-btn" class="flex items-center justify-center space-x-2 px-4 py-2 font-semibold rounded-lg transition duration-200 transform active:scale-95 bg-cyan-600 hover:bg-cyan-700 text-white shadow-md shadow-cyan-500/30 w-full">
+                            ${getIconHtml('log-in', 'w-[18px] h-[18px]')}
+    
+                            <span>Check-In</span>
+                        </button>
+                        <button id="check-out-btn" class="flex items-center justify-center space-x-2 px-4 py-2 font-semibold rounded-lg transition duration-200 transform active:scale-95 bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-500/30 w-full">
+         
+                            ${getIconHtml('log-out', 'w-[18px] h-[18px]')}
+                            <span>Check-Out</span>
+                        </button>
+                         <div class="hidden 
+                        sm:block"></div>
+                    </div>
+                </div>
+                
+                <h3 class="text-xl font-semibold text-white mb-4 pt-4 border-t border-gray-700">Attendance Log (Recent)</h3>
+                 <div class="overflow-x-auto bg-gray-700 rounded-xl shadow-lg border 
+                border-gray-600">
+                    <table class="min-w-full divide-y divide-gray-600">
+                        <thead class="bg-gray-600">
+                            <tr>
+                        
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Time</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Employee</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Type</th>
+    
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-600 text-white">
+                         
+                            ${attendance.slice(0, 15).map(getLogRow).join('')}
+                            ${attendance.length === 0 ?
+                            '<tr><td colspan="3" class="text-center py-4 text-gray-400">No attendance records yet.</td></tr>' : ''}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            const selectEl = container.querySelector('#employeeSelect');
+            const checkInBtn = container.querySelector('#check-in-btn');
+            const checkOutBtn = container.querySelector('#check-out-btn');
+            const infoEl = container.querySelector('#selected-employee-info');
+            const updateInfo = () => {
+                const employeeId = selectEl.value;
+                const employee = employees.find(e => e.id === employeeId);
+                if (employee) {
+                    infoEl.innerHTML = `Logging for: <span class="font-semibold text-white">${employee.name}</span> (${employee.role})`;
+                } else {
+                    infoEl.textContent = 'Please select an employee.';
+                }
+            };
+            if (firstEmployeeId) {
+                selectEl.value = firstEmployeeId;
+                updateInfo();
+                selectEl.onchange = updateInfo;
+                checkInBtn.onclick = () => logAttendance(selectEl.value, 'check-in');
+                checkOutBtn.onclick = () => logAttendance(selectEl.value, 'check-out');
+            } else {
+                infoEl.textContent = 'No employees defined in the system.';
+                checkInBtn.setAttribute('disabled', 'true');
+                checkOutBtn.setAttribute('disabled', 'true');
+                checkInBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                checkOutBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+
+            lucide.createIcons();
+        };
+
+        const renderPayrollSummary = () => {
+            const container = document.getElementById('payroll-view');
+            const { start, end, monthKey } = getCurrentMonthRange();
+            const monthName = start.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+            const getPayrollRow = (employee) => {
+                const totalHours = calculateHours(employee.id, attendance, start, end);
+                const totalOwed = totalHours * employee.wage;
+                
+                const currentPayment = payments.find(p => p.employee_id === employee.id && p.month_key === monthKey);
+                let statusText = 'Unpaid';
+                let statusClass = 'bg-red-500';
+                
+                const modalData = { 
+                    employee: employee, 
+                    totalHours: totalHours, 
+                    totalOwed: totalOwed, 
+                    monthKey: monthKey,
+ 
+                    existingPayment: currentPayment
+                };
+                let actionButton = `
+                    <button onclick="openModal('pay', ${JSON.stringify(modalData).replace(/"/g, '&quot;')})" 
+                            class="px-3 py-1 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Record Payment
+         
+                    </button>
+                    <button onclick="sendInvoiceViaWhatsApp('${employee.name}', ${totalOwed}, '${monthKey}')" 
+                            class="px-3 py-1 text-xs font-semibold rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition duration-200" title="Requires WhatsApp Business API setup">
+                            ${getIconHtml('send', 'w-[14px] h-[14px]')} WhatsApp
+                    </button>
+                    `;
+
+                if (currentPayment) {
+                    // FIX: Safely check for paid_at before calling toLocaleDateString
+                    const paidDate = currentPayment.paid_at ? currentPayment.paid_at.toLocaleDateString() : 
+                    'Date N/A';
+                    
+                    if (currentPayment.status === 'Paid') {
+                        statusText = `Paid (${paidDate})`;
+                        statusClass = 'bg-emerald-500';
+  
+                        actionButton = `
+                            <button onclick="openModal('pay', ${JSON.stringify(modalData).replace(/"/g, '&quot;')})" 
+                                    class="px-3 py-1 text-xs font-semibold rounded-lg bg-gray-600 hover:bg-gray-700 text-white 
+                                    transition duration-200">
+                                View/Edit
+                            </button>
+                            <button onclick="sendInvoiceViaWhatsApp('${employee.name}', ${totalOwed}, '${monthKey}')" 
+                                    class="px-3 py-1 text-xs font-semibold rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition duration-200" title="Requires WhatsApp Business API setup">
+                                    ${getIconHtml('send', 'w-[14px] h-[14px]')} WhatsApp
+                            </button>
+                        `;
+                    } else if (currentPayment.status === 'Partial') {
+                        statusText = `Partial: ${formatCurrency(currentPayment.amount_paid)} / ${formatCurrency(currentPayment.amount_owed)}`;
+                        statusClass = 'bg-yellow-500';
+                         actionButton = `
+                            <button onclick="openModal('pay', ${JSON.stringify(modalData).replace(/"/g, '&quot;')})" 
+                                    class="px-3 py-1 text-xs font-semibold rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white transition duration-200">
+                  
+                                Update Payment
+                            </button>
+                            <button onclick="sendInvoiceViaWhatsApp('${employee.name}', ${totalOwed}, '${monthKey}')" 
+                                    class="px-3 py-1 text-xs font-semibold rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition duration-200" title="Requires WhatsApp Business API setup">
+                                    ${getIconHtml('send', 'w-[14px] h-[14px]')} WhatsApp
+                            </button>
+                        `;
+                    }
+             
+                } else if (totalOwed === 0) {
+                     statusText = 'No Hours Logged';
+                     statusClass = 'bg-gray-500';
+                     actionButton = `
+                    
+                        <button disabled class="px-3 py-1 text-xs font-semibold rounded-lg bg-gray-600 text-gray-400">
+                            N/A
+                        </button>
+                         <button disabled class="px-3 py-1 text-xs font-semibold rounded-lg bg-gray-500 text-gray-400">
+                            ${getIconHtml('send', 'w-[14px] h-[14px]')} WhatsApp
+                        </button>
+                    `;
+                
+                }
+
+                return `
+                    <tr class="hover:bg-gray-600/50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${employee.name}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300 hidden sm:table-cell">${employee.role}</td>
+  
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-yellow-400">${totalHours.toFixed(2)} hrs</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-400">${formatCurrency(totalOwed)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+               
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full text-white ${statusClass}">
+                                ${statusText}
+                            </span>
+                   
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                            ${actionButton}
+                        </td>
+             
+                    </tr>
+                `;
+            };
+
+            container.innerHTML = `
+                <div class="bg-gray-700 p-6 rounded-xl shadow-lg border border-gray-600 mb-6">
+                    <h3 class="text-2xl font-bold text-white mb-2 flex items-center">
+                        ${getIconHtml('wallet', 'w-6 h-6 mr-2 text-cyan-500')}
+                    
+                        Payroll Summary
+                    </h3>
+                    <p class="text-gray-300 text-lg">Calculation Period: <span class="font-semibold text-cyan-400">${monthName} (${start.toLocaleDateString()} - ${end.toLocaleDateString()})</span></p>
+                    <p class="text-gray-400 text-sm mt-1">Status reflects payment based on <span class="text-cyan-400">Amount Owed</span> vs. <span class="text-cyan-400">Amount Paid</span> in the record.</p>
+         
+                </div>
+
+                <div class="overflow-x-auto bg-gray-700 rounded-xl shadow-lg border border-gray-600">
+                    <table class="min-w-full divide-y divide-gray-600">
+                        <thead class="bg-gray-600">
+                       
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Employee</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider hidden sm:table-cell">Role</th>
+             
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Hours Worked</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Amount Owed</th>
+                               
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Payment Status</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Action</th>
+                            </tr>
+                      
+                        </thead>
+                        <tbody class="divide-y divide-gray-600 text-white">
+                            ${employees.length === 0 ?
+                            '<tr><td colspan="6" class="text-center py-4 text-gray-400">No employees available for payroll calculation.</td></tr>' : employees.map(getPayrollRow).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            lucide.createIcons();
+        };
+        
+        // --- REPORTS VIEW ---
+        
+        // Function to handle sorting the payment history table
+        window.handleReportsSort = (field) => {
+            if (currentReportsSort.field === field) {
+                currentReportsSort.direction = currentReportsSort.direction === 'asc' ?
+                'desc' : 'asc';
+            } else {
+                currentReportsSort = { field: field, direction: 'desc' };
+            }
+            renderReports();
+            // Re-render the reports with the new sort order
+        };
+        // Function to handle employee filter change
+        window.handleEmployeeFilterChange = (selectElement) => {
+            selectedEmployeeFilter = selectElement.value;
+            renderReports(); // Re-render the reports with the new filter
+        };
+        const renderReports = () => {
+            const container = document.getElementById('reports-view');
+            // --- Task P/L Report Logic ---
+            
+            const taskMetrics = tasks.map(task => {
+                // Find the highest wage among assigned employees for estimated labor cost calculation
+                const assignedWages = task.assigned_to_ids
+                   
+                    ?.map(id => employees.find(e => e.id === id)?.wage || 0)
+                    .filter(w => w > 0);
+                
+                const maxWage = assignedWages.length > 0 ? Math.max(...assignedWages) : 0;
+                
+          
+                const estimatedLaborCost = maxWage * (task.estimated_hours || 0);
+                // NEW: Include Material Cost
+                const estimatedCost = estimatedLaborCost + (task.material_cost || 0);
+                const estimatedRevenue = task.estimated_revenue || 0;
+                const profitLoss = estimatedRevenue - estimatedCost;
+
+                return { ...task, estimatedLaborCost, estimatedCost, estimatedRevenue, profitLoss };
+            });
+            // Calculate overall totals
+            const totals = taskMetrics.reduce((acc, task) => {
+                acc.totalCost += task.estimatedCost;
+                acc.totalRevenue += task.estimatedRevenue;
+                acc.totalProfitLoss += task.profitLoss;
+                return acc;
+        
+            }, { totalCost: 0, totalRevenue: 0, totalProfitLoss: 0 });
+            const getTaskProfitLossRow = (task) => {
+                let plClass = 'text-gray-400';
+                if (task.profitLoss > 0) plClass = 'text-emerald-400 font-bold';
+                else if (task.profitLoss < 0) plClass = 'text-red-400 font-bold';
+                return `
+                    <tr class="hover:bg-gray-600/50">
+                        <td class="px-6 py-4 text-sm font-medium">${task.title}</td>
+                        <td class="px-6 py-4 text-sm text-gray-300 hidden sm:table-cell">${task.estimated_hours ||
+                            0} hrs</td>
+                        <td class="px-6 py-4 text-sm text-gray-300 hidden sm:table-cell">${formatCurrency(task.material_cost || 0)}</td>
+                        <td class="px-6 py-4 text-sm text-red-400">${formatCurrency(task.estimatedCost)}</td>
+                        <td class="px-6 py-4 text-sm text-emerald-400">${formatCurrency(task.estimatedRevenue)}</td>
+                        <td class="px-6 py-4 text-sm ${plClass}">${formatCurrency(task.profitLoss)}</td>
+               
+                        <td class="px-6 py-4 text-sm text-gray-300">${task.status}</td>
+                    </tr>
+                `;
+            };
+            
+            // --- Payment History Report Logic ---
+            
+            // 1. Filter payments based on selectedEmployeeFilter
+            const filteredPayments = payments.filter(payment => {
+                if (selectedEmployeeFilter === 'all') return true;
+                return payment.employee_id === selectedEmployeeFilter;
+      
+            });
+            
+            // 2. Sort payments based on currentReportsSort
+            const sortedPayments = filteredPayments.sort((a, b) => {
+                const aValue = a[currentReportsSort.field] instanceof Date ? a[currentReportsSort.field].getTime() : a[currentReportsSort.field];
+                const bValue = b[currentReportsSort.field] instanceof Date ? b[currentReportsSort.field].getTime() : b[currentReportsSort.field];
+
+                // Handle null/undefined 
+                // dates or numeric values
+                const valA = aValue ?? (currentReportsSort.direction === 'asc' ? -Infinity : Infinity);
+                const valB = bValue ?? (currentReportsSort.direction === 'asc' ? -Infinity : Infinity);
+                
+                if (valA < valB) return currentReportsSort.direction === 'asc' ? -1 : 
+                1;
+                if (valA > valB) return currentReportsSort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+            const getPaymentHistoryRow = (payment) => {
+                const employee = employees.find(e => e.id === payment.employee_id);
+                let statusClass = 'bg-red-500';
+                if (payment.status === 'Paid') statusClass = 'bg-emerald-500';
+                else if (payment.status === 'Partial') statusClass = 'bg-yellow-500';
+                return `
+                    <tr class="hover:bg-gray-600/50">
+                        <td class="px-6 py-4 text-sm font-medium">${employee?.name ||
+                            'Unknown Employee'}</td>
+                        <td class="px-6 py-4 text-sm text-gray-300 hidden md:table-cell">${payment.month_key}</td>
+                        <td class="px-6 py-4 text-sm text-gray-300">${payment.paid_at ?
+                        payment.paid_at.toLocaleDateString() : 'N/A'}</td>
+                        <td class="px-6 py-4 text-sm text-red-400">${formatCurrency(payment.amount_owed)}</td>
+                        <td class="px-6 py-4 text-sm text-emerald-400">${formatCurrency(payment.amount_paid)}</td>
+                        <td class="px-6 py-4">
+                
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full text-white ${statusClass}">
+                                ${payment.status}
+                            </span>
+                    
+                        </td>
+                    </tr>
+                `;
+            };
+
+            const getSortIcon = (field) => {
+                if (currentReportsSort.field !== field) return getIconHtml('arrow-down-up', 'w-3 h-3 ml-1 text-gray-500');
+                return getIconHtml(currentReportsSort.direction === 'asc' ? 'arrow-up' : 'arrow-down', 'w-3 h-3 ml-1');
+            };
+            container.innerHTML = `
+                <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+                    ${getIconHtml('bar-chart-2', 'w-6 h-6 mr-2 text-cyan-500')}
+                    Management Reports
+                </h2>
+
+               
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold text-white mb-4 border-b border-gray-700 pb-2">Task Estimated Profit/Loss</h3>
+                    <p class="text-sm text-gray-400 mb-4">
+                        *Labor Cost 
+                        is estimated using **Estimated Hours** multiplied by the **Highest Hourly Wage** of any assigned employee.
+                        *Total Cost = Estimated Labor Cost + **Material Cost**.
+                        </p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div class="p-4 bg-gray-700 rounded-lg border border-gray-600">
+                      
+                            <p class="text-sm text-gray-400">Total Est.
+                            Cost</p>
+                            <p class="text-xl font-bold text-red-400">${formatCurrency(totals.totalCost)}</p>
+                        </div>
+                        <div class="p-4 bg-gray-700 rounded-lg border border-gray-600">
+                
+                            <p class="text-sm text-gray-400">Total Est.
+                            Revenue</p>
+                            <p class="text-xl font-bold text-emerald-400">${formatCurrency(totals.totalRevenue)}</p>
+                        </div>
+                        <div class="p-4 bg-gray-700 rounded-lg border border-gray-600">
+                
+                            <p class="text-sm text-gray-400">Total Est.
+                            P/L</p>
+                            <p class="text-xl font-bold ${totals.totalProfitLoss >= 0 ? 'text-emerald-400' : 'text-red-400'}">${formatCurrency(totals.totalProfitLoss)}</p>
+                        </div>
+                    </div>
+                   
+                    <div class="overflow-x-auto bg-gray-700 rounded-xl shadow-lg border border-gray-600">
+                        <table class="min-w-full divide-y divide-gray-600">
+                            <thead class="bg-gray-600">
+             
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Task Title</th>
+                                    
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider hidden sm:table-cell">Est.
+                                    Hours</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider hidden sm:table-cell">Material Cost</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Total Est.
+                                    Cost</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Est.
+                                    Revenue</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Est.
+                                    P/L</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                                </tr>
+                        
+                            </thead>
+                            <tbody class="divide-y divide-gray-600 text-white">
+                                ${tasks.length === 0 ?
+                                '<tr><td colspan="7" class="text-center py-4 text-gray-400">No tasks defined.</td></tr>' : taskMetrics.map(getTaskProfitLossRow).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+    
+                <div>
+                    <h3 class="text-xl font-semibold text-white mb-4 border-b border-gray-700 pb-2">Employee Payment History</h3>
+                    
+                  
+                    <div class="mb-4 flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                        <label for="employeeFilter" class="text-sm font-medium text-gray-300">Filter by Employee:</label>
+                        <select 
+            
+                            id="employeeFilter"
+                            onchange="handleEmployeeFilterChange(this)"
+                            class="block w-full sm:w-64 px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-colors cursor-pointer"
+               
+                        >
+                            <option value="all">All Employees</option>
+                            ${employees.map(e => `
+                               
+                                <option value="${e.id}" ${e.id === selectedEmployeeFilter ? 'selected' : ''}>${e.name}</option>
+                            `).join('')}
+                        </select>
+                        <p class="text-sm text-gray-400">Showing ${filteredPayments.length} of ${payments.length} payment records.</p>
+        
+                    </div>
+                    <div class="overflow-x-auto bg-gray-700 rounded-xl shadow-lg border border-gray-600">
+                   
+                        <table class="min-w-full divide-y divide-gray-600">
+                            <thead class="bg-gray-600">
+                                <tr>
+                               
+                                    <th onclick="handleReportsSort('employee_name')" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-500/50">
+                                        <div class="flex items-center">Employee ${getSortIcon('employee_name')}</div>
+                                    </th>
+     
+                                    <th onclick="handleReportsSort('month_key')" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider hidden md:table-cell cursor-pointer hover:bg-gray-500/50">
+                                        <div class="flex items-center">Month ${getSortIcon('month_key')}</div>
+             
+                                    </th>
+                                    <th onclick="handleReportsSort('paid_at')" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-500/50">
+                              
+                                        <div class="flex items-center">Paid Date ${getSortIcon('paid_at')}</div>
+                                    </th>
+                                    <th onclick="handleReportsSort('amount_owed')" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-500/50">
+   
+                                        <div class="flex items-center">Amount Owed ${getSortIcon('amount_owed')}</div>
+                                    </th>
+                       
+                                    <th onclick="handleReportsSort('amount_paid')" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-500/50">
+                                        <div class="flex items-center">Amount Paid ${getSortIcon('amount_paid')}</div>
+                                
+                                    </th>
+                                    <th onclick="handleReportsSort('status')" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-500/50">
+                                        <div class="flex items-center">Status ${getSortIcon('status')}</div>
+      
+                                    </th>
+                                </tr>
+                            </thead>
+          
+                            <tbody class="divide-y divide-gray-600 text-white">
+                                ${sortedPayments.length === 0 ?
+                                '<tr><td colspan="6" class="text-center py-4 text-gray-400">No payment records match the current filter/sort criteria.</td></tr>' : sortedPayments.map(getPaymentHistoryRow).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+               
+                </div>
+            `;
+            lucide.createIcons();
+        };
+        // Export functions to global scope so they can be called from onclick attributes
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+        window.deleteEmployee = deleteEmployee;
+        window.deleteTask = deleteTask;
+        window.updateTaskStatus = updateTaskStatus;
+        window.logAttendance = logAttendance;
+        window.showConfirmationModal = showConfirmationModal;
+        window.handleConfirmationClick = handleConfirmationClick;
+        window.recordPayment = recordPayment; 
+        window.handleReportsSort = handleReportsSort; // Exported for sorting logic
+        window.handleEmployeeFilterChange = handleEmployeeFilterChange;
+        window.sendInvoiceViaWhatsApp = sendInvoiceViaWhatsApp; // NEW: Exported WhatsApp placeholder
+        
+    </script>
+</body>
+</html>
