@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1151,7 +1152,9 @@ function renderMonthlySpendChart() {
     // --- Balance Calculations (Main App) ---
     function calculateAllBalances() { if (!isAuthenticated) return {};
     const accBalances = {}; const visibleAccountsForBalance = accounts.filter(acc => acc.status === 'active' || (acc.status === 'secret' && showSecretAccounts));
-    visibleAccountsForBalance.forEach(acc => accBalances[acc.id] = 0); transactions.forEach(t => { if (t.type === 'income' && accBalances.hasOwnProperty(t.account)) { accBalances[t.account] = (accBalances[t.account] || 0) + t.amount; } else if (t.type === 'spend' && accBalances.hasOwnProperty(t.account)) { accBalances[t.account] = (accBalances[t.account] || 0) - t.amount; } else if (t.type === 'transfer') { if(accBalances.hasOwnProperty(t.fromAccount)) accBalances[t.fromAccount] = (accBalances[t.fromAccount] || 0) - t.amount; if(accBalances.hasOwnProperty(t.toAccount)) accBalances[t.toAccount] = (accBalances[t.toAccount] || 0) + t.amount; } else if (t.type === 'loan') { if (t.account && accBalances.hasOwnProperty(t.account)) { accBalances[t.account] = (accBalances[t.account] || 0) - t.amount; } if (t.loanStatus === 'returned' && t.returnDetails && t.returnDetails.returnAccount && accBalances.hasOwnProperty(t.returnDetails.returnAccount) && t.returnDetails.returnAmount > 0) { accBalances[t.returnDetails.returnAccount] = (accBalances[t.returnDetails.returnAccount] ||
+    visibleAccountsForBalance.forEach(acc => accBalances[acc.id] = 0); transactions.forEach(t => { if (t.type === 'income' && accBalances.hasOwnProperty(t.account)) { accBalances[t.account] = (accBalances[t.account] || 0) + t.amount; } else if (t.type === 'spend' && accBalances.hasOwnProperty(t.account)) { accBalances[t.account] = (accBalances[t.account] || 0) - t.amount; } else if (t.type === 'transfer') { if(accBalances.hasOwnProperty(t.fromAccount)) accBalances[t.fromAccount] = (accBalances[t.fromAccount] || 0) - t.amount; if(accBalances.hasOwnProperty(t.toAccount)) accBalances[t.toAccount] = (accBalances[t.toAccount] || 0) + t.amount; } else if (t.type === 'loan') { if (t.loanStatus === 'outstanding' && t.account && accBalances.hasOwnProperty(t.account)) { 
+    accBalances[t.account] = (accBalances[t.account] || 0) - t.amount; 
+} if (t.loanStatus === 'returned' && t.returnDetails && t.returnDetails.returnAccount && accBalances.hasOwnProperty(t.returnDetails.returnAccount) && t.returnDetails.returnAmount > 0) { accBalances[t.returnDetails.returnAccount] = (accBalances[t.returnDetails.returnAccount] ||
     0) + t.returnDetails.returnAmount; } } }); return accBalances; }
     function renderAccountBalances() { if (!isAuthenticated || !accountBalancesListEl || !totalBalanceEl) return;
     const balances = calculateAllBalances(); accountBalancesListEl.innerHTML = ''; let totalOverallBalance = 0;
