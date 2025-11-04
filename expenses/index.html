@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RaGhaSExpenses v2</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom Tailwind Config (for Inter font) -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // Enable dark mode
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <!-- Inline Styles -->
+    <style>
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Fix for Chart.js responsiveness */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        /* Style for revealed swipe buttons */
+        .transaction-actions {
+            display: flex;
+            align-items: center;
+        }
+        /* Hide swipe actions by default */
+        .swipe-actions {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans antialiased">
+
+    <!-- Main Container -->
+    <div class="container max-w-4xl mx-auto p-4 pb-24">
+
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-blue-600 dark:text-blue-400">RaGhaSExpenses</h1>
+            <button id="darkModeToggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-xl">
+                ☀️
+            </button>
+        </header>
+
+        <!-- Summary Cards Grid -->
+        <section id="summary-section" class="mb-6">
+            <h2 class="text-xl font-semibold mb-3">Dashboard</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <!-- Actual Balance -->
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md flex flex-col justify-between">
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">💰 Actual Balance</p>
+                    <h2 class="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">₹<span id="actualBalance">0</span></h2>
+                </div>
+                <!-- Net Balance -->
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md flex flex-col justify-between">
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">📈 Net Balance + Invmt</p>
+                    <h2 class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-2">₹<span id="netBalance">0</span></h2>
+                </div>
+                <!-- Income -->
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md flex flex-col justify-between">
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">🤑 Income</p>
+                    <h2 class="text-2xl font-bold text-emerald-500 dark:text-emerald-400 mt-2">₹<span id="incomeTotal">0</span></h2>
+                </div>
+                <!-- Monthly Expenses -->
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md flex flex-col justify-between">
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">💸 Monthly Expenses</p>
+                    <h2 class="text-2xl font-bold text-red-500 dark:text-red-400 mt-2">₹<span id="monthlyTotal">0</span></h2>
+                </div>
+                <!-- Self Transfers -->
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md flex flex-col justify-between">
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">🔄 Self Transfers</p>
+                    <h2 class="text-2xl font-bold text-yellow-500 dark:text-yellow-400 mt-2">₹<span id="selfTransferTotal">0</span></h2>
+                </div>
+                <!-- Investments -->
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md flex flex-col justify-between">
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">📊 Investments</p>
+                    <h2 class="text-2xl font-bold text-purple-500 dark:text-purple-400 mt-2">
+                        <a href="#" onclick="openModal('investmentModal')" class="hover:underline">₹<span id="investmentTotal">0</span></a>
+                    </h2>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chart and Filters -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Chart -->
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md">
+                <h2 class="text-xl font-semibold mb-3">Expense Breakdown</h2>
+                <div class="chart-container">
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Filters & Actions -->
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md flex flex-col space-y-4">
+                <h2 class="text-xl font-semibold">Actions</h2>
+                <!-- Month Filter -->
+                <div>
+                    <label for="monthFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Filter by Date</label>
+                    <div id="dateFilterButtons" class="mt-1 grid grid-cols-4 gap-2">
+                        <button class="date-filter-btn text-sm p-2 rounded-md transition-colors" onclick="setDateFilter('all')">All Time</button>
+                        <button class="date-filter-btn text-sm p-2 rounded-md transition-colors" onclick="setDateFilter('week')">Week</button>
+                        <button class="date-filter-btn text-sm p-2 rounded-md transition-colors" onclick="setDateFilter('month')">Month</button>
+                        <button class="date-filter-btn text-sm p-2 rounded-md transition-colors" onclick="setDateFilter('3m')">3M</button>
+                        <button class="date-filter-btn text-sm p-2 rounded-md transition-colors" onclick="setDateFilter('6m')">6M</button>
+                        <button class="date-filter-btn text-sm p-2 rounded-md transition-colors" onclick="setDateFilter('1y')">1Y</button>
+                        <button class="date-filter-btn text-sm p-2 rounded-md transition-colors" onclick="setDateFilter('custom')">Custom</button>
+                    </div>
+                </div>
+
+                <!-- Custom Date Range (Hidden by default) -->
+                <div id="customDateRange" class="hidden space-y-2">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label for="startDate" class="block text-xs font-medium">From</label>
+                            <input type="date" id="startDate" class="mt-1 block w-full text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500" onchange="applyCustomDateFilter()">
+                        </div>
+                        <div>
+                            <label for="endDate" class="block text-xs font-medium">To</label>
+                            <input type="date" id="endDate" class="mt-1 block w-full text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500" onchange="applyCustomDateFilter()">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Data Actions -->
+                <div class="grid grid-cols-2 gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <button onclick="exportData()" class="w-full text-sm bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow-sm transition-colors">
+                        Export Data
+                    </button>
+                    <label class="w-full text-sm text-center bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-md shadow-sm transition-colors cursor-pointer">
+                        Import Data
+                        <input type="file" id="importFile" onchange="importData()" accept=".json" class="hidden">
+                    </label>
+                </div>
+                <button onclick="confirmClearAllData()" class="w-full text-sm bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md shadow-sm transition-colors">
+                    Clear All Data
+                </button>
+            </div>
+        </section>
+
+        <!-- Transaction List -->
+        <section>
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 gap-3">
+                <h2 class="text-xl font-semibold">Recent Transactions</h2>
+                <div class="relative sm:w-64">
+                    <input type="text" id="searchBox" oninput="updateUI()" placeholder="Search by description or amount..." class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 pl-10 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+            </div>
+            <div id="transactionList" class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+                <!-- Transactions will be injected here by JS -->
+                <p class="p-6 text-center text-gray-500 dark:text-gray-400">No transactions yet!</p>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Floating Action Button (FAB) to Add Transaction -->
+    <button onclick="openFormModal()" class="fixed z-30 bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-transform hover:scale-110">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+    </button>
+
+    <!-- MODALS -->
+
+    <!-- Transaction Form Modal -->
+    <div id="formModal" class="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-50 dark:bg-opacity-70 hidden" onclick="closeModal('formModal')">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-lg m-4 rounded-xl shadow-2xl p-6 relative" onclick="event.stopPropagation()">
+            <button onclick="closeModal('formModal')" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 text-2xl">&times;</button>
+            <h3 id="formTitle" class="text-2xl font-semibold mb-4">Add Transaction</h3>
+            <form id="transactionForm" onsubmit="addTransaction(event)" class="space-y-4">
+                <div>
+                    <label for="date" class="block text-sm font-medium">Date</label>
+                    <input type="date" id="date" class="mt-1 block w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <div>
+                    <label for="description" class="block text-sm font-medium">Description</label>
+                    <input type="text" id="description" class="mt-1 block w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="transactionType" class="block text-sm font-medium">Type</label>
+                        <select id="transactionType" onchange="updateSubcategories()" class="mt-1 block w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="income">Income</option>
+                            <option value="expense">Expense</option>
+                            <option value="savings">Savings</option>
+                            <option value="acexpense">A/c Expense</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="subcategory" class="block text-sm font-medium">Subcategory</label>
+                        <select id="subcategory" class="mt-1 block w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"></select>
+                    </div>
+                </div>
+                <div>
+                    <label for="amount" class="block text-sm font-medium">Amount</label>
+                    <input type="number" id="amount" step="0.01" class="mt-1 block w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <button id="saveButton" type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md shadow-lg transition-colors">
+                    Save Transaction
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Investment Modal -->
+    <div id="investmentModal" class="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-50 dark:bg-opacity-70 hidden" onclick="closeModal('investmentModal')">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-lg m-4 rounded-xl shadow-2xl p-6 relative" onclick="event.stopPropagation()">
+            <button onclick="closeModal('investmentModal')" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 text-2xl">&times;</button>
+            <h3 class="text-2xl font-semibold mb-4">Investment Transactions</h3>
+            <div id="investmentList" class="max-h-64 overflow-y-auto space-y-3 divide-y divide-gray-200 dark:divide-gray-700">
+                <!-- Investment list will be injected here -->
+            </div>
+            <button onclick="closeModal('investmentModal')" class="mt-6 w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md shadow-lg transition-colors">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal (Generic) -->
+    <div id="confirmationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 hidden">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-sm m-4 rounded-xl shadow-2xl p-6 text-center" onclick="event.stopPropagation()">
+            <h3 class="text-lg font-semibold mb-2">Are you sure?</h3>
+            <p id="confirmationMessage" class="text-sm text-gray-600 dark:text-gray-300 mb-6">This action cannot be undone.</p>
+            <div class="flex justify-center gap-4">
+                <button id="cancelButton" class="flex-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-100 font-bold py-2 px-4 rounded-md transition-colors">
+                    Cancel
+                </button>
+                <button id="confirmButton" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alert Modal (Generic) -->
+    <div id="alertModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 hidden">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-sm m-4 rounded-xl shadow-2xl p-6 text-center" onclick="event.stopPropagation()">
+            <h3 class="text-lg font-semibold mb-2" id="alertTitle">Action Complete</h3>
+            <p id="alertMessage" class="text-sm text-gray-600 dark:text-gray-300 mb-6">Your data has been processed.</p>
+            <button id="alertOkButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+                OK
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let transactions = [];
+        let editTransactionId = null;
+        let confirmCallback = null;
+        window.expenseChartInstance = null;
+        let activeDateFilter = 'all'; // 'all', 'week', 'month', '3m', '6m', '1y', 'custom'
+
+        // --- Dark Mode ---
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const html = document.documentElement;
+        
+        // On load, check saved preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            html.classList.add('dark');
+            darkModeToggle.textContent = '🌙';
+        } else {
+            html.classList.remove('dark');
+            darkModeToggle.textContent = '☀️';
+        }
+
+        darkModeToggle.addEventListener('click', () => {
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                darkModeToggle.textContent = '☀️';
+                localStorage.setItem('darkMode', 'false');
+            } else {
+                html.classList.add('dark');
+                darkModeToggle.textContent = '🌙';
+                localStorage.setItem('darkMode', 'true');
+            }
+            // Re-render chart for dark mode
+            updateChart(); 
+        });
+
+        // --- Modal Controls ---
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function openFormModal() {
+            document.getElementById('transactionForm').reset();
+            updateSubcategories();
+            document.getElementById('date').value = new Date().toISOString().split("T")[0];
+            document.getElementById('formTitle').textContent = 'Add Transaction';
+            document.getElementById('saveButton').textContent = 'Save Transaction';
+            editTransactionId = null;
+            openModal('formModal');
+        }
+
+        function showAlert(message, title = 'Notice') {
+            document.getElementById('alertTitle').textContent = title;
+            document.getElementById('alertMessage').textContent = message;
+            openModal('alertModal');
+            
+            const alertOkButton = document.getElementById('alertOkButton');
+            alertOkButton.onclick = () => closeModal('alertModal');
+        }
+
+        function showConfirmation(message, onConfirm) {
+            document.getElementById('confirmationMessage').textContent = message;
+            openModal('confirmationModal');
+            
+            confirmCallback = onConfirm;
+            
+            const confirmButton = document.getElementById('confirmButton');
+            confirmButton.onclick = () => {
+                closeModal('confirmationModal');
+                if (confirmCallback) {
+                    confirmCallback();
+                }
+            };
+            
+            const cancelButton = document.getElementById('cancelButton');
+            cancelButton.onclick = () => {
+                closeModal('confirmationModal');
+                confirmCallback = null;
+            };
+        }
+
+
+        // --- Date Filter Logic ---
+        function setDateFilter(filterType) {
+            activeDateFilter = filterType;
+            const customDateRange = document.getElementById('customDateRange');
+            
+            if (filterType === 'custom') {
+                customDateRange.classList.remove('hidden');
+                // Set default custom dates if empty
+                if (!document.getElementById('endDate').value) {
+                    document.getElementById('endDate').value = new Date().toISOString().split("T")[0];
+                }
+                if (!document.getElementById('startDate').value) {
+                    const oneMonthAgo = new Date();
+                    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+                    document.getElementById('startDate').value = oneMonthAgo.toISOString().split("T")[0];
+                }
+            } else {
+                customDateRange.classList.add('hidden');
+            }
+            
+            updateUI();
+            updateFilterButtons();
+        }
+
+        function applyCustomDateFilter() {
+            // This function is called onchange, so we just need to re-run updateUI
+            updateUI();
+        }
+
+        function updateFilterButtons() {
+            const buttons = document.querySelectorAll('.date-filter-btn');
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            
+            buttons.forEach(btn => {
+                const isActive = btn.onclick.toString().includes(`'${activeDateFilter}'`);
+                if (isActive) {
+                    btn.className = "date-filter-btn text-sm p-2 rounded-md transition-colors bg-blue-600 text-white font-medium";
+                } else {
+                    btn.className = "date-filter-btn text-sm p-2 rounded-md transition-colors bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600";
+                }
+            });
+        }
+
+        function getDateRange() {
+            const now = new Date();
+            let startDate = new Date(0); // The beginning of time
+            let endDate = new Date(); // Today
+            endDate.setHours(23, 59, 59, 999); // End of today
+
+            switch (activeDateFilter) {
+                case 'all':
+                    return { startDate, endDate: new Date('2099-12-31') }; // Effectively all future
+                case 'week':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+                    break;
+                case 'month':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    break;
+                case '3m':
+                    startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+                    break;
+                case '6m':
+                    startDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+                    break;
+                case '1y':
+                    startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+                    break;
+                case 'custom':
+                    const startVal = document.getElementById('startDate').value;
+                    const endVal = document.getElementById('endDate').value;
+                    if (startVal) {
+                        startDate = new Date(startVal + "T00:00:00");
+                    } else {
+                        startDate = new Date(0); // Beginning of time if no start date
+                    }
+                    if (endVal) {
+                        endDate = new Date(endVal + "T23:59:59");
+                    } else {
+                        endDate = new Date(); // Today if no end date
+                        endDate.setHours(23, 59, 59, 999);
+                    }
+                    break;
+            }
+            startDate.setHours(0, 0, 0, 0); // Start of the day
+            return { startDate, endDate };
+        }
+
+        // --- Core Transaction Logic (Your original logic, enhanced) ---
+
+        function updateSubcategories() {
+            const type = document.getElementById("transactionType").value;
+            const subcategory = document.getElementById("subcategory");
+            subcategory.innerHTML = "";
+
+            const options = {
+                income: ["In-hand Cash", "A/c", "Savings", "Salary", "Earnings"],
+                expense: ["Home & Utilities", "Health & Daily Care", "Medicine", "Daily Use", "Fruits", "Foods & Drinks", "Transfer", "Self Transfer", "Travel", "All Bills", "EMI", "CC Bills", "Groceries & Items", "Shopping", "Clothes", "Others"],
+                acexpense: ["HDFC", "Axis", "SBI", "ICICI"],
+                savings: ["FD", "Stocks", "PPF", "Postal Savings"]
+            };
+
+            const typeOptions = options[type] || [];
+            typeOptions.forEach(sub => {
+                let opt = document.createElement("option");
+                opt.value = sub;
+                opt.textContent = sub;
+                subcategory.appendChild(opt);
+            });
+        }
+
+        function addTransaction(event) {
+            event.preventDefault(); // Prevent form from submitting traditionally
+            
+            let description = document.getElementById("description").value;
+            let amount = parseFloat(document.getElementById("amount").value);
+            let type = document.getElementById("transactionType").value;
+            let date = document.getElementById("date").value;
+            let subcategory = document.getElementById("subcategory").value;
+            
+            if (!description || isNaN(amount) || !date || !subcategory) {
+                showAlert("Please fill all fields!", "Error");
+                return;
+            }
+
+            if (editTransactionId !== null) {
+                let index = transactions.findIndex(t => t.id === editTransactionId);
+                if (index !== -1) {
+                    transactions[index] = { ...transactions[index], description, amount, type, date, subcategory };
+                }
+                editTransactionId = null;
+            } else {
+                transactions.push({
+                    id: Date.now(),
+                    description,
+                    amount,
+                    type,
+                    date,
+                    subcategory
+                });
+            }
+
+            localStorage.setItem("rdailycalc", JSON.stringify(transactions));
+            updateUI();
+            // populateMonthDropdown(); // Removed
+            closeModal('formModal');
+            document.getElementById('transactionForm').reset();
+        }
+
+        function deleteTransaction(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            localStorage.setItem("rdailycalc", JSON.stringify(transactions));
+            updateUI();
+            // populateMonthDropdown(); // Removed
+        }
+        
+        function confirmDelete(id) {
+            const trans = transactions.find(t => t.id === id);
+            if (!trans) return;
+            const message = `Delete transaction: ${trans.description} (₹${trans.amount})?`;
+            showConfirmation(message, () => deleteTransaction(id));
+        }
+
+        function editTransaction(id) {
+            const trans = transactions.find(t => t.id === id);
+            if (trans) {
+                document.getElementById("date").value = trans.date;
+                document.getElementById("description").value = trans.description;
+                document.getElementById("transactionType").value = trans.type;
+                updateSubcategories(); // Update subcategory dropdown first
+                document.getElementById("subcategory").value = trans.subcategory;
+                document.getElementById("amount").value = trans.amount;
+
+                document.getElementById('formTitle').textContent = 'Edit Transaction';
+                document.getElementById('saveButton').textContent = 'Update Transaction';
+                editTransactionId = id;
+                
+                openModal('formModal');
+            }
+        }
+        
+        function confirmEdit(id) {
+            const trans = transactions.find(t => t.id === id);
+            if (!trans) return;
+            const message = `Edit transaction: ${trans.description} (₹${trans.amount})?`;
+            showConfirmation(message, () => editTransaction(id));
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            transactions = JSON.parse(localStorage.getItem("rdailycalc")) || [];
+            updateSubcategories();
+            // populateMonthDropdown(); // Removed
+            setDateFilter('all'); // Set default filter and update UI
+        });
+
+
+        // function populateMonthDropdown() { ... } // REMOVED
+
+        function updateUI() {
+            let monthlyTotal = 0, selfTransferTotal = 0, investmentTotal = 0, incomeTotal = 0;
+
+            const transactionList = document.getElementById("transactionList");
+            transactionList.innerHTML = ""; // Clear before updating
+
+            // 1. Get Date Range
+            const { startDate, endDate } = getDateRange();
+
+            // 2. Get Search Term
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+
+            // 3. Filter Transactions
+            let dateFilteredTransactions = transactions.filter(t => {
+                const tDate = new Date(t.date + "T00:00:00"); // Ensure correct date parsing
+                return tDate >= startDate && tDate <= endDate;
+            });
+
+            let finalFilteredTransactions = dateFilteredTransactions.filter(t => {
+                const descMatch = t.description.toLowerCase().includes(searchTerm);
+                const subcatMatch = t.subcategory.toLowerCase().includes(searchTerm);
+                const amountMatch = t.amount.toString().includes(searchTerm);
+                return descMatch || subcatMatch || amountMatch;
+            });
+
+            // Sort by date (Newest First)
+            finalFilteredTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            if (finalFilteredTransactions.length === 0) {
+                transactionList.innerHTML = "<p class='p-6 text-center text-gray-500 dark:text-gray-400'>No transactions for this period or search!</p>";
+            }
+
+            // Calculate totals from ALL transactions, not just filtered ones
+            // This is a business logic choice: Dashboard cards show ALL-TIME totals
+            // Let's refine: Dashboard should reflect the filter.
+            
+            let allTimeTotals = {
+                actualBalance: 0,
+                netBalance: 0,
+                investmentTotal: 0
+            };
+            
+            // First, calculate all-time balances
+            transactions.forEach(trans => {
+                if (trans.type === "expense" || trans.type === "acexpense" ) {
+                    if (trans.subcategory !== "Self Transfer") {
+                        allTimeTotals.actualBalance -= trans.amount;
+                    }
+                } else if (trans.type === "income") {
+                    allTimeTotals.actualBalance += trans.amount;
+                } else if (trans.type === "savings") {
+                    allTimeTotals.investmentTotal += trans.amount;
+                    allTimeTotals.actualBalance -= trans.amount; 
+                }
+            });
+            allTimeTotals.netBalance = allTimeTotals.actualBalance + allTimeTotals.investmentTotal;
+            
+            // Now, calculate totals for the FILTERED period
+            finalFilteredTransactions.forEach(trans => {
+                if (trans.type === "expense" || trans.type === "acexpense" ) {
+                    if (trans.subcategory === "Self Transfer") {
+                        selfTransferTotal += trans.amount;
+                    } else {
+                        monthlyTotal += trans.amount;
+                    }
+                } else if (trans.type === "income") {
+                    incomeTotal += trans.amount;
+                } 
+                // Investment total for the period
+                else if (trans.type === "savings") {
+                    investmentTotal += trans.amount;
+                }
+
+                // Render list item
+                const transactionItem = document.createElement("div");
+                transactionItem.className = "transaction-item p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700 last:border-b-0";
+                
+                let amountSign = "";
+                let amountColor = "text-gray-900 dark:text-gray-100";
+
+                if (trans.type === "expense" || trans.type === "acexpense") {
+                    if (trans.subcategory !== "Self Transfer") {
+                        amountSign = "-";
+                        amountColor = "text-red-500 dark:text-red-400";
+                    } else {
+                        amountSign = ""; // Self transfer
+                        amountColor = "text-yellow-500 dark:text-yellow-400";
+                    }
+                } else if (trans.type === "income") {
+                    amountSign = "+";
+                    amountColor = "text-green-500 dark:text-green-400";
+                } else if (trans.type === "savings") {
+                    amountSign = "-";
+                    amountColor = "text-purple-500 dark:text-purple-400";
+                }
+
+                transactionItem.innerHTML = `
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium truncate">${trans.description}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">${trans.date} (${trans.subcategory})</p>
+                    </div>
+                    <div class="flex items-center ml-4">
+                        <strong class="text-lg font-bold ${amountColor}">${amountSign}₹${trans.amount.toLocaleString('en-IN')}</strong>
+                        <button onclick="editTransaction(${trans.id})" class="ml-4 p-2 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 hidden sm:block">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                            </svg>
+                        </button>
+                        <button onclick="confirmDelete(${trans.id})" class="ml-2 p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 hidden sm:block">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 009 2zM10 8a1 1 0 011 1v6a1 1 0 11-2 0V9a1 1 0 011-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                `;
+                
+                // Add swipe listeners for touch devices
+                addSwipeListeners(transactionItem, trans.id);
+                transactionList.appendChild(transactionItem);
+            });
+
+            // Update dashboard cards
+            // Use All-Time totals for Balances, and Filtered totals for others
+            document.getElementById("actualBalance").textContent = allTimeTotals.actualBalance.toLocaleString('en-IN');
+            document.getElementById("netBalance").textContent = allTimeTotals.netBalance.toLocaleString('en-IN');
+            document.getElementById("investmentTotal").textContent = allTimeTotals.investmentTotal.toLocaleString('en-IN'); // Show all-time investments
+            
+            // These totals are for the filtered period
+            document.getElementById("monthlyTotal").textContent = monthlyTotal.toLocaleString('en-IN');
+            document.getElementById("selfTransferTotal").textContent = selfTransferTotal.toLocaleString('en-IN');
+            document.getElementById("incomeTotal").textContent = incomeTotal.toLocaleString('en-IN'); 
+
+            updateChart();
+        }
+
+
+        function showInvestmentModal() {
+            const investmentList = document.getElementById("investmentList");
+            investmentList.innerHTML = ""; 
+
+            let investments = transactions.filter(t => t.type === "savings").sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (investments.length === 0) {
+                investmentList.innerHTML = "<p class='p-4 text-center text-gray-500 dark:text-gray-400'>No investments found!</p>";
+            } else {
+                investments.forEach(trans => {
+                    let item = document.createElement("div");
+                    item.className = "flex justify-between items-center p-3";
+                    item.innerHTML = `
+                        <div>
+                            <p class="font-medium">${trans.description} (${trans.subcategory})</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">${trans.date}</p>
+                        </div>
+                        <strong class="text-purple-500 dark:text-purple-400">₹${trans.amount.toLocaleString('en-IN')}</strong>
+                    `;
+                    investmentList.appendChild(item);
+                });
+            }
+            openModal('investmentModal');
+        }
+
+		
+		function updateChart() {
+            const ctx = document.getElementById("expenseChart").getContext("2d");
+            
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            const textColor = isDarkMode ? '#e5e7eb' : '#374151'; // gray-200 or gray-700
+            
+            if (window.expenseChartInstance) {
+                window.expenseChartInstance.destroy();
+            }
+
+            const expenseCategories = {};
+            // const selectedMonth = document.getElementById("monthFilter").value; // Removed
+            // let filteredTransactions = selectedMonth === "all" // Removed
+            
+            // 1. Get Date Range
+            const { startDate, endDate } = getDateRange();
+
+            // 2. Get Search Term
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+
+            // 3. Filter Transactions (Same logic as updateUI)
+            let dateFilteredTransactions = transactions.filter(t => {
+                const tDate = new Date(t.date + "T00:00:00");
+                return tDate >= startDate && tDate <= endDate;
+            });
+
+            let finalFilteredTransactions = dateFilteredTransactions.filter(t => {
+                const descMatch = t.description.toLowerCase().includes(searchTerm);
+                const subcatMatch = t.subcategory.toLowerCase().includes(searchTerm);
+                const amountMatch = t.amount.toString().includes(searchTerm);
+                return descMatch || subcatMatch || amountMatch;
+            });
+
+
+            finalFilteredTransactions.forEach(trans => {
+                if ((trans.type === "expense" || trans.type === "acexpense") && trans.subcategory !== "Self Transfer") {
+                    expenseCategories[trans.subcategory] = (expenseCategories[trans.subcategory] || 0) + trans.amount;
+                }
+            });
+
+            if (Object.keys(expenseCategories).length === 0) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                // Optionally show a message on the canvas
+                ctx.textAlign = 'center';
+                ctx.fillStyle = textColor;
+                ctx.fillText('No expense data for this period', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
+            
+            // Generate dynamic colors
+            const colors = Object.keys(expenseCategories).map((_, i) => {
+                const hue = (i * 360 / Object.keys(expenseCategories).length) % 360;
+                return `hsl(${hue}, 70%, 60%)`;
+            });
+
+            window.expenseChartInstance = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                    labels: Object.keys(expenseCategories),
+                    datasets: [{
+                        data: Object.values(expenseCategories),
+                        backgroundColor: colors,
+                        borderColor: isDarkMode ? '#1f2937' : '#ffffff', // gray-800 or white
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: textColor,
+                                padding: 15,
+                                boxWidth: 12,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    let value = context.parsed || 0;
+                                    let total = context.chart.getDataVisibility().reduce((a, b) => a + b, 0);
+                                    let sum = context.dataset.data.reduce((a,b) => a + b, 0);
+                                    let percentage = (value / sum * 100).toFixed(1) + '%';
+                                    return `${label}: ₹${value.toLocaleString('en-IN')} (${percentage})`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+
+        function addSwipeListeners(element, transactionId) {
+            let startX = 0;
+            let isSwiping = false;
+
+            element.addEventListener("touchstart", function (e) {
+                // Check if the event target is one of the buttons
+                if (e.target.closest('button')) {
+                    isSwiping = false;
+                    return; // Don't start swipe if clicking a button
+                }
+                startX = e.touches[0].clientX;
+                isSwiping = true; // Start swipe
+            }, { passive: true });
+
+            element.addEventListener("touchmove", function (e) {
+                if (!isSwiping) return; // Not swiping
+                
+                let moveX = e.touches[0].clientX;
+                let diffX = moveX - startX;
+
+                // Apply visual feedback during swipe (optional)
+                // element.style.transform = `translateX(${diffX}px)`;
+                // element.style.transition = 'none';
+
+            }, { passive: true });
+
+            element.addEventListener("touchend", function (e) {
+                if (!isSwiping) return; // Was not a swipe
+                isSwiping = false; // End swipe
+                
+                let moveX = e.changedTouches[0].clientX;
+                let diffX = moveX - startX;
+
+                // Reset visual style
+                // element.style.transform = 'translateX(0)';
+                // element.style.transition = 'transform 0.3s';
+
+                if (diffX < -50) { // Swipe Left → Delete
+                    confirmDelete(transactionId);
+                    e.preventDefault(); // Prevent click
+                } else if (diffX > 50) { // Swipe Right → Edit
+                    confirmEdit(transactionId);
+                    e.preventDefault(); // Prevent click
+                }
+                
+                startX = 0;
+            });
+        }
+
+        function confirmClearAllData() {
+            showConfirmation("Are you sure you want to clear ALL transactions? This action is permanent.", clearAllData);
+        }
+
+        function clearAllData() {
+            transactions = [];
+            localStorage.removeItem("rdailycalc");
+            updateUI();
+            // populateMonthDropdown(); // Removed
+            showAlert("All data has been cleared.", "Success");
+        }
+
+        function exportData() {
+            if (transactions.length === 0) {
+                showAlert("No data to export.", "Notice");
+                return;
+            }
+            const filename = `RaGhaSExpenses_${new Date().toISOString().split('T')[0]}.json`;
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions));
+            const dlAnchor = document.createElement("a");
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", filename);
+            dlAnchor.click();
+            showAlert("Export Complete!", "Success");
+        }
+
+        function importData() {
+            const file = document.getElementById("importFile").files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const importedTransactions = JSON.parse(event.target.result);
+                    if (Array.isArray(importedTransactions)) {
+                        // Simple merge: add new transactions to existing ones
+                        // More complex logic could be to check for duplicates
+                        transactions = [...transactions, ...importedTransactions];
+                        // Or to overwrite:
+                        // transactions = importedTransactions;
+                        
+                        localStorage.setItem("rdailycalc", JSON.stringify(transactions));
+                        // populateMonthDropdown(); // Removed
+                        setDateFilter('all'); // Reset filter to show all data
+                        updateUI();
+                        showAlert("Data imported successfully!", "Success");
+                    } else {
+                        throw new Error("Invalid file format");
+                    }
+                } catch (e) {
+                    showAlert("Invalid file format! Could not import.", "Error");
+                }
+            };
+            reader.readAsText(file);
+            // Clear the file input
+            document.getElementById("importFile").value = null;
+        }
+
+    </script>
+</body>
+</html>
+
+
