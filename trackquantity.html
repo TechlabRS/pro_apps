@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Milk Tracker App</title>
+    <!-- Load Tailwind CSS from CDN for convenience -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Inter Font (The only remote dependency for styling) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Custom Styles for Modern UX */
+        :root {
+            --primary: #4f46e5; /* Indigo-600 */
+            --primary-dark: #4338ca; /* Indigo-700 */
+            --background: #f3f4f6; /* Gray-100 */
+            --card-bg: #ffffff;
+            --success: #10b981; /* Emerald-500 */
+            --danger: #ef4444; /* Red-500 */
+            --warning: #f59e0b; /* Amber-500 */
+            --text-dark: #1f2937;
+            --text-muted: #6b7280;
+        }
+
+        body {
+            background-color: var(--background);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-dark);
+        }
+
+        .container-main { max-width: 800px; margin: 20px auto; padding: 1rem; }
+        .card { padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06); background-color: var(--card-bg); }
+
+        /* Input Styles */
+        .form-input {
+            width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid #d1d5db;
+            transition: all 0.2s; background-color: white; color: var(--text-dark);
+        }
+        .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); outline: none; }
+        
+        /* Button Styles */
+        .btn-primary { background-color: var(--primary); color: white; transition: background-color 0.2s; }
+        .btn-primary:hover { background-color: var(--primary-dark); }
+        .btn-success { background-color: var(--success); color: white; transition: background-color 0.2s; }
+        .btn-success:hover { background-color: #059669; }
+        .btn-danger { background-color: var(--danger); color: white; transition: background-color 0.2s; }
+        .btn-danger:hover { background-color: #b91c1c; }
+        .btn-outline-secondary { border: 1px solid #d1d5db; color: var(--text-dark); }
+
+        /* Toggle Switch */
+        .mode-toggle-label { cursor: pointer; user-select: none; font-weight: 600; transition: color 0.2s; }
+        .toggle-container { background-color: var(--card-bg); border: 1px solid #e5e7eb; }
+        .toggle-switch-input:checked + .toggle-switch-bg { background-color: var(--primary); }
+
+        /* Calendar View (General) */
+        .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 1rem; font-weight: 700; text-align: center; font-size: 0.875rem; color: var(--text-muted); }
+        .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 4px; }
+        
+        /* Day Box Styling */
+        .day {
+            min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            border: 1px solid #e5e7eb; border-radius: 6px; padding: 5px 2px; box-sizing: border-box; text-align: center;
+            overflow: hidden; transition: background-color 0.3s; cursor: help;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        .day-number { font-size: 0.8rem; display: block; margin-bottom: 2px; color: var(--text-dark); font-weight: 600; }
+        .day-quantity { font-size: 0.75rem; font-weight: 700; display: block; color: var(--primary); }
+        
+        /* Day Status Colors */
+        .day.milk { background-color: #d1fae5; border-color: var(--success); }
+        .day.milk .day-number { color: #065f46; }
+        
+        /* New style for explicit Qty=0 */
+        .day.absent { background-color: #fee2e2; /* red-100 */ border-color: var(--danger); }
+        .day.absent .day-number { color: #991b1b; /* red-800 */ }
+        .day-absent-x { 
+            font-size: 1.1rem; 
+            font-weight: 700; 
+            color: var(--danger); 
+            line-height: 1; /* Tighter line height for the X */
+            margin-top: 2px;
+        }
+
+        /* Renamed style for past days with no entry */
+        .day.no-data-past { background-color: #fef3c7; border-color: var(--warning); }
+        .day.no-data-past .day-number { color: #92400e; }
+        
+        /* Renamed style for future days with no entry */
+        .day.no-data-future { background-color: var(--card-bg); }
+        
+        .day.empty { background-color: transparent; border: none; box-shadow: none; }
+        
+        /* Bulk Calendar Specific Styles */
+        .bulk-day {
+            min-height: 40px; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid #e5e7eb; border-radius: 6px;
+            font-weight: 600; font-size: 0.85rem;
+        }
+        .bulk-day:hover:not(.bulk-empty) {
+            background-color: #f3f4f6;
+        }
+        .bulk-day.bulk-selected {
+            background-color: #e0e7ff; /* Indigo-100 */
+            border-color: var(--primary);
+            color: var(--primary-dark);
+            font-weight: 700;
+            /* box-shadow: 0 0 0 2px var(--primary); <- Removed primary shadow, using color class ring */
+        }
+        .bulk-empty {
+            background-color: transparent;
+            border: none;
+            box-shadow: none;
+            cursor: default;
+        }
+
+        /* Bulk Entry Quantity Row Styles */
+        .bulk-quantity-row {
+            grid-template-columns: 1fr 1fr auto; /* Quantity, Count, Remove Button */
+        }
+        
+        /* Mobile-specific adjustments */
+        @media (max-width: 640px) {
+            .container-main { margin: 10px auto; padding: 0.5rem; }
+            .card { padding: 1rem; }
+            .calendar-header, .calendar { font-size: 0.75rem; }
+            .day { min-height: 40px; padding: 3px 1px; }
+            .day-number { font-size: 0.7rem; }
+            .day-quantity { font-size: 0.65rem; }
+            .h2-title { font-size: 1.5rem; }
+            .bulk-day { min-height: 35px; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-main">
+    <div class="text-center mb-6">
+        <h2 class="h2-title text-3xl font-extrabold text-gray-800">🥛 Daily Milk Tracker App</h2>
+    </div>
+
+    <!-- Toggle Switch -->
+    <div class="flex justify-center items-center mb-6 p-3 rounded-xl shadow-md toggle-container">
+        <span id="normalModeText" class="mode-toggle-label me-2 text-gray-800">Daily Entry</span>
+        <label class="relative inline-flex items-center cursor-pointer mx-3">
+            <input type="checkbox" value="" id="entryModeToggle" class="sr-only peer toggle-switch-input" title="Switch between Daily and Bulk Entry modes">
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all toggle-switch-bg"></div>
+        </label>
+        <span id="bulkModeText" class="mode-toggle-label ms-2 text-gray-500">Bulk Entry</span>
+    </div>
+
+
+    <!-- Normal Entry Section -->
+    <div id="normalEntrySection">
+        <div class="card mb-6">
+            <h5 class="text-xl font-semibold text-gray-700 mb-4">Log New Daily Entry</h5>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="mb-3">
+                    <label for="dateInput" class="block text-sm font-medium text-gray-600 mb-1">Date</label>
+                    <input type="date" id="dateInput" class="form-input">
+                </div>
+                <div class="mb-3">
+                    <label for="pricePerLiter" class="block text-sm font-medium text-gray-600 mb-1">Price per Liter (₹)</label>
+                    <input type="number" id="pricePerLiter" class="form-input" value="65" min="0.01" step="0.01" placeholder="e.g., 65">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="mb-3">
+                    <label for="predefinedQuantity" class="block text-sm font-medium text-gray-600 mb-1">Select Quantity</label>
+                    <select id="predefinedQuantity" class="form-input">
+                        <option value="">-- Common Quantities --</option>
+                        <option value="0.25">0.25 L</option><option value="0.5">0.5 L</option><option value="0.75">0.75 L</option>
+                        <option value="1">1 L</option><option value="1.25">1.25 L</option><option value="1.5">1.5 L</option>
+                        <option value="1.75">1.75 L</option><option value="2">2 L</option>
+                        <option value="custom">Custom Quantity</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="milkQuantity" class="block text-sm font-medium text-gray-600 mb-1">Or Enter Custom Quantity (L)</label>
+                    <input type="number" id="milkQuantity" class="form-input" step="0.25" min="0" placeholder="e.g., 1.25">
+                </div>
+            </div>
+            <button class="btn-primary w-full py-3 rounded-lg font-semibold shadow-md mt-2" onclick="addEntry()">Add / Update Daily Entry</button>
+            <button class="btn-outline-secondary w-full py-2 rounded-lg font-semibold shadow-sm mt-3 text-sm" onclick="markAbsent()">Mark Date as Absent (No Milk)</button>
+        </div>
+    </div>
+
+    <!-- Bulk Entry Section -->
+    <div id="bulkEntrySection" class="hidden">
+        <div class="card mb-6">
+            <h5 class="text-xl font-semibold text-gray-700 mb-4">Log New Bulk Entry</h5>
+            <p class="text-gray-500 text-sm mb-4">Define quantity presets, select an active preset, then click the days on the calendar to apply it.</p>
+            
+            <!-- Price and Month Inputs -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="mb-3 md:mb-0">
+                    <label for="bulkMonthSelectorInput" class="block text-sm font-medium text-gray-600 mb-1">Target Month</label>
+                    <input type="month" id="bulkMonthSelectorInput" class="form-input" onchange="renderBulkCalendar()">
+                </div>
+                <div class="mb-3 md:mb-0">
+                    <label for="bulkPricePerLiter" class="block text-sm font-medium text-gray-600 mb-1">Price per Liter (₹)</label>
+                    <input type="number" id="bulkPricePerLiter" class="form-input" value="65" min="0.01" step="0.01" placeholder="e.g., 65">
+                </div>
+            </div>
+
+            <hr class="my-4 border-gray-200">
+            <h6 class="text-base font-medium text-gray-700 mb-3">1. Define Quantity Presets:</h6>
+            
+            <!-- Bulk Entry Rows Container -->
+            <div id="bulkQuantityDefinitionsContainer" class="space-y-3">
+                <!-- Bulk Entry Rows will be injected here -->
+            </div>
+            <button type="button" id="addBulkQuantityRowBtn" class="btn-outline-secondary w-full py-2 rounded-lg font-semibold shadow-sm mt-3 text-sm">
+                + Add Another Quantity Preset
+            </button>
+            
+            <hr class="my-4 border-gray-200">
+            <h6 class="text-base font-medium text-gray-700 mb-3">2. Click Days to Apply Presets:</h6>
+            
+            <!-- Bulk Calendar Container -->
+            <div class="calendar-header"> <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div> </div>
+            <div id="bulkCalendar" class="calendar mb-6">
+                <!-- Bulk Calendar will be rendered here -->
+            </div>
+            
+            <button class="btn-success w-full py-3 rounded-lg font-semibold shadow-md mt-2" onclick="processBulkEntry()">Submit Bulk Entry for Selected Days</button>
+            <p class="text-gray-500 text-xs mt-2 text-center">Note: This action will overwrite existing entries for the selected days.</p>
+        </div>
+    </div>
+    
+    <div id="messageArea" class="mt-4"></div>
+
+    <div class="card mb-6">
+        <h4 class="text-xl font-semibold text-gray-700 mb-4">Monthly Overview</h4>
+        
+        <label for="monthSelector" class="block text-sm font-medium text-gray-600 mb-2">View Records for Month</label>
+        <select id="monthSelector" class="form-input mb-4" onchange="updateTable()"></select>
+        
+        <!-- Calendar View -->
+        <h5 class="text-lg font-semibold text-gray-700 mt-4 mb-2">Calendar View</h5>
+        <div class="calendar-header"> <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div> </div>
+        <div id="calendar" class="calendar"></div>
+
+        <!-- Monthly Records -->
+        <h5 class="text-lg font-semibold text-gray-700 mt-6 mb-2">Monthly Records</h5>
+        <div id="milkTable" class="overflow-x-auto">
+            <!-- Table content -->
+        </div>
+        <div class="mt-4 pt-3 border-t border-gray-200">
+            <h5 class="text-lg font-extrabold text-right text-gray-800">Total Amount: ₹<span id="totalAmountMonth" class="text-primary">0.00</span></h5>
+        </div>
+    </div>
+    
+    <button class="btn-danger w-full py-3 rounded-lg font-semibold shadow-md mt-4" onclick="handleClearAll()">Clear All Data (Local Storage)</button>
+</div>
+
+<!-- 
+    MODAL: Custom Confirmation Modal 
+    Replaces the blocking window.confirm()
+-->
+<div id="confirmationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50 hidden">
+  <div class="relative mx-auto p-5 border w-11/12 max-w-md shadow-lg rounded-xl bg-white">
+    <div class="mt-3 text-center">
+      <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
+        <!-- Warning Icon -->
+        <svg class="h-6 w-6 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+        </svg>
+      </div>
+      <h3 class="text-lg leading-6 font-medium text-gray-900 mt-2" id="modalTitle">Confirm Action</h3>
+      <div class="mt-2 px-7 py-3">
+        <p class="text-sm text-gray-500" id="modalMessage">Are you sure you want to proceed? This action may overwrite existing data.</p>
+      </div>
+      <div class="items-center px-4 py-3 grid grid-cols-2 gap-4">
+        <button id="modalCancelBtn" class="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition shadow-sm">
+          Cancel
+        </button>
+        <button id="modalConfirmBtn" class="w-full px-4 py-2 bg-success text-white rounded-lg font-medium hover:bg-emerald-600 transition shadow-sm">
+          Confirm & Submit
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- End of Modal -->
+
+
+<script>
+    let milkRecords = JSON.parse(localStorage.getItem("milkRecords")) || [];
+    // Stores day numbers (1 to 31) mapped to a selected quantity object index: {day: presetIndex}
+    let selectedBulkDaysMap = new Map(); 
+
+    // --- DOM Elements ---
+    const dateInputElement = document.getElementById("dateInput");
+    const pricePerLiterElement = document.getElementById("pricePerLiter");
+    const predefinedQuantitySelect = document.getElementById("predefinedQuantity");
+    const milkQuantityInputElement = document.getElementById("milkQuantity");
+    const monthSelectorElement = document.getElementById("monthSelector");
+    const calendarDivElement = document.getElementById("calendar");
+    const milkTableDivElement = document.getElementById("milkTable");
+    const totalAmountMonthElement = document.getElementById("totalAmountMonth");
+    const messageAreaElement = document.getElementById("messageArea");
+
+    const normalEntrySection = document.getElementById('normalEntrySection');
+    const bulkEntrySection = document.getElementById('bulkEntrySection');
+    
+    // Bulk Entry elements
+    const bulkMonthSelectorInput = document.getElementById('bulkMonthSelectorInput');
+    const bulkPricePerLiterElement = document.getElementById('bulkPricePerLiter');
+    const bulkQuantityDefinitionsContainer = document.getElementById('bulkQuantityDefinitionsContainer');
+    const addBulkQuantityRowBtn = document.getElementById('addBulkQuantityRowBtn');
+    const bulkCalendarDiv = document.getElementById('bulkCalendar');
+    
+    const entryModeToggle = document.getElementById('entryModeToggle');
+    const normalModeTextElement = document.getElementById('normalModeText');
+    const bulkModeTextElement = document.getElementById('bulkModeText');
+
+    // MODAL: Custom Modal Elements
+    const confirmationModal = document.getElementById('confirmationModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+    const modalCancelBtn = document.getElementById('modalCancelBtn');
+    const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+
+    // MODAL: Global promise resolvers for modal
+    let modalConfirmResolver = null;
+    let modalCancelResolver = null;
+    
+    // Global variable to track the currently active quantity preset index for clicking
+    let activePresetIndex = 0; 
+    // NEW: Variables for drag-to-select
+    let isDragging = false;
+    let currentDragMode = 'select'; // 'select' or 'deselect'
+
+    // --- Toggle Switch Logic ---
+    function updateToggleLabels(isBulkMode) {
+        if (isBulkMode) {
+            normalModeTextElement.classList.add('text-gray-500');
+            normalModeTextElement.classList.remove('text-gray-800');
+            bulkModeTextElement.classList.remove('text-gray-500');
+            bulkModeTextElement.classList.add('text-gray-800');
+            entryModeToggle.title = "Switch to Daily Entry mode";
+        } else {
+            normalModeTextElement.classList.remove('text-gray-500');
+            normalModeTextElement.classList.add('text-gray-800');
+            bulkModeTextElement.classList.add('text-gray-500');
+            bulkModeTextElement.classList.remove('text-gray-800');
+            entryModeToggle.title = "Switch to Bulk Entry mode";
+        }
+    }
+
+    function setEntryMode(isBulkMode) {
+        entryModeToggle.checked = isBulkMode;
+        entryModeToggle.dispatchEvent(new Event('change'));
+    }
+
+    normalModeTextElement.addEventListener('click', () => setEntryMode(false));
+    bulkModeTextElement.addEventListener('click', () => setEntryMode(true));
+
+    entryModeToggle.addEventListener('change', function() {
+        clearMessage();
+        const isBulkMode = this.checked;
+        updateToggleLabels(isBulkMode);
+        if (isBulkMode) {
+            normalEntrySection.classList.add('hidden');
+            bulkEntrySection.classList.remove('hidden');
+            initializeBulkEntryForm();
+            renderBulkCalendar();
+        } else {
+            normalEntrySection.classList.remove('hidden');
+            bulkEntrySection.classList.add('hidden');
+        }
+    });
+
+
+    // --- Utility Functions ---
+    function showMessage(message, type = 'success') {
+        const typeClass = {
+            'success': 'bg-green-100 border-green-400 text-green-700',
+            'danger': 'bg-red-100 border-red-400 text-red-700',
+            'info': 'bg-blue-100 border-blue-400 text-blue-700',
+            'warning': 'bg-yellow-100 border-yellow-400 text-yellow-700',
+        }[type];
+        
+        messageAreaElement.innerHTML = `
+            <div class="p-4 rounded-lg border-l-4 ${typeClass} mb-4 flex justify-between items-center shadow-md" role="alert">
+                <span>${message}</span>
+                <button type="button" class="text-gray-500 hover:text-gray-800 transition" onclick="messageAreaElement.innerHTML=''">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+        `;
+        
+        if (type !== 'danger' && type !== 'warning') {
+            setTimeout(() => {
+                const alertNode = messageAreaElement.querySelector('div[role="alert"]');
+                if (alertNode) {
+                    alertNode.style.opacity = '0';
+                    alertNode.style.transition = 'opacity 0.5s';
+                    setTimeout(() => { 
+                        if (alertNode.parentElement === messageAreaElement) {
+                            messageAreaElement.innerHTML = ''; 
+                        }
+                    }, 500);
+                }
+            }, 5000);
+        }
+    }
+    function clearMessage() { messageAreaElement.innerHTML = ""; }
+
+    // --- MODAL: Custom Confirmation Modal Logic ---
+    function showConfirmationModal(title, message) {
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+        confirmationModal.classList.remove('hidden');
+
+        // Return a promise that resolves or rejects based on button click
+        return new Promise((resolve, reject) => {
+            modalConfirmResolver = resolve;
+            modalCancelResolver = reject;
+        });
+    }
+
+    modalCancelBtn.addEventListener('click', () => {
+        confirmationModal.classList.add('hidden');
+        if (modalCancelResolver) {
+            modalCancelResolver('cancelled');
+            modalConfirmResolver = null;
+            modalCancelResolver = null;
+        }
+    });
+
+    modalConfirmBtn.addEventListener('click', () => {
+        confirmationModal.classList.add('hidden');
+        if (modalConfirmResolver) {
+            modalConfirmResolver('confirmed');
+            modalConfirmResolver = null;
+            modalCancelResolver = null;
+        }
+    });
+    // --- End of Modal Logic ---
+
+
+    // --- Month Selector Population ---
+    function populateMonthSelector() {
+        monthSelectorElement.innerHTML = ""; 
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth(); 
+        const currentYearMonthString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+
+        const uniqueYearMonths = new Set();
+        milkRecords.forEach(record => {
+            if (record.date && typeof record.date === 'string' && record.date.length >= 7) {
+                uniqueYearMonths.add(record.date.substring(0, 7));
+            }
+        });
+
+        if (milkRecords.length === 0 || !uniqueYearMonths.has(currentYearMonthString)) {
+             uniqueYearMonths.add(currentYearMonthString);
+        }
+
+        const sortedYearMonths = Array.from(uniqueYearMonths).sort((a, b) => b.localeCompare(a));
+        
+        sortedYearMonths.forEach(yearMonthValue => {
+            const [yearStr, monthStr] = yearMonthValue.split('-');
+            const dateForDisplay = new Date(parseInt(yearStr), parseInt(monthStr) - 1, 1);
+            const monthDisplayText = dateForDisplay.toLocaleString("default", { month: "long", year: "numeric" });
+            monthSelectorElement.add(new Option(monthDisplayText, yearMonthValue));
+        });
+        
+        monthSelectorElement.value = currentYearMonthString;
+    }
+
+    // --- Normal Daily Entry Management ---
+    function addEntry() {
+        clearMessage();
+        const date = dateInputElement.value;
+        const quantityStr = milkQuantityInputElement.value;
+        const pricePerLiterStr = pricePerLiterElement.value;
+
+        if (!date || quantityStr === "" || pricePerLiterStr === "" ) {
+            showMessage("Daily Entry: Please enter a valid date, quantity, and price.", "danger"); return;
+        }
+        const quantity = parseFloat(quantityStr);
+        const pricePerLiter = parseFloat(pricePerLiterStr);
+
+        if (isNaN(quantity) || quantity < 0 || isNaN(pricePerLiter) || pricePerLiter <=0) {
+            showMessage("Daily Entry: Quantity must be 0 or more, and price must be greater than 0.", "danger"); return;
+        }
+        const amount = (quantity * pricePerLiter).toFixed(2);
+        const existingEntryIndex = milkRecords.findIndex(record => record.date === date);
+
+        if (existingEntryIndex > -1) {
+            milkRecords[existingEntryIndex].quantity = quantity;
+            milkRecords[existingEntryIndex].amount = amount;
+            milkRecords[existingEntryIndex].pricePerLiter = pricePerLiter;
+            showMessage(`Entry for ${date} updated successfully!`, "success");
+        } else {
+            milkRecords.push({ date, quantity, amount, pricePerLiter });
+            showMessage(`Entry for ${date} added successfully!`, "success");
+        }
+        localStorage.setItem("milkRecords", JSON.stringify(milkRecords));
+        const entryYearMonth = date.substring(0,7);
+        
+        populateMonthSelector();
+        monthSelectorElement.value = entryYearMonth;
+        updateTable();
+    }
+
+    // NEW: Function to explicitly mark a day as Absent (Quantity 0)
+    function markAbsent() {
+        clearMessage();
+        const date = dateInputElement.value;
+        if (!date) {
+            showMessage("Please select a date to mark as absent.", "danger"); return;
+        }
+        // Use the current price from the input, or 0 if empty
+        const pricePerLiter = parseFloat(pricePerLiterElement.value) || 0; 
+        const quantity = 0;
+        const amount = 0;
+
+        const existingEntryIndex = milkRecords.findIndex(record => record.date === date);
+
+        if (existingEntryIndex > -1) {
+            milkRecords[existingEntryIndex].quantity = quantity;
+            milkRecords[existingEntryIndex].amount = amount;
+            milkRecords[existingEntryIndex].pricePerLiter = pricePerLiter; 
+            showMessage(`Entry for ${date} updated to ABSENT.`, "success");
+        } else {
+            milkRecords.push({ date, quantity, amount, pricePerLiter });
+            showMessage(`Entry for ${date} marked as ABSENT.`, "success");
+        }
+        localStorage.setItem("milkRecords", JSON.stringify(milkRecords));
+        const entryYearMonth = date.substring(0,7);
+        
+        populateMonthSelector();
+        monthSelectorElement.value = entryYearMonth;
+        updateTable();
+    }
+
+    // --- Bulk Entry Initialization ---
+    function initializeBulkEntryForm() {
+        const today = new Date();
+        if (!bulkMonthSelectorInput.value) {
+            bulkMonthSelectorInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+        }
+        if (!bulkPricePerLiterElement.value) bulkPricePerLiterElement.value = pricePerLiterElement.value || "65";
+        
+        // Reset and populate rows if container is empty
+        if (bulkQuantityDefinitionsContainer.children.length === 0) {
+            addBulkQuantityRowToDOM("1.0"); // Default 1.0L
+            addBulkQuantityRowToDOM("0.5"); // Default 0.5L
+            addBulkQuantityRowToDOM("0"); // Default 0L (Absent)
+        }
+        
+        selectedBulkDaysMap.clear(); // Clear selections when initializing form
+        activePresetIndex = 0;
+        updatePresetButtonStyles();
+    }
+    
+    // --- Bulk Preset Rows Management ---
+
+    function handlePresetSelection(button, index) {
+        activePresetIndex = index;
+        updatePresetButtonStyles();
+        showMessage(`Preset ${index + 1} (${button.getAttribute('data-qty')}L) is now active. Click days on the calendar to select them!`, 'info');
+    }
+
+    function updatePresetButtonStyles() {
+        document.querySelectorAll('.preset-button').forEach((btn, index) => {
+            if (index === activePresetIndex) {
+                btn.classList.add('ring-2', 'ring-primary', 'bg-indigo-50');
+                btn.classList.remove('bg-gray-200', 'hover:bg-gray-300');
+            } else {
+                btn.classList.remove('ring-2', 'ring-primary', 'bg-indigo-50');
+                btn.classList.add('bg-gray-200', 'hover:bg-gray-300');
+            }
+        });
+        // Re-render calendar to reflect the active selection mode
+        renderBulkCalendar(); 
+    }
+
+    function createBulkQuantityRowHTML(qty = '') {
+        const index = bulkQuantityDefinitionsContainer.children.length;
+        const colorClass = ['text-blue-600', 'text-green-600', 'text-yellow-600', 'text-red-600', 'text-purple-600'][index % 5];
+
+        return `
+            <div class="bulk-quantity-row grid grid-cols-3 gap-2 items-center p-2 rounded-lg border border-gray-200">
+                <div class="col-span-2 flex items-center space-x-2">
+                    <button type="button" 
+                            class="preset-button p-2 text-sm font-semibold rounded-lg bg-gray-200 hover:bg-gray-300 transition w-full" 
+                            data-qty="${qty}"
+                            onclick="handlePresetSelection(this, ${index})">
+                        <span class="${colorClass} font-bold">${index + 1}</span>: <input type="number" 
+                                                                                        class="bulk-qty-value text-sm w-20 px-1 py-0.5 border border-gray-300 rounded" 
+                                                                                        value="${qty}" 
+                                                                                        step="0.25" min="0" 
+                                                                                        onchange="this.closest('button').setAttribute('data-qty', this.value)"> L
+                    </button>
+                </div>
+                <div class="col-span-1 flex justify-end">
+                    <button type="button" class="text-red-500 hover:text-red-700 transition" title="Remove row" onclick="removeBulkQuantityRow(this)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
+                </div>
+            </div>`;
+    }
+    
+    function addBulkQuantityRowToDOM(qty = '1.0') {
+        // Remove 'Remove' button listener on old row to avoid double-click issues
+        document.querySelectorAll('.bulk-quantity-row button[title="Remove row"]').forEach(btn => {
+            btn.onclick = null;
+        });
+
+        bulkQuantityDefinitionsContainer.insertAdjacentHTML('beforeend', createBulkQuantityRowHTML(qty));
+        // Re-attach listeners for all 'Remove' buttons
+        document.querySelectorAll('.bulk-quantity-row button[title="Remove row"]').forEach(btn => {
+            btn.onclick = () => removeBulkQuantityRow(btn);
+        });
+
+        // Re-index all rows to ensure correct preset indexing
+        reIndexBulkRows();
+        
+        // Make the new row the active preset
+        activePresetIndex = bulkQuantityDefinitionsContainer.children.length - 1;
+        updatePresetButtonStyles();
+    }
+    
+    function removeBulkQuantityRow(button) { 
+        const rowElement = button.closest('.bulk-quantity-row');
+        const removedIndex = parseInt(rowElement.querySelector('.preset-button span').textContent.trim()) - 1;
+        rowElement.remove(); 
+
+        // Remove the entries from the map associated with the removed preset index
+        for (let [day, index] of selectedBulkDaysMap.entries()) {
+            if (index === removedIndex) {
+                selectedBulkDaysMap.delete(day);
+            } else if (index > removedIndex) {
+                // Shift indices down for presets after the removed one
+                selectedBulkDaysMap.set(day, index - 1);
+            }
+        }
+        
+        reIndexBulkRows();
+        
+        // Reset active preset to the first one if it was removed, or adjust index
+        if (bulkQuantityDefinitionsContainer.children.length > 0) {
+            // If the active preset was removed, or was after the removed one, reset to 0
+            if (activePresetIndex === removedIndex || activePresetIndex > removedIndex) {
+                 activePresetIndex = 0;
+            } else {
+                // Active preset was before the removed one, index is fine
+            }
+            updatePresetButtonStyles();
+        } else {
+            activePresetIndex = -1; // No active preset
+        }
+
+        renderBulkCalendar(); // Rerender calendar to reflect changes
+    }
+
+    function reIndexBulkRows() {
+        document.querySelectorAll('.bulk-quantity-row').forEach((row, index) => {
+            const button = row.querySelector('.preset-button');
+            const indexDisplay = row.querySelector('.preset-button span');
+            
+            // Update display text and data attribute
+            if (indexDisplay) {
+                indexDisplay.textContent = index + 1;
+            }
+            if (button) {
+                 button.setAttribute('onclick', `handlePresetSelection(this, ${index})`);
+            }
+            // Update the quantity input's onchange logic to use the new index
+            const input = row.querySelector('.bulk-qty-value');
+            if (input) {
+                input.onchange = () => {
+                    button.setAttribute('data-qty', input.value);
+                };
+            }
+        });
+    }
+
+    // --- Bulk Calendar Rendering and Interaction ---
+
+    /* REMOVED: The single-click handler is now replaced 
+        by the mousedown/mousemove/mouseup handlers below.
+    */
+    // function handleBulkDayClick(event) { ... }
+
+    function renderBulkCalendar() {
+        bulkCalendarDiv.innerHTML = '';
+        
+        const targetMonthYear = bulkMonthSelectorInput.value;
+        if (!targetMonthYear) return;
+        
+        const [yearStr, monthStr] = targetMonthYear.split('-');
+        const year = parseInt(yearStr); 
+        const month = parseInt(monthStr) - 1; // 0-indexed month
+        const daysInSelectedMonth = new Date(year, month + 1, 0).getDate();
+        const firstDayOfMonthStartOffset = new Date(year, month, 1).getDay(); // 0=Sunday, 6=Saturday
+
+        // Get all defined quantity presets for display in the tooltip
+        const presetButtons = document.querySelectorAll('.preset-button');
+        const presets = Array.from(presetButtons).map(btn => ({
+            qty: parseFloat(btn.getAttribute('data-qty')) || 0,
+            color: btn.querySelector('span').className.split(' ').find(c => c.startsWith('text-')) // e.g., 'text-blue-600'
+        }));
+
+
+        // Render empty slots
+        for (let i = 0; i < firstDayOfMonthStartOffset; i++) {
+            bulkCalendarDiv.innerHTML += `<div class="bulk-day bulk-empty"></div>`;
+        }
+
+        // Render day numbers
+        for (let dayNum = 1; dayNum <= daysInSelectedMonth; dayNum++) {
+            const dayElement = document.createElement('div');
+            
+            let dayClass = "bulk-day";
+            let tooltipText = `Day ${dayNum}`;
+            let presetIndex = selectedBulkDaysMap.get(dayNum);
+            
+            if (presetIndex !== undefined) {
+                // Day is selected
+                const preset = presets[presetIndex];
+                if (preset) {
+                    dayClass += " bulk-selected";
+                    // Apply the color of the active preset to the day's text
+                    dayElement.classList.add(preset.color, "font-bold");
+                    tooltipText += `: ${preset.qty.toFixed(2)}L`;
+
+                    // If it matches the active preset, add an outer ring (for emphasis)
+                    if (presetIndex === activePresetIndex) {
+                         dayClass += " ring-2 ring-primary";
+                    }
+                }
+            } else if (dayNum > 0 && dayNum < 32) {
+                 // Check if the day should be highlighted based on the existing milk records
+                 const dateStr = `${yearStr}-${monthStr}-${String(dayNum).padStart(2, '0')}`;
+                 const existingRecord = milkRecords.find(r => r.date === dateStr);
+                 if (existingRecord) {
+                    dayClass += " bg-gray-200 border-gray-400"; // Slight visual distinction for existing data
+                    tooltipText += `: Existing ${existingRecord.quantity.toFixed(2)}L`;
+                 }
+            }
+
+            dayElement.className = dayClass;
+            dayElement.textContent = dayNum;
+            dayElement.setAttribute('data-day', dayNum);
+            dayElement.setAttribute('title', tooltipText);
+            
+            // REMOVED: Click listener is replaced by event delegation on the parent
+            // dayElement.addEventListener('click', handleBulkDayClick); 
+            
+            bulkCalendarDiv.appendChild(dayElement);
+        }
+    }
+
+    // NEW: Event listeners for click and drag selection on the calendar container
+    bulkCalendarDiv.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // Prevent text selection
+        const dayElement = e.target.closest('.bulk-day');
+        if (!dayElement || dayElement.classList.contains('bulk-empty')) return;
+        
+        isDragging = true;
+        const dayNum = parseInt(dayElement.getAttribute('data-day'), 10);
+
+        if (activePresetIndex === -1 || !document.querySelector('.preset-button')) {
+            showMessage("Please define at least one Quantity Preset (step 1) and select it first.", "danger");
+            isDragging = false;
+            return;
+        }
+
+        // Determine if we are selecting or deselecting based on the first clicked day
+        const isCurrentlySelected = selectedBulkDaysMap.get(dayNum) === activePresetIndex;
+        currentDragMode = isCurrentlySelected ? 'deselect' : 'select'; // Set the global drag mode
+
+        applySelection(dayNum); // Apply to the first day
+        updateDayElementStyle(dayElement, dayNum); // Instantly update the first day
+    });
+
+    bulkCalendarDiv.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        const dayElement = e.target.closest('.bulk-day');
+        if (!dayElement || dayElement.classList.contains('bulk-empty')) return;
+
+        const dayNum = parseInt(dayElement.getAttribute('data-day'), 10);
+        
+        // Only apply if the state is different, to avoid map/DOM churn
+        const isCurrentlySelected = selectedBulkDaysMap.get(dayNum) === activePresetIndex;
+        if (currentDragMode === 'select' && !isCurrentlySelected) {
+             applySelection(dayNum);
+             updateDayElementStyle(dayElement, dayNum);
+        } else if (currentDragMode === 'deselect' && isCurrentlySelected) {
+             applySelection(dayNum);
+             updateDayElementStyle(dayElement, dayNum);
+        }
+    });
+
+    // Stop dragging on mouseup anywhere in the document
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            // Optional: Re-render the whole calendar to ensure consistency after drag
+            // renderBulkCalendar(); 
+        }
+    });
+
+    // NEW: Function to apply/toggle selection based on drag mode
+    function applySelection(dayNum) {
+        if (currentDragMode === 'select') {
+            selectedBulkDaysMap.set(dayNum, activePresetIndex);
+        } else { // mode === 'deselect'
+            selectedBulkDaysMap.delete(dayNum);
+        }
+    }
+    
+    // NEW: Helper to update style without full re-render
+    function updateDayElementStyle(dayElement, dayNum) {
+         // Get all defined quantity presets
+        const presetButtons = document.querySelectorAll('.preset-button');
+        const presets = Array.from(presetButtons).map(btn => ({
+            qty: parseFloat(btn.getAttribute('data-qty')) || 0,
+            color: btn.querySelector('span').className.split(' ').find(c => c.startsWith('text-'))
+        }));
+        
+        // Clear existing styles
+        dayElement.classList.remove('bulk-selected', 'ring-2', 'ring-primary', 'font-bold', 'bg-gray-200', 'border-gray-400');
+        presets.forEach(p => p.color && dayElement.classList.remove(p.color));
+
+        let presetIndex = selectedBulkDaysMap.get(dayNum);
+
+        if (presetIndex !== undefined) {
+            const preset = presets[presetIndex];
+            if (preset) {
+                dayElement.classList.add("bulk-selected", preset.color, "font-bold");
+                if (presetIndex === activePresetIndex) {
+                    dayElement.classList.add("ring-2", "ring-primary");
+                }
+            }
+        } else {
+            // Check for existing record
+            const targetMonthYear = bulkMonthSelectorInput.value;
+            if (targetMonthYear) {
+                const [yearStr, monthStr] = targetMonthYear.split('-');
+                // BUG FIX: Was padStart(2, '-') which is wrong for dates
+                const dateStr = `${yearStr}-${monthStr}-${String(dayNum).padStart(2, '0')}`;
+                const existingRecord = milkRecords.find(r => r.date === dateStr);
+                if (existingRecord) {
+                    dayElement.classList.add("bg-gray-200", "border-gray-400");
+                }
+            }
+        }
+    }
+    
+    // --- Bulk Entry Processing (Made ASYNC to handle modal) ---
+    async function processBulkEntry() {
+        clearMessage();
+        const targetMonthYear = bulkMonthSelectorInput.value;
+        const bulkPriceStr = bulkPricePerLiterElement.value;
+        
+        // 1. Validate fixed inputs
+        if (!targetMonthYear || !bulkPriceStr) { 
+            showMessage("Bulk Entry: Please select month and enter price.", "danger"); return; 
+        }
+        const bulkPrice = parseFloat(bulkPriceStr);
+        if (isNaN(bulkPrice) || bulkPrice <= 0) { 
+            showMessage("Bulk Entry: Price per Liter must be a positive number.", "danger"); return; 
+        }
+
+        // 2. Extract and validate all selected days and their assigned quantities
+        const finalEntries = new Map(); // Map<dateStr, {quantity, pricePerLiter}>
+        const [yearStr, monthStr] = targetMonthYear.split('-');
+        const [year, month] = [parseInt(yearStr), parseInt(monthStr)];
+        const monthName = new Date(year, month - 1).toLocaleString('default', {month:'long'});
+
+        const presetButtons = document.querySelectorAll('.preset-button');
+        const presets = Array.from(presetButtons).map((btn, idx) => ({
+            quantity: parseFloat(btn.getAttribute('data-qty')),
+            index: idx,
+            isValid: (parseFloat(btn.getAttribute('data-qty')) >= 0) // Allow 0
+        }));
+
+        let daysToOverwriteCount = 0;
+
+        for (let [dayNum, presetIndex] of selectedBulkDaysMap.entries()) {
+            const preset = presets.find(p => p.index === presetIndex);
+            
+            if (!preset || !preset.isValid) {
+                 showMessage(`Bulk Entry: Quantity preset #${presetIndex + 1} is invalid (Quantity must be 0 or greater). Please fix or remove the row.`, "danger");
+                 return;
+            }
+            
+            const dateStr = `${yearStr}-${monthStr}-${String(dayNum).padStart(2, '0')}`;
+            daysToOverwriteCount++;
+            
+            finalEntries.set(dateStr, { 
+                quantity: preset.quantity, 
+                pricePerLiter: bulkPrice 
+            });
+        }
+
+        if (finalEntries.size === 0) { 
+            showMessage("Bulk Entry: Please click days on the calendar to select them.", "danger"); return; 
+        }
+
+        // 3. Confirmation (using custom modal)
+        const confirmationMessage = `You are about to log entries for ${daysToOverwriteCount} unique day(s) in ${monthName} (Price ₹${bulkPrice.toFixed(2)}). Existing entries for these days will be OVERWRITTEN.`;
+        
+        try {
+            await showConfirmationModal('Confirm Bulk Entry', confirmationMessage);
+            // If we are here, user clicked "Confirm"
+        } catch (reason) {
+            // User clicked "Cancel"
+            showMessage("Bulk entry cancelled by user.", "info"); 
+            return;
+        }
+        
+        // 4. Update Records
+        
+        // Remove existing entries for the days being overwritten
+        let datesToKeep = milkRecords.filter(record => 
+            !finalEntries.has(record.date)
+        );
+        milkRecords = datesToKeep;
+        
+        // Add new bulk entries
+        finalEntries.forEach((data, dateStr) => {
+            const amount = (data.quantity * data.pricePerLiter).toFixed(2);
+            milkRecords.push({ date: dateStr, quantity: data.quantity, amount: amount, pricePerLiter: data.pricePerLiter });
+        });
+
+        // Final cleanup and storage
+        milkRecords.sort((a,b) => a.date.localeCompare(b.date));
+        localStorage.setItem("milkRecords", JSON.stringify(milkRecords));
+        showMessage(`Bulk entries for ${daysToOverwriteCount} day(s) in ${monthName} created/updated successfully.`, "success");
+        
+        // Update UI
+        populateMonthSelector(); 
+        monthSelectorElement.value = targetMonthYear;
+        updateTable(); 
+        
+        // FIX: Clear the selection map *after* successful submission
+        selectedBulkDaysMap.clear();
+
+        renderBulkCalendar(); // Re-render to reflect cleared selection
+    }
+
+    // --- Shared Entry Management ---
+    async function removeEntry(dateToRemove) {
+        clearMessage();
+        try {
+            await showConfirmationModal('Delete Entry', `Are you sure you want to remove the entry for ${dateToRemove}? This cannot be undone.`);
+            // User confirmed
+            milkRecords = milkRecords.filter(record => record.date !== dateToRemove);
+            localStorage.setItem("milkRecords", JSON.stringify(milkRecords));
+            showMessage(`Entry for ${dateToRemove} removed.`, "info");
+            populateMonthSelector();
+            updateTable();
+        } catch (reason) {
+            // User cancelled
+            showMessage("Delete action cancelled.", "info");
+        }
+    }
+    
+    async function handleClearAll() {
+        clearMessage();
+        try {
+            await showConfirmationModal('Clear All Data', "Are you sure you want to clear ALL milk records? This action is permanent and cannot be undone.");
+            // User confirmed
+            localStorage.removeItem("milkRecords"); 
+            milkRecords = [];
+            populateMonthSelector(); 
+            updateTable();
+            showMessage("All milk records have been cleared.", "warning");
+        } catch (reason) {
+            // User cancelled
+            showMessage("Clear all action cancelled.", "info");
+        }
+    }
+
+    // --- UI Updates (Table and Calendar) ---
+    function updateTable() {
+        // Clear any existing summary cards before re-rendering
+        const existingSummary = document.getElementById('monthSummaryCard');
+        if (existingSummary) {
+            existingSummary.remove();
+        }
+
+        milkTableDivElement.innerHTML = "";
+        let overallTotalAmountMonth = 0, overallTotalLitersMonth = 0;
+        const selectedMonthYear = monthSelectorElement.value;
+        if (!selectedMonthYear) { totalAmountMonthElement.innerText = "0.00"; updateCalendar(null, null, 0); return; }
+        const [selectedYear, selectedMonthNumStr] = selectedMonthYear.split('-');
+        const selectedYearNum = parseInt(selectedYear), selectedMonthIndex = parseInt(selectedMonthNumStr) - 1; 
+        const monthName = new Date(selectedYearNum, selectedMonthIndex).toLocaleString("default", { month: "long", year: "numeric" });
+        
+        let tableHTML = `
+            <table class="min-w-full divide-y divide-gray-200 shadow-md rounded-lg overflow-hidden mt-4">
+                <thead class="bg-indigo-600 text-white">
+                    <tr>
+                        <th scope="col" class="px-4 py-3 text-left text-sm font-medium uppercase tracking-wider">Date</th>
+                        <th scope="col" class="px-4 py-3 text-left text-sm font-medium uppercase tracking-wider">Quantity (L)</th>
+                        <th scope="col" class="px-4 py-3 text-left text-sm font-medium uppercase tracking-wider">Price/L (₹)</th>
+                        <th scope="col" class="px-4 py-3 text-left text-sm font-medium uppercase tracking-wider">Amount (₹)</th>
+                        <th scope="col" class="px-4 py-3 text-center text-sm font-medium uppercase tracking-wider">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+        `;
+        
+        const recordsForSelectedMonth = milkRecords.filter(r => r.date.startsWith(selectedMonthYear)).sort((a,b) => a.date.localeCompare(b.date));
+        let groupedQuantities = {};
+        
+        if (recordsForSelectedMonth.length === 0) {
+            tableHTML += `<tr><td colspan="5" class="px-4 py-4 text-center text-gray-500">No records found for ${monthName}.</td></tr>`;
+        } else {
+            recordsForSelectedMonth.forEach(record => {
+                let priceForDisplay = typeof record.pricePerLiter === 'number' ? record.pricePerLiter : 0;
+                let amount = parseFloat(record.amount);
+                
+                tableHTML += `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${record.date}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${record.quantity.toFixed(2)} L</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">₹${priceForDisplay.toFixed(2)}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-800">₹${amount.toFixed(2)}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-center text-sm">
+                            <button class="text-red-500 hover:text-red-700 p-1 rounded-full transition" title="Remove Entry" onclick="removeEntry('${record.date}')">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                overallTotalAmountMonth += amount; 
+                overallTotalLitersMonth += record.quantity;
+                let qtyKey = record.quantity.toFixed(2) + "L";
+                groupedQuantities[qtyKey] = groupedQuantities[qtyKey] || { count: 0, totalAmount: 0 };
+                groupedQuantities[qtyKey].count++; 
+                groupedQuantities[qtyKey].totalAmount += amount;
+            });
+        }
+        
+        tableHTML += `</tbody></table>`;
+        milkTableDivElement.innerHTML = tableHTML;
+        
+        // Summary Card
+        let summaryHTML = `
+            <div id="monthSummaryCard" class="bg-indigo-50 p-4 rounded-lg shadow-inner mt-4">
+                <h6 class="text-base font-bold text-indigo-700 mb-2">Summary for ${monthName}:</h6>
+                <div class="text-sm text-gray-700">Total Liters: <span class="font-semibold">${overallTotalLitersMonth.toFixed(2)} L</span></div>
+                <div class="space-y-1 mt-2">
+                    ${Object.entries(groupedQuantities).map(([key, val]) => 
+                        `<div class="text-xs text-gray-600">- ${key}: ${val.count} day(s) (₹${val.totalAmount.toFixed(2)})</div>`
+                    ).join('')}
+                    ${recordsForSelectedMonth.length === 0 ? `<div class="text-xs text-gray-600">No entries to summarize.</div>` : ''}
+                </div>
+            </div>
+        `;
+        
+        // Insert summary after the table, but before the total amount
+        milkTableDivElement.insertAdjacentHTML('afterend', summaryHTML);
+        totalAmountMonthElement.innerText = overallTotalAmountMonth.toFixed(2);
+
+        const daysInMonth = new Date(selectedYearNum, selectedMonthIndex + 1, 0).getDate();
+        updateCalendar(selectedYearNum, selectedMonthIndex, daysInMonth);
+    }
+
+    function updateCalendar(year, month, daysInMonth) { 
+        calendarDivElement.innerHTML = "";
+        if (year === null || month === null) return;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); 
+
+        const recordsForMonthMap = new Map();
+        const currentMonthPrefix = `${year}-${String(month + 1).padStart(2, '0')}-`;
+        milkRecords.forEach(record => {
+            if (record.date.startsWith(currentMonthPrefix)) {
+                 recordsForMonthMap.set(record.date, record.quantity);
+            }
+        });
+
+        const firstDayOfMonthStartOffset = new Date(year, month, 1).getDay();
+        for (let i = 0; i < firstDayOfMonthStartOffset; i++) {
+            calendarDivElement.innerHTML += `<div class="day empty"></div>`;
+        }
+
+        for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+            const dayDate = new Date(year, month, dayNum); 
+
+            const quantityForDay = recordsForMonthMap.get(dateStr);
+            let dayClass = "day";
+            const dayNumberHTML = `<span class="day-number">${dayNum}</span>`;
+            let quantityHTML = "";
+            let titleText = `Date: ${dateStr}`;
+            let isToday = dayDate.getTime() === today.getTime();
+
+            if (quantityForDay !== undefined) {
+                if (quantityForDay === 0) {
+                    // Explicitly marked as Absent
+                    dayClass += " absent"; // Use the new 'absent' style
+                    quantityHTML = `<span class="day-absent-x">X</span>`;
+                    titleText += `\nStatus: Absent (No Milk)`;
+                } else {
+                    // Took milk
+                    dayClass += " milk";
+                    quantityHTML = `<span class="day-quantity">${quantityForDay.toFixed(2)}L</span>`;
+                    titleText += `\nQuantity: ${quantityForDay.toFixed(2)}L`;
+                }
+            } else {
+                // No entry exists for this day
+                if (dayDate < today) {
+                    dayClass += " no-data-past"; // Renamed class for past days with no data
+                    titleText += `\nNo Record (Past)`;
+                } else {
+                    dayClass += " no-data-future"; // Renamed class for future days
+                    titleText += `\nNo Record`;
+                }
+            }
+            
+            if (isToday) {
+                dayClass += " border-2 border-primary ring-2 ring-primary/50";
+            }
+            
+            calendarDivElement.innerHTML += `<div class="${dayClass}" title="${titleText}">
+                                              ${dayNumberHTML}
+                                              ${quantityHTML}
+                                           </div>`;
+        }
+    }
+
+    // --- Event Listeners and Initial Setup ---
+    predefinedQuantitySelect.addEventListener('change', function() {
+        if (this.value && this.value !== "custom") milkQuantityInputElement.value = this.value;
+        else if (this.value === "custom") milkQuantityInputElement.focus();
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        dateInputElement.valueAsDate = new Date(); 
+        populateMonthSelector();
+        updateTable(); 
+        
+        // Initial state setup for toggle and visibility
+        const isBulk = entryModeToggle.checked;
+        updateToggleLabels(isBulk); 
+        normalEntrySection.classList.toggle('hidden', isBulk); // <-- FIX: Was 'isBilk'
+        bulkEntrySection.classList.toggle('hidden', !isBulk);
+        if (isBulk) {
+            initializeBulkEntryForm();
+            renderBulkCalendar(); // CRITICAL FIX: Ensure calendar renders immediately if bulk mode is active
+        }
+        
+        // Attach initial event listener for the Add Preset Button
+        document.getElementById('addBulkQuantityRowBtn').addEventListener('click', () => addBulkQuantityRowToDOM('1.0'));
+    });
+    
+    // Initial call to render the empty bulk calendar when the page loads
+    bulkMonthSelectorInput.addEventListener('change', renderBulkCalendar);
+</script>
+</body>
+</html>
+
+
+
